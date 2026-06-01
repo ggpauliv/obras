@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PAWLIV OBRAS - Lista de Obras</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-highest": "#dce2f3",
+                        "secondary": "#565f67",
+                        "on-surface-variant": "#424751",
+                        "on-surface": "#151c27",
+                        "background": "#f9f9ff",
+                        "on-tertiary-container": "#c0d9ff",
+                        "tertiary-container": "#385f8f",
+                        "outline-variant": "#c2c6d2",
+                        "primary-fixed-dim": "#a4c9ff",
+                        "on-secondary-container": "#5b646b",
+                        "primary": "#004782",
+                        "error": "#ba1a1a",
+                        "inverse-surface": "#2a313d",
+                        "surface-container": "#e7eefe",
+                        "tertiary": "#1d4776",
+                        "surface-tint": "#1960a6",
+                        "inverse-primary": "#a4c9ff",
+                        "on-background": "#151c27",
+                        "surface-container-high": "#e2e8f8",
+                        "error-container": "#ffdad6",
+                        "outline": "#727782",
+                        "tertiary-fixed-dim": "#a3c9ff",
+                        "on-primary-container": "#c1d9ff",
+                        "on-secondary-fixed": "#141d23",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-fixed": "#001c39",
+                        "on-secondary-fixed-variant": "#3f484f",
+                        "on-primary-fixed-variant": "#004883",
+                        "inverse-on-surface": "#ebf1ff",
+                        "tertiary-fixed": "#d3e3ff",
+                        "on-tertiary-fixed-variant": "#1e4877",
+                        "surface-container-low": "#f0f3ff",
+                        "surface-dim": "#d3daea",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed": "#d4e3ff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#f9f9ff",
+                        "secondary-fixed-dim": "#bec8d0",
+                        "on-primary-fixed": "#001c39",
+                        "secondary-fixed": "#dbe4ec",
+                        "secondary-container": "#d8e1ea",
+                        "surface": "#f9f9ff",
+                        "on-tertiary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "surface-variant": "#dce2f3",
+                        "primary-container": "#185fa5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "xs": "4px",
+                        "margin-desktop": "32px",
+                        "gutter": "24px",
+                        "margin-mobile": "16px",
+                        "lg": "24px",
+                        "base": "4px",
+                        "2xl": "48px",
+                        "sm": "8px",
+                        "xl": "32px"
+                    },
+                    "fontFamily": {
+                        "display-lg-mobile": ["DM Sans"],
+                        "body-lg": ["DM Sans"],
+                        "label-sm": ["DM Sans"],
+                        "body-md": ["DM Sans"],
+                        "body-sm": ["DM Sans"],
+                        "label-md": ["DM Sans"],
+                        "display-lg": ["DM Sans"],
+                        "headline-sm": ["DM Sans"],
+                        "headline-md": ["DM Sans"]
+                    },
+                    "fontSize": {
+                        "display-lg-mobile": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "display-lg": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md h-screen w-screen overflow-hidden flex">
+<!-- SideNavBar (Shared Component) -->
+<nav class="fixed left-0 top-0 h-screen w-[280px] bg-[#0E3D6B] flex flex-col py-xl px-md shadow-md z-40 hidden md:flex">
+<div class="mb-xl flex flex-col items-center">
+<div class="h-16 w-16 bg-white rounded-full flex items-center justify-center mb-sm shadow-md overflow-hidden border-2 border-white/20">
+<img alt="PAWLIV OBRAS Logo" class="h-full w-full object-cover" data-alt="A close up image of architectural blueprints on a drafting table, lit with bright high key lighting, conveying structural integrity and operational efficiency, modern SaaS style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWYi6mxBRfvKrkctGX6Bn4rCfQ_LGsjb64g9LcmjY5sYaUKPu63sqkQc-RFtfBTj64isJTMCCco3ZKhDvpaXuLb5sCNX9YXkimD294V8sgmTWVh2Wc99uJt55caVozBtVjPTErfsib-xffsP9fMSwD5t0Ss3-7o7TJKq87MNjlDMBGxxYLa2Mi-oZ7OZsee6zQGiFwtgOCHc3EM7GEtb-C673Q5RCFtHakoE2WzLes0xYiBLxFg0FTiRGSLCR62JLFfpxPvcjNPcs"/>
+</div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-white text-center">PAWLIV OBRAS</h1>
+<p class="font-label-sm text-label-sm text-primary-fixed text-center">Gestão de Obras</p>
+</div>
+<ul class="flex flex-col gap-sm flex-1">
+<li class="group">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-outline-variant hover:text-white hover:bg-white/5 transition-colors cursor-pointer duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+</li>
+<li class="group">
+<a class="flex items-center gap-md px-md py-sm text-primary-fixed font-bold bg-white/10 rounded-lg cursor-pointer transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="foundation" data-weight="fill">foundation</span>
+<span class="font-label-md text-label-md">Obras</span>
+</a>
+</li>
+<li class="group">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-outline-variant hover:text-white hover:bg-white/5 transition-colors cursor-pointer duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="account_tree">account_tree</span>
+<span class="font-label-md text-label-md">Fases</span>
+</a>
+</li>
+<li class="group">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-outline-variant hover:text-white hover:bg-white/5 transition-colors cursor-pointer duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+<span class="font-label-md text-label-md">Progresso</span>
+</a>
+</li>
+<li class="group">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-outline-variant hover:text-white hover:bg-white/5 transition-colors cursor-pointer duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-label-md text-label-md">Financeiro</span>
+</a>
+</li>
+<li class="group">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-outline-variant hover:text-white hover:bg-white/5 transition-colors cursor-pointer duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="engineering">engineering</span>
+<span class="font-label-md text-label-md">Fornecedores</span>
+</a>
+</li>
+<li class="group">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-outline-variant hover:text-white hover:bg-white/5 transition-colors cursor-pointer duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-label-md text-label-md">Usuários</span>
+</a>
+</li>
+<li class="group mt-auto">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-outline-variant hover:text-white hover:bg-white/5 transition-colors cursor-pointer duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Configurações</span>
+</a>
+</li>
+<li class="group mt-sm border-t border-white/10 pt-sm">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-outline-variant hover:text-white hover:bg-error/20 transition-colors cursor-pointer duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-label-md text-label-md">Sair</span>
+</a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Wrapper -->
+<div class="flex-1 flex flex-col md:ml-[280px] w-full h-full relative">
+<!-- TopAppBar (Shared Component) -->
+<header class="fixed top-0 right-0 w-full md:w-[calc(100%-280px)] h-16 bg-surface dark:bg-surface-container border-b border-outline-variant dark:border-outline flex items-center justify-between px-margin-desktop z-30 transition-all duration-200 ease-in-out">
+<div class="flex items-center gap-md">
+<!-- Mobile Menu Button -->
+<button class="md:hidden p-sm rounded-full text-on-surface hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="flex flex-col">
+<div class="flex items-center gap-sm text-secondary font-label-sm text-label-sm">
+<a class="hover:text-primary transition-colors" href="#">Início</a>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-on-surface">Obras</span>
+</div>
+<h2 class="font-headline-sm text-headline-sm font-bold text-primary dark:text-primary-fixed">Obras</h2>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="pl-10 pr-4 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-64 text-body-sm font-body-sm text-on-surface placeholder:text-outline transition-all" placeholder="Buscar no sistema..." type="text"/>
+</div>
+<div class="flex items-center gap-sm">
+<button class="p-sm rounded-full text-on-surface-variant hover:bg-primary-container/10 transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-error rounded-full border border-surface"></span>
+</button>
+<button class="p-sm rounded-full text-on-surface-variant hover:bg-primary-container/10 transition-colors">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-surface-variant border border-outline-variant overflow-hidden ml-sm cursor-pointer hover:ring-2 hover:ring-primary transition-all">
+<img alt="User profile picture" class="h-full w-full object-cover" data-alt="A portrait of a male construction professional wearing a hard hat, smiling, brightly lit against a neutral modern background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuASy_l1hl5j2wm3B1Y62OlguZ_hMhMjmInXxqoxtcJpKzhEvxQhSTX93NoH5-on1SNbA5czgYzAyDTFvneMVeQiMOF5K_9UXe9PJvKDEcbvY64xKc4z1fjw0Jiw_78REPxrTEbOzq2an_4I81quSaKcfYLU0llldzstdOEqKgbLdsEheiS06n8uJxa9OS9CzaF_AWNsEm38UGrtOCl5dosDGO8ob6KBpguzgIv_drb1rI2ryw3BXiVMlYfB-xCpYooQfYELmHgwcyM"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto pt-20 px-margin-mobile md:px-margin-desktop pb-xl bg-background">
+<!-- Actions Bar -->
+<div class="flex flex-col sm:flex-row items-center justify-between gap-md mb-lg bg-surface-container-lowest p-md rounded-xl border border-outline-variant shadow-sm">
+<div class="flex flex-wrap items-center gap-sm w-full sm:w-auto">
+<div class="relative flex-1 sm:w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">search</span>
+<input class="w-full pl-10 pr-4 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-sm font-body-sm text-on-surface placeholder:text-outline" placeholder="Buscar obras..." type="text"/>
+</div>
+<div class="relative">
+<select class="appearance-none pl-4 pr-10 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary text-body-sm font-body-sm text-on-surface cursor-pointer">
+<option value="">Status (Todos)</option>
+<option value="em-andamento">Em Andamento</option>
+<option value="concluida">Concluída</option>
+<option value="atrasada">Atrasada</option>
+<option value="planejamento">Em Planejamento</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none text-[20px]">expand_more</span>
+</div>
+<div class="relative hidden lg:block">
+<select class="appearance-none pl-4 pr-10 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary text-body-sm font-body-sm text-on-surface cursor-pointer">
+<option value="">Tipo (Todos)</option>
+<option value="residencial">Residencial</option>
+<option value="comercial">Comercial</option>
+<option value="infraestrutura">Infraestrutura</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none text-[20px]">expand_more</span>
+</div>
+<div class="relative hidden xl:block">
+<select class="appearance-none pl-4 pr-10 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary text-body-sm font-body-sm text-on-surface cursor-pointer">
+<option value="">Período (Todos)</option>
+<option value="2024">2024</option>
+<option value="2023">2023</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none text-[20px]">expand_more</span>
+</div>
+</div>
+<button class="w-full sm:w-auto flex items-center justify-center gap-xs px-lg py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors shadow-sm font-label-md text-label-md shrink-0" onclick="document.getElementById('modal-nova-obra').classList.remove('hidden')">
+<span class="material-symbols-outlined text-[20px]">add</span>
+                    Nova Obra
+                </button>
+</div>
+<!-- Main Table Card -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm overflow-hidden flex flex-col">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse min-w-[1000px]">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="py-sm px-md font-label-sm text-label-sm text-on-surface-variant font-semibold w-16 text-center">#</th>
+<th class="py-sm px-md font-label-sm text-label-sm text-on-surface-variant font-semibold">Nome da Obra</th>
+<th class="py-sm px-md font-label-sm text-label-sm text-on-surface-variant font-semibold">Cliente</th>
+<th class="py-sm px-md font-label-sm text-label-sm text-on-surface-variant font-semibold">Tipo</th>
+<th class="py-sm px-md font-label-sm text-label-sm text-on-surface-variant font-semibold">Início</th>
+<th class="py-sm px-md font-label-sm text-label-sm text-on-surface-variant font-semibold">Término Previsto</th>
+<th class="py-sm px-md font-label-sm text-label-sm text-on-surface-variant font-semibold w-48">% Conclusão</th>
+<th class="py-sm px-md font-label-sm text-label-sm text-on-surface-variant font-semibold text-center">Status</th>
+<th class="py-sm px-md font-label-sm text-label-sm text-on-surface-variant font-semibold text-center w-24">Ações</th>
+</tr>
+</thead>
+<tbody class="text-body-sm font-body-sm divide-y divide-outline-variant/50">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-lowest transition-colors group">
+<td class="py-sm px-md text-on-surface-variant text-center">101</td>
+<td class="py-sm px-md font-medium text-on-surface group-hover:text-primary transition-colors cursor-pointer">Edifício Horizonte</td>
+<td class="py-sm px-md text-secondary">Construtora Alpha S.A.</td>
+<td class="py-sm px-md text-secondary">Residencial</td>
+<td class="py-sm px-md text-secondary">15/01/2024</td>
+<td class="py-sm px-md text-secondary">30/11/2025</td>
+<td class="py-sm px-md">
+<div class="flex items-center gap-sm w-full">
+<span class="text-secondary w-8 text-right font-medium">35%</span>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 35%"></div>
+</div>
+</div>
+</td>
+<td class="py-sm px-md text-center">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-primary-container/10 text-primary-container font-label-sm text-label-sm border border-primary-container/20">Em Andamento</span>
+</td>
+<td class="py-sm px-md text-center">
+<button class="p-xs text-outline hover:text-primary transition-colors rounded-md hover:bg-primary-container/10"><span class="material-symbols-outlined text-[20px]">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-lowest transition-colors group bg-surface-bright">
+<td class="py-sm px-md text-on-surface-variant text-center">102</td>
+<td class="py-sm px-md font-medium text-on-surface group-hover:text-primary transition-colors cursor-pointer">Galpão Logístico Norte</td>
+<td class="py-sm px-md text-secondary">LogisBraz Corp</td>
+<td class="py-sm px-md text-secondary">Comercial</td>
+<td class="py-sm px-md text-secondary">05/03/2024</td>
+<td class="py-sm px-md text-secondary">15/08/2024</td>
+<td class="py-sm px-md">
+<div class="flex items-center gap-sm w-full">
+<span class="text-secondary w-8 text-right font-medium">85%</span>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 85%"></div>
+</div>
+</div>
+</td>
+<td class="py-sm px-md text-center">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-primary-container/10 text-primary-container font-label-sm text-label-sm border border-primary-container/20">Em Andamento</span>
+</td>
+<td class="py-sm px-md text-center">
+<button class="p-xs text-outline hover:text-primary transition-colors rounded-md hover:bg-primary-container/10"><span class="material-symbols-outlined text-[20px]">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-lowest transition-colors group">
+<td class="py-sm px-md text-on-surface-variant text-center">103</td>
+<td class="py-sm px-md font-medium text-on-surface group-hover:text-primary transition-colors cursor-pointer">Reforma Shopping Central</td>
+<td class="py-sm px-md text-secondary">Malls Brasil</td>
+<td class="py-sm px-md text-secondary">Comercial</td>
+<td class="py-sm px-md text-secondary">10/11/2023</td>
+<td class="py-sm px-md text-secondary">20/12/2024</td>
+<td class="py-sm px-md">
+<div class="flex items-center gap-sm w-full">
+<span class="text-error w-8 text-right font-medium">40%</span>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-error rounded-full" style="width: 40%"></div>
+</div>
+</div>
+</td>
+<td class="py-sm px-md text-center">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-error/10 text-error font-label-sm text-label-sm border border-error/20">Atrasada</span>
+</td>
+<td class="py-sm px-md text-center">
+<button class="p-xs text-outline hover:text-primary transition-colors rounded-md hover:bg-primary-container/10"><span class="material-symbols-outlined text-[20px]">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-lowest transition-colors group bg-surface-bright">
+<td class="py-sm px-md text-on-surface-variant text-center">104</td>
+<td class="py-sm px-md font-medium text-on-surface group-hover:text-primary transition-colors cursor-pointer">Viaduto Ayrton Senna</td>
+<td class="py-sm px-md text-secondary">Prefeitura Municipal</td>
+<td class="py-sm px-md text-secondary">Infraestrutura</td>
+<td class="py-sm px-md text-secondary">01/05/2024</td>
+<td class="py-sm px-md text-secondary">30/05/2026</td>
+<td class="py-sm px-md">
+<div class="flex items-center gap-sm w-full">
+<span class="text-secondary w-8 text-right font-medium">0%</span>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-outline rounded-full" style="width: 0%"></div>
+</div>
+</div>
+</td>
+<td class="py-sm px-md text-center">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-outline-variant/30 text-on-surface-variant font-label-sm text-label-sm border border-outline-variant">Planejamento</span>
+</td>
+<td class="py-sm px-md text-center">
+<button class="p-xs text-outline hover:text-primary transition-colors rounded-md hover:bg-primary-container/10"><span class="material-symbols-outlined text-[20px]">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-container-lowest transition-colors group">
+<td class="py-sm px-md text-on-surface-variant text-center">099</td>
+<td class="py-sm px-md font-medium text-on-surface group-hover:text-primary transition-colors cursor-pointer">Condomínio Vila Verde</td>
+<td class="py-sm px-md text-secondary">Habitar Engenharia</td>
+<td class="py-sm px-md text-secondary">Residencial</td>
+<td class="py-sm px-md text-secondary">10/02/2022</td>
+<td class="py-sm px-md text-secondary">15/12/2023</td>
+<td class="py-sm px-md">
+<div class="flex items-center gap-sm w-full">
+<span class="text-emerald-700 w-8 text-right font-medium">100%</span>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-emerald-600 rounded-full" style="width: 100%"></div>
+</div>
+</div>
+</td>
+<td class="py-sm px-md text-center">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-label-sm text-label-sm border border-emerald-200">Concluída</span>
+</td>
+<td class="py-sm px-md text-center">
+<button class="p-xs text-outline hover:text-primary transition-colors rounded-md hover:bg-primary-container/10"><span class="material-symbols-outlined text-[20px]">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 6 -->
+<tr class="hover:bg-surface-container-lowest transition-colors group bg-surface-bright">
+<td class="py-sm px-md text-on-surface-variant text-center">105</td>
+<td class="py-sm px-md font-medium text-on-surface group-hover:text-primary transition-colors cursor-pointer">Hospital Memorial Sul</td>
+<td class="py-sm px-md text-secondary">Grupo Saúde+</td>
+<td class="py-sm px-md text-secondary">Comercial</td>
+<td class="py-sm px-md text-secondary">20/06/2023</td>
+<td class="py-sm px-md text-secondary">20/06/2025</td>
+<td class="py-sm px-md">
+<div class="flex items-center gap-sm w-full">
+<span class="text-secondary w-8 text-right font-medium">22%</span>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 22%"></div>
+</div>
+</div>
+</td>
+<td class="py-sm px-md text-center">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-primary-container/10 text-primary-container font-label-sm text-label-sm border border-primary-container/20">Em Andamento</span>
+</td>
+<td class="py-sm px-md text-center">
+<button class="p-xs text-outline hover:text-primary transition-colors rounded-md hover:bg-primary-container/10"><span class="material-symbols-outlined text-[20px]">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 7 -->
+<tr class="hover:bg-surface-container-lowest transition-colors group">
+<td class="py-sm px-md text-on-surface-variant text-center">106</td>
+<td class="py-sm px-md font-medium text-on-surface group-hover:text-primary transition-colors cursor-pointer">Escola Técnica Bandeirantes</td>
+<td class="py-sm px-md text-secondary">Governo Estadual</td>
+<td class="py-sm px-md text-secondary">Infraestrutura</td>
+<td class="py-sm px-md text-secondary">01/09/2023</td>
+<td class="py-sm px-md text-secondary">30/08/2024</td>
+<td class="py-sm px-md">
+<div class="flex items-center gap-sm w-full">
+<span class="text-error w-8 text-right font-medium">65%</span>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-error rounded-full" style="width: 65%"></div>
+</div>
+</div>
+</td>
+<td class="py-sm px-md text-center">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-error/10 text-error font-label-sm text-label-sm border border-error/20">Atrasada</span>
+</td>
+<td class="py-sm px-md text-center">
+<button class="p-xs text-outline hover:text-primary transition-colors rounded-md hover:bg-primary-container/10"><span class="material-symbols-outlined text-[20px]">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 8 -->
+<tr class="hover:bg-surface-container-lowest transition-colors group bg-surface-bright">
+<td class="py-sm px-md text-on-surface-variant text-center">107</td>
+<td class="py-sm px-md font-medium text-on-surface group-hover:text-primary transition-colors cursor-pointer">Praça das Águas</td>
+<td class="py-sm px-md text-secondary">Prefeitura Municipal</td>
+<td class="py-sm px-md text-secondary">Infraestrutura</td>
+<td class="py-sm px-md text-secondary">15/07/2024</td>
+<td class="py-sm px-md text-secondary">15/12/2024</td>
+<td class="py-sm px-md">
+<div class="flex items-center gap-sm w-full">
+<span class="text-secondary w-8 text-right font-medium">0%</span>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-outline rounded-full" style="width: 0%"></div>
+</div>
+</div>
+</td>
+<td class="py-sm px-md text-center">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-outline-variant/30 text-on-surface-variant font-label-sm text-label-sm border border-outline-variant">Planejamento</span>
+</td>
+<td class="py-sm px-md text-center">
+<button class="p-xs text-outline hover:text-primary transition-colors rounded-md hover:bg-primary-container/10"><span class="material-symbols-outlined text-[20px]">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination Footer -->
+<div class="bg-surface-container-low border-t border-outline-variant p-md flex items-center justify-between text-body-sm font-body-sm text-secondary">
+<p>Mostrando 1 a 8 de 42 obras</p>
+<div class="flex items-center gap-xs">
+<button class="p-1 rounded border border-outline-variant bg-surface hover:bg-surface-variant text-outline disabled:opacity-50 transition-colors" disabled="">
+<span class="material-symbols-outlined text-[20px]">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded border border-primary bg-primary text-white flex items-center justify-center font-medium">1</button>
+<button class="w-8 h-8 rounded border border-outline-variant bg-surface hover:bg-surface-variant text-on-surface transition-colors flex items-center justify-center">2</button>
+<button class="w-8 h-8 rounded border border-outline-variant bg-surface hover:bg-surface-variant text-on-surface transition-colors flex items-center justify-center">3</button>
+<span class="px-1">...</span>
+<button class="w-8 h-8 rounded border border-outline-variant bg-surface hover:bg-surface-variant text-on-surface transition-colors flex items-center justify-center">6</button>
+<button class="p-1 rounded border border-outline-variant bg-surface hover:bg-surface-variant text-on-surface transition-colors">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<div class="h-xl w-full"></div> <!-- Bottom spacer -->
+</main>
+</div>
+<!-- Modal "Nova Obra" -->
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/60 backdrop-blur-sm transition-opacity" id="modal-nova-obra">
+<div class="bg-surface-container-lowest w-full max-w-3xl rounded-xl shadow-xl flex flex-col max-h-[921px] mx-margin-mobile border border-outline-variant overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+<!-- Modal Header -->
+<div class="px-lg py-md border-b border-outline-variant flex items-center justify-between bg-surface">
+<h3 class="font-headline-sm text-headline-sm font-semibold text-on-surface">Nova Obra</h3>
+<button class="p-xs text-outline hover:text-error transition-colors rounded-md hover:bg-error-container/50" onclick="document.getElementById('modal-nova-obra').classList.add('hidden')">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Modal Body (Scrollable) -->
+<div class="p-lg overflow-y-auto flex-1 bg-surface-bright">
+<!-- AI Import Section (Highlighted) -->
+<div class="mb-lg p-md rounded-lg border-2 border-dashed border-primary/40 bg-surface-container shadow-sm relative overflow-hidden group hover:border-primary transition-colors cursor-pointer">
+<div class="absolute -right-6 -top-6 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
+<div class="flex gap-md items-start relative z-10">
+<div class="p-sm bg-white rounded-lg shadow-sm border border-primary/20 text-primary">
+<span class="material-symbols-outlined text-[32px]">auto_awesome</span>
+</div>
+<div>
+<h4 class="font-label-md text-label-md font-bold text-primary mb-xs">Importar via documento (IA)</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                                Anexe um cronograma, planilha orçamentária ou memorial descritivo e a IA preencherá as fases e custos automaticamente.
+                            </p>
+<div class="mt-sm flex gap-sm">
+<button class="px-sm py-1 bg-white border border-primary-container/30 rounded text-primary-container font-label-sm text-label-sm hover:bg-primary-container/10 transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">upload_file</span> Selecionar Arquivo
+                                </button>
+</div>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-sm mb-md">
+<div class="h-px bg-outline-variant flex-1"></div>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">Ou preencha manualmente</span>
+<div class="h-px bg-outline-variant flex-1"></div>
+</div>
+<!-- Manual Form Grid -->
+<form class="grid grid-cols-1 md:grid-cols-2 gap-md">
+<div class="col-span-1 md:col-span-2 space-y-1">
+<label class="font-label-md text-label-md text-on-surface font-medium block">Nome da Obra <span class="text-error">*</span></label>
+<input class="w-full px-3 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-sm font-body-sm text-on-surface transition-all" placeholder="Ex: Residencial Flores do Bosque" type="text"/>
+</div>
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface font-medium block">Cliente <span class="text-error">*</span></label>
+<select class="w-full px-3 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-sm font-body-sm text-on-surface appearance-none cursor-pointer">
+<option disabled="" selected="" value="">Selecione um cliente</option>
+<option value="1">Construtora Alpha S.A.</option>
+<option value="2">Malls Brasil</option>
+</select>
+</div>
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface font-medium block">Tipo de Obra</label>
+<select class="w-full px-3 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-sm font-body-sm text-on-surface appearance-none cursor-pointer">
+<option disabled="" selected="" value="">Selecione o tipo</option>
+<option value="res">Residencial</option>
+<option value="com">Comercial</option>
+<option value="inf">Infraestrutura</option>
+</select>
+</div>
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface font-medium block">Data de Início</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">calendar_today</span>
+<input class="w-full pl-3 pr-10 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-sm font-body-sm text-on-surface transition-all" type="date"/>
+</div>
+</div>
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface font-medium block">Término Previsto</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">calendar_today</span>
+<input class="w-full pl-3 pr-10 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-sm font-body-sm text-on-surface transition-all" type="date"/>
+</div>
+</div>
+<div class="col-span-1 md:col-span-2 space-y-1">
+<label class="font-label-md text-label-md text-on-surface font-medium block">Orçamento Estimado (R$)</label>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-outline font-body-sm">R$</span>
+<input class="w-full pl-9 pr-3 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-sm font-body-sm text-on-surface transition-all" placeholder="0,00" type="text"/>
+</div>
+</div>
+<div class="col-span-1 md:col-span-2 space-y-1">
+<label class="font-label-md text-label-md text-on-surface font-medium block">Endereço Completo</label>
+<input class="w-full px-3 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-sm font-body-sm text-on-surface transition-all" placeholder="Rua, número, bairro, cidade - UF" type="text"/>
+</div>
+<div class="col-span-1 md:col-span-2 space-y-1">
+<label class="font-label-md text-label-md text-on-surface font-medium block">Engenheiro/Responsável</label>
+<select class="w-full px-3 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-sm font-body-sm text-on-surface appearance-none cursor-pointer">
+<option disabled="" selected="" value="">Selecione um responsável da equipe</option>
+<option value="1">Carlos Mendes (Eng. Civil)</option>
+<option value="2">Ana Souza (Gerente de Projetos)</option>
+</select>
+</div>
+</form>
+</div>
+<!-- Modal Footer -->
+<div class="px-lg py-md border-t border-outline-variant bg-surface flex justify-end gap-md">
+<button class="px-lg py-2 bg-transparent text-on-surface border border-outline-variant rounded-lg hover:bg-surface-variant transition-colors font-label-md text-label-md" onclick="document.getElementById('modal-nova-obra').classList.add('hidden')">
+                    Cancelar
+                </button>
+<button class="px-lg py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors shadow-sm font-label-md text-label-md">
+                    Salvar Obra
+                </button>
+</div>
+</div>
+</div>
+</body></html>

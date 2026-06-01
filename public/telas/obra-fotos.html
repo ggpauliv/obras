@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PAWLIV OBRAS - Tela 4 Aba Fotos</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed": "#001c39",
+                        "surface-variant": "#dce2f3",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#dbe4ec",
+                        "surface-container-low": "#f0f3ff",
+                        "on-primary": "#ffffff",
+                        "surface-container": "#e7eefe",
+                        "primary-container": "#185fa5",
+                        "tertiary-container": "#385f8f",
+                        "inverse-primary": "#a4c9ff",
+                        "surface": "#f9f9ff",
+                        "on-tertiary-fixed": "#001c39",
+                        "on-tertiary-fixed-variant": "#1e4877",
+                        "on-primary-container": "#c1d9ff",
+                        "on-background": "#151c27",
+                        "on-secondary-fixed": "#141d23",
+                        "background": "#f9f9ff",
+                        "on-secondary-container": "#5b646b",
+                        "surface-container-highest": "#dce2f3",
+                        "tertiary-fixed": "#d3e3ff",
+                        "primary-fixed": "#d4e3ff",
+                        "on-surface-variant": "#424751",
+                        "primary-fixed-dim": "#a4c9ff",
+                        "error": "#ba1a1a",
+                        "surface-container-high": "#e2e8f8",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#f9f9ff",
+                        "on-surface": "#151c27",
+                        "outline-variant": "#c2c6d2",
+                        "on-secondary": "#ffffff",
+                        "surface-tint": "#1960a6",
+                        "on-secondary-fixed-variant": "#3f484f",
+                        "tertiary": "#1d4776",
+                        "inverse-surface": "#2a313d",
+                        "inverse-on-surface": "#ebf1ff",
+                        "tertiary-fixed-dim": "#a3c9ff",
+                        "secondary-container": "#d8e1ea",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#004883",
+                        "surface-dim": "#d3daea",
+                        "on-tertiary-container": "#c0d9ff",
+                        "on-tertiary": "#ffffff",
+                        "secondary": "#565f67",
+                        "outline": "#727782",
+                        "primary": "#004782",
+                        "secondary-fixed-dim": "#bec8d0",
+                        "on-error": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "2xl": "48px",
+                        "xs": "4px",
+                        "margin-desktop": "32px",
+                        "xl": "32px",
+                        "md": "16px",
+                        "gutter": "24px",
+                        "sm": "8px",
+                        "margin-mobile": "16px",
+                        "lg": "24px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["DM Sans"],
+                        "body-lg": ["DM Sans"],
+                        "label-md": ["DM Sans"],
+                        "display-lg": ["DM Sans"],
+                        "label-sm": ["DM Sans"],
+                        "display-lg-mobile": ["DM Sans"],
+                        "headline-md": ["DM Sans"],
+                        "body-sm": ["DM Sans"],
+                        "body-md": ["DM Sans"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "display-lg": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "display-lg-mobile": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #F3F4F6; } /* Page background per specs */
+        /* Smooth scrolling */
+        html { scroll-behavior: smooth; }
+        
+        /* Modal specific styling to prevent body scroll when open */
+        body.modal-open { overflow: hidden; }
+        
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #c2c6d2; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #727782; }
+
+        /* Ensuring icons use standard styling from specs */
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-background min-h-screen flex bg-[#F3F4F6] modal-open">
+<!-- SideNavBar (from JSON) -->
+<nav class="hidden md:flex fixed left-0 top-0 h-full w-[280px] bg-primary dark:bg-primary-container z-40 shadow-none border-r border-outline-variant flex-col py-xl">
+<!-- Brand/Header -->
+<div class="px-md mb-xl flex items-center gap-sm">
+<div class="w-10 h-10 rounded-lg bg-surface flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary font-bold">architecture</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-md text-headline-md font-bold text-on-primary tracking-tight">PAWLIV OBRAS</span>
+<span class="font-label-sm text-label-sm text-on-primary-container">Construction Management</span>
+</div>
+</div>
+<!-- Navigation Links -->
+<div class="flex-1 flex flex-col gap-sm">
+<a class="text-on-primary/70 hover:text-on-primary flex items-center gap-md px-md py-sm transition-colors hover:bg-primary-fixed-dim/20" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="bg-[#0E3D6B] text-on-primary border-l-[3px] border-on-primary flex items-center gap-md px-md py-sm scale-[0.98] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="domain" data-weight="fill">domain</span>
+<span class="font-label-md text-label-md font-bold">Obras</span>
+</a>
+<a class="text-on-primary/70 hover:text-on-primary flex items-center gap-md px-md py-sm transition-colors hover:bg-primary-fixed-dim/20" href="#">
+<span class="material-symbols-outlined" data-icon="fact_check">fact_check</span>
+<span class="font-label-md text-label-md">Fases</span>
+</a>
+<a class="text-on-primary/70 hover:text-on-primary flex items-center gap-md px-md py-sm transition-colors hover:bg-primary-fixed-dim/20" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+<span class="font-label-md text-label-md">Progresso</span>
+</a>
+<a class="text-on-primary/70 hover:text-on-primary flex items-center gap-md px-md py-sm transition-colors hover:bg-primary-fixed-dim/20" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="font-label-md text-label-md">Financeiro</span>
+</a>
+<a class="text-on-primary/70 hover:text-on-primary flex items-center gap-md px-md py-sm transition-colors hover:bg-primary-fixed-dim/20" href="#">
+<span class="material-symbols-outlined" data-icon="local_shipping">local_shipping</span>
+<span class="font-label-md text-label-md">Fornecedores</span>
+</a>
+<a class="text-on-primary/70 hover:text-on-primary flex items-center gap-md px-md py-sm transition-colors hover:bg-primary-fixed-dim/20" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-label-md text-label-md">Usuários</span>
+</a>
+<a class="text-on-primary/70 hover:text-on-primary flex items-center gap-md px-md py-sm transition-colors hover:bg-primary-fixed-dim/20" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Configurações</span>
+</a>
+</div>
+<!-- Footer -->
+<div class="mt-auto px-md pt-lg border-t border-outline/20">
+<a class="text-on-primary/70 hover:text-on-primary flex items-center gap-md py-sm transition-colors hover:bg-primary-fixed-dim/20 rounded px-sm" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-label-md text-label-md">Sair</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<div class="flex-1 ml-0 md:ml-[280px] flex flex-col min-h-screen">
+<!-- TopAppBar (from JSON) -->
+<header class="hidden md:flex docked full-width top-0 h-[56px] bg-surface dark:bg-surface-container border-b border-outline-variant dark:border-outline flat no shadows justify-between items-center w-full px-margin-desktop sticky z-30">
+<div class="flex items-center gap-sm">
+<!-- Search bar hidden per JSON intent, but space maintained -->
+</div>
+<div class="flex items-center gap-lg">
+<button class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-primary flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<div class="flex items-center gap-sm cursor-pointer hover:bg-surface-container-low p-1 pr-3 rounded-full transition-colors border border-outline-variant">
+<img alt="User Avatar" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3wgLNoLBMilpT3Xm0kcjqByB9OHrY4tRdl46pyqs3LDAQxQz8MqYkDcyDGQRJY-e4Jjdbbq79qC838-0L0OacB8lj9wI6ypzltNdVzd019KHzIKxMyUg7h0rXUIOdslFrOjSWF2ooT06pFtID9vdXmqdJH8L3vJYLE02U1N0rXp8xi5yKqlWCgbjYFnIwDRyJAW8XvNIOTVbQRwbcw8ifw7PdtIyJlXZ7XKVtd5RMtPNin5SJQdMecWweuPmyAUvH23ll_2QqgeM"/>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Eng. Ricardo</span>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<main class="flex-1 p-margin-mobile md:p-margin-desktop space-y-xl max-w-7xl mx-auto w-full">
+<!-- Context Header Card -->
+<div class="bg-primary-container text-on-primary rounded-xl p-lg md:p-xl shadow-sm relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-lg">
+<!-- Decorative background element -->
+<div class="absolute -right-20 -top-20 opacity-10 pointer-events-none">
+<span class="material-symbols-outlined text-[300px]">domain</span>
+</div>
+<div class="z-10">
+<div class="flex items-center gap-sm mb-2">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-primary-container">Projeto Residencial</span>
+<span class="w-1 h-1 rounded-full bg-on-primary-container"></span>
+<span class="font-label-sm text-label-sm text-on-primary-container">Cod: PJ-2023-42</span>
+</div>
+<h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-on-primary mb-1">Edifício Horizonte — Torre A</h1>
+<p class="font-body-md text-body-md text-inverse-primary max-w-2xl">Gestão visual e auditoria técnica da fase estrutural.</p>
+</div>
+<div class="z-10 flex flex-col items-end gap-sm">
+<div class="bg-[#16A34A]/20 text-[#4ADE80] font-label-md text-label-md px-3 py-1 rounded border border-[#16A34A]/30 flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-[#4ADE80] animate-pulse"></span>
+                        Em Andamento
+                    </div>
+<div class="text-right">
+<span class="font-label-sm text-label-sm text-on-primary-container block">Progresso Geral</span>
+<span class="font-headline-md text-headline-md text-on-primary font-bold block">42%</span>
+</div>
+</div>
+</div>
+<!-- Tab Navigation (Contextual) -->
+<div class="border-b border-outline-variant">
+<nav aria-label="Tabs" class="flex overflow-x-auto gap-xl hide-scrollbar">
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary pb-sm border-b-2 border-transparent transition-colors whitespace-nowrap" href="#">Visão Geral</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary pb-sm border-b-2 border-transparent transition-colors whitespace-nowrap" href="#">Fases</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary pb-sm border-b-2 border-transparent transition-colors whitespace-nowrap" href="#">Financeiro</a>
+<a aria-current="page" class="font-label-md text-label-md text-primary font-bold pb-sm border-b-2 border-primary transition-colors whitespace-nowrap" href="#">Fotos</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary pb-sm border-b-2 border-transparent transition-colors whitespace-nowrap flex items-center gap-1" href="#">Auditoria <span class="material-symbols-outlined text-[16px]">verified</span></a>
+</nav>
+</div>
+<!-- Toolbar (Filters & Actions) -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-md">
+<div class="flex flex-wrap items-center gap-sm w-full md:w-auto">
+<!-- Search -->
+<div class="relative flex-1 md:w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">search</span>
+<input class="w-full pl-10 pr-3 py-2 bg-surface border border-outline-variant rounded-md font-body-sm text-body-sm focus:border-primary-container focus:ring-1 focus:ring-primary-container focus:outline-none transition-all placeholder:text-outline text-on-surface" placeholder="Buscar fotos por título ou tag..." type="text"/>
+</div>
+<!-- Filters -->
+<select class="py-2 pl-3 pr-8 bg-surface border border-outline-variant rounded-md font-body-sm text-body-sm focus:border-primary-container focus:ring-1 focus:ring-primary-container focus:outline-none text-on-surface-variant appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23727782%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_8px_center] bg-[size:16px]">
+<option value="">Fase: Todas</option>
+<option value="fundacao">Fundação</option>
+<option selected="" value="alvenaria">Alvenaria</option>
+<option value="acabamento">Acabamento</option>
+</select>
+<input class="py-2 px-3 bg-surface border border-outline-variant rounded-md font-body-sm text-body-sm focus:border-primary-container focus:ring-1 focus:ring-primary-container focus:outline-none text-on-surface-variant" type="date"/>
+<select class="py-2 pl-3 pr-8 bg-surface border border-outline-variant rounded-md font-body-sm text-body-sm focus:border-primary-container focus:ring-1 focus:ring-primary-container focus:outline-none text-on-surface-variant appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23727782%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_8px_center] bg-[size:16px]">
+<option value="">Responsável: Todos</option>
+<option value="eng_ricardo">Eng. Ricardo</option>
+<option value="eng_carlos">Eng. Carlos Motta</option>
+</select>
+</div>
+<button class="w-full md:w-auto bg-primary-container text-white px-4 py-2 rounded-md font-label-md text-label-md hover:bg-tertiary-container transition-colors flex items-center justify-center gap-2 shadow-sm whitespace-nowrap">
+<span class="material-symbols-outlined text-[20px]">add_a_photo</span>
+                    Adicionar Fotos
+                </button>
+</div>
+<!-- Photo Gallery Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-md">
+<!-- Grid Item 1 (Simulating the open one) -->
+<div class="group relative rounded-lg overflow-hidden border border-outline-variant bg-surface cursor-pointer aspect-[4/3] ring-2 ring-primary-container ring-offset-2">
+<img alt="Concrete pouring on a construction site upper floor" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" data-alt="A wide angle, daylight shot of concrete being poured onto a rebar mesh for a high-rise building floor slab. Construction workers in bright yellow hardhats and high-visibility vests are guiding the heavy concrete hose. The background shows a clear blue sky and distant city skyline. The overall aesthetic is industrial, bright, and professional." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcV_nH9j9KslNi_94gf82WX8rgF6TOnrUG31VP-HUUV8aVQVM_adyu8UVtKWA7XtuuLdayKspGzJUQWtua1S7bSEzBZ7KmSZD3vYAUIlU3xJNeWYuY3i8InH50PaQkXY_n_KX4zyzbDpAZysbqVhqoF3Io7d9BkouOcdQo09cANcQJp5AuW7b7kA3CEs_swSrwwxh9h5yjlqrNhyNudMGHsufJe_6_VCg9yc73EsuED3_lWWJoMX2QYGO2PzpCK4HR1NN4-_0tgqs"/>
+<div class="absolute top-2 right-2 bg-surface/90 backdrop-blur-sm p-1 rounded-full border border-outline-variant/50 shadow-sm opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[18px]">verified</span>
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/90 via-inverse-surface/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-sm">
+<div class="text-on-primary">
+<p class="font-label-sm text-label-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">calendar_today</span> 15/05/2024</p>
+<p class="font-label-sm text-label-sm flex items-center gap-1 mt-1"><span class="material-symbols-outlined text-[14px]">layers</span> Fase: Laje 4º Andar</p>
+<p class="font-label-sm text-label-sm flex items-center gap-1 mt-1"><span class="material-symbols-outlined text-[14px]">person</span> Eng. Carlos Motta</p>
+</div>
+</div>
+</div>
+<!-- Grid Item 2 -->
+<div class="group relative rounded-lg overflow-hidden border border-outline-variant bg-surface cursor-pointer aspect-[4/3]">
+<img alt="Steel framework construction" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" data-alt="A low angle view looking up at complex steel beam framing against a bright sky. The structural steel is painted deep red. Sunlight is catching the edges of the metal, creating strong geometric shadows. The image implies progress, structural integrity, and modern engineering." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDe8kn7CY1MbgzvboOsMA2J3DB7iBFvFFUdinLn5_ELA61md5VIeH1T2vZ20jxuoTJpbzR45EsvBFk2ngI-s6V00SFvOz2Vgf9nKfEvr6dv6WAbqfixZB4SEkj1XS_OObrXhP2b8jGYbTgyBPAL7JUiR0JW_VR9FSTWXJFKKgR9CTv9PNSDSbM1VO5fVbduU6DBETeSKymucJvAen5O7GIyaYzM2rNgKl9HoABy89JYDkyv0zVyurh7TjtuWNeZKIlUq_1GHFxge8M"/>
+<div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/90 via-inverse-surface/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-sm">
+<div class="text-on-primary">
+<p class="font-label-sm text-label-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">calendar_today</span> 12/05/2024</p>
+<p class="font-label-sm text-label-sm flex items-center gap-1 mt-1"><span class="material-symbols-outlined text-[14px]">layers</span> Fase: Estrutura Metálica</p>
+<p class="font-label-sm text-label-sm flex items-center gap-1 mt-1"><span class="material-symbols-outlined text-[14px]">person</span> Eng. Ricardo</p>
+</div>
+</div>
+</div>
+<!-- Grid Item 3 -->
+<div class="group relative rounded-lg overflow-hidden border border-outline-variant bg-surface cursor-pointer aspect-[4/3]">
+<img alt="Bricklaying detail" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" data-alt="A close-up shot of a partially built brick wall. Red clay bricks are cleanly laid with fresh grey mortar. The focus is sharp on the foreground bricks, blurring out the background scaffolding slightly. The lighting is natural, casting soft shadows that highlight the texture of the masonry." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA0SFi_ZJdBUfeAVJlfttOkbXbi6dqQiXoaOSUkA1mru-c2y2GLWFvf8Jkso3NoJAeJClTYK7NK6LQpwApDjJgLWkAWdytKqIaorKrpQoQU_6Zm7U_rMRNjhaS8JJ1AONpww5Kfr4elJ7BTcA5zCwEl1X3sanuyRATdZpMwf1J7pKa8Mi4jFz95W0xJ2v8UJTK2dOYjVgw47dZMCsPKCtbf7gkzuH8vTQkIUNaxvmgFVVVNlw3kwSkcGvnDMOHAUzMY0Ceyd44n_vc"/>
+<div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/90 via-inverse-surface/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-sm">
+<div class="text-on-primary">
+<p class="font-label-sm text-label-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">calendar_today</span> 10/05/2024</p>
+<p class="font-label-sm text-label-sm flex items-center gap-1 mt-1"><span class="material-symbols-outlined text-[14px]">layers</span> Fase: Alvenaria</p>
+<p class="font-label-sm text-label-sm flex items-center gap-1 mt-1"><span class="material-symbols-outlined text-[14px]">person</span> Eng. Ricardo</p>
+</div>
+</div>
+</div>
+<!-- Grid Item 4 -->
+<div class="group relative rounded-lg overflow-hidden border border-outline-variant bg-surface cursor-pointer aspect-[4/3]">
+<img alt="Scaffolding side view" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" data-alt="An exterior view of a building facade covered in dense, metallic scaffolding. Green safety netting partially covers some sections. The overcast lighting gives a moody, industrial feel to the raw construction environment. The vertical lines of the scaffolding dominate the composition." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBA4bmkQUNuobF1pDo--Rz_8ko0Q-HV-u4TBOgbwN3s2RPhNPjRflbdS9DDS43w4__GZ6O_eQShuhliZvccFvGlg9dLVMCy10graWyFALeOFFTYjjiOhLfmodeU1oC9Smq6RznCJAqH-omtcK-ND6oenctXY2-zZ7lheuXi7_JiUmGbhMR3fmHO035K8Hlf-LdkQeowVCtN4XquhOnEKqf2wn5c_mH2hte-JA4hg-kOedMDBSn_wvvUottCvTdgEc1SWv92uyXZ4ks"/>
+<div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/90 via-inverse-surface/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-sm">
+<div class="text-on-primary">
+<p class="font-label-sm text-label-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">calendar_today</span> 08/05/2024</p>
+<p class="font-label-sm text-label-sm flex items-center gap-1 mt-1"><span class="material-symbols-outlined text-[14px]">layers</span> Fase: Fachada</p>
+<p class="font-label-sm text-label-sm flex items-center gap-1 mt-1"><span class="material-symbols-outlined text-[14px]">person</span> Eng. Ana Clara</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- MODAL OVERLAY (OPEN STATE) -->
+<div aria-modal="true" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-lg" role="dialog">
+<!-- Backdrop -->
+<div class="absolute inset-0 bg-inverse-surface/80 backdrop-blur-sm transition-opacity"></div>
+<!-- Modal Container (Bento Grid Style) -->
+<div class="relative w-full max-w-[1200px] h-[921px] bg-surface rounded-xl shadow-2xl flex flex-col lg:flex-row overflow-hidden border border-outline-variant z-10">
+<!-- Close Button (Absolute on container) -->
+<button class="absolute top-4 right-4 z-20 p-2 bg-surface/50 hover:bg-surface rounded-full text-on-surface-variant hover:text-on-surface transition-colors border border-outline-variant/30 shadow-sm backdrop-blur-md flex items-center justify-center">
+<span class="material-symbols-outlined">close</span>
+</button>
+<!-- Left/Main Area: Photo Viewer -->
+<div class="flex-1 bg-[#1A1A1A] relative flex items-center justify-center overflow-hidden group">
+<img alt="Concrete pouring large view" class="max-w-full max-h-full object-contain" data-alt="A wide angle, daylight shot of concrete being poured onto a rebar mesh for a high-rise building floor slab. Construction workers in bright yellow hardhats and high-visibility vests are guiding the heavy concrete hose. The background shows a clear blue sky and distant city skyline. The overall aesthetic is industrial, bright, and professional." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOAEu49J-Nw2fcM823iqyub-qvCLCffJBa7ehD7l4MBRwUCIWFKNN7Zd_scq3nprjxtPYLcQJmixi9MvJrqGrqQYhltWz8yQ0Bp-BzSkaseoCoVsPuR-ms9TjksDEQSAh9R4h-M4KNOG1Htpc9463GFAmqWrxyGQj-oNQ3DuCyKg91tqmGaR1_dl4Knc_DOUDjX3xj0AzPPWGyH_0x_80gQJJlqmAFWMvgtLoxIZfdNknEnji0tBBhwpf39whatbBhrzK5EefMfTQ"/>
+<!-- Viewer Controls Overlay -->
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-surface/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-outline-variant/50 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-on-surface hover:text-primary transition-colors"><span class="material-symbols-outlined">zoom_in</span></button>
+<button class="p-1 text-on-surface hover:text-primary transition-colors"><span class="material-symbols-outlined">zoom_out</span></button>
+<div class="w-px h-4 bg-outline-variant mx-2"></div>
+<button class="p-1 text-on-surface hover:text-primary transition-colors"><span class="material-symbols-outlined">download</span></button>
+<button class="p-1 text-on-surface hover:text-primary transition-colors"><span class="material-symbols-outlined">share</span></button>
+</div>
+<!-- Nav Arrows -->
+<button class="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-surface/20 hover:bg-surface/50 text-white rounded-full backdrop-blur-sm transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-surface/20 hover:bg-surface/50 text-white rounded-full backdrop-blur-sm transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+<!-- Right Area: Metadata Panel (Glassmorphism inspired clean look) -->
+<div class="w-full lg:w-[400px] bg-surface border-l border-outline-variant flex flex-col h-full overflow-y-auto shrink-0 hide-scrollbar">
+<!-- Header -->
+<div class="p-md border-b border-outline-variant bg-surface-container-lowest sticky top-0 z-10 pt-lg pr-xl">
+<div class="flex items-center gap-2 mb-2">
+<span class="bg-primary-container/10 text-primary-fixed-variant px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider border border-primary-container/20">Registro Fotográfico</span>
+<span class="text-outline text-xs">•</span>
+<span class="text-on-surface-variant font-label-sm text-label-sm">ID: PH-892</span>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Foto #4829 - Laje 4º Andar</h2>
+</div>
+<!-- Content Blocks (Bento Style Layout inside sidebar) -->
+<div class="p-md space-y-md">
+<!-- Status Block -->
+<div class="bg-[#F0FDF4] border border-[#BBF7D0] rounded-lg p-sm flex items-start gap-3">
+<div class="bg-[#DCFCE7] p-1.5 rounded-full mt-0.5">
+<span class="material-symbols-outlined text-[#16A34A] text-[20px]">verified_user</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-[#166534] font-semibold">Validada via Blockchain</p>
+<p class="font-body-sm text-body-sm text-[#15803D] mt-0.5">Integridade do arquivo confirmada. O registro não foi alterado desde a captura.</p>
+</div>
+</div>
+<!-- Tech Details Grid -->
+<div class="grid grid-cols-2 gap-sm">
+<!-- Date -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-sm">
+<span class="material-symbols-outlined text-outline mb-1 text-[20px]">calendar_month</span>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-0.5">Data/Hora</p>
+<p class="font-label-md text-label-md text-on-surface font-medium">15/05/2024</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">14:30 BRT</p>
+</div>
+<!-- Author -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-sm">
+<span class="material-symbols-outlined text-outline mb-1 text-[20px]">person</span>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-0.5">Responsável</p>
+<p class="font-label-md text-label-md text-on-surface font-medium truncate">Eng. Carlos Motta</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">CREA: 893.211-X</p>
+</div>
+</div>
+<!-- Hash Block -->
+<div class="bg-surface-container-low border border-outline-variant rounded-lg p-sm">
+<div class="flex items-center justify-between mb-2">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">fingerprint</span> Hash SHA-256
+                            </p>
+<button class="text-primary hover:text-primary-container" title="Copiar Hash">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+</div>
+<div class="bg-inverse-surface text-inverse-on-surface p-2 rounded border border-outline/30 overflow-x-auto hide-scrollbar">
+<code class="font-mono text-[11px] whitespace-nowrap">8f92b7c4d5e6a1f892b7c4d5e6a1f892b7c4d5e6a1f892b7c4d5e6a1f83a1c</code>
+</div>
+</div>
+<!-- Location Block -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden flex flex-col">
+<div class="p-sm border-b border-outline-variant bg-surface-container-low flex justify-between items-center">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">location_on</span> Coordenadas GPS
+                            </p>
+<span class="font-mono text-xs text-on-surface font-medium">-23.5505, -46.6333</span>
+</div>
+<div class="h-[120px] bg-surface-variant relative">
+<!-- Placeholder for map -->
+<img alt="Map location view" class="w-full h-full object-cover opacity-80 mix-blend-luminosity" data-alt="A clean, minimalist street map interface centered on a dense urban area. The map uses a light color palette with subtle greys and pale blues for water bodies. A prominent red drop-pin marker indicates a specific location in the center." data-location="São Paulo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnQGAvLu9nB-m0d65Aanun38SqIV-fXA7YBPS3WMFDadIyryeuTnCPDfa1yZcCIsW_99UddFJ70lRsKQZG57Ct3gC4-bK6JVrvX4wvnJ5xsiaxRdAgGt-S74I9Ai0tQD7c0u9jwpTZKjQURaRbp-bEEoec1Nxl0c9Lr47j3ZQWYB88nOEQlpGTWDul9X5RthTHOfqPr41kNCnHbLGX7gcopsy3uRf9TJGasXEUn4e9gz0YCyGiH15hQJfoReKZftoQGCLIyY8UQQE"/>
+<!-- Custom Pin Overlay -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-error drop-shadow-md">
+<span class="material-symbols-outlined text-[32px]" data-weight="fill">location_on</span>
+</div>
+</div>
+</div>
+<!-- Context Tags -->
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Tags de Classificação</p>
+<div class="flex flex-wrap gap-2">
+<span class="bg-surface-variant text-on-surface-variant px-2 py-1 rounded font-body-sm text-[12px] border border-outline-variant">#Estrutura</span>
+<span class="bg-surface-variant text-on-surface-variant px-2 py-1 rounded font-body-sm text-[12px] border border-outline-variant">#Concreto Usinado</span>
+<span class="bg-surface-variant text-on-surface-variant px-2 py-1 rounded font-body-sm text-[12px] border border-outline-variant">#Laje4</span>
+<span class="bg-surface-variant text-on-surface-variant px-2 py-1 rounded font-body-sm text-[12px] border border-outline-variant">#Inspeção</span>
+</div>
+</div>
+</div>
+<!-- Footer Actions -->
+<div class="mt-auto p-md border-t border-outline-variant bg-surface-container-lowest gap-sm flex flex-col">
+<button class="w-full bg-surface border border-outline-variant text-on-surface font-label-md text-label-md py-2 px-4 rounded hover:bg-surface-container-low transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">edit</span> Adicionar Observação
+                    </button>
+<button class="w-full bg-error/10 border border-error/20 text-error font-label-md text-label-md py-2 px-4 rounded hover:bg-error/20 transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">flag</span> Sinalizar Inconformidade
+                    </button>
+</div>
+</div>
+</div>
+</div>
+</body></html>

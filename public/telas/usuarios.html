@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PAWLIV OBRAS - Usuários</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-highest": "#dce2f3",
+                    "on-tertiary-container": "#c0d9ff",
+                    "on-surface": "#151c27",
+                    "outline": "#727782",
+                    "inverse-surface": "#2a313d",
+                    "surface": "#f9f9ff",
+                    "on-error-container": "#93000a",
+                    "on-secondary-fixed": "#141d23",
+                    "tertiary": "#1d4776",
+                    "on-secondary": "#ffffff",
+                    "tertiary-fixed-dim": "#a3c9ff",
+                    "on-primary-fixed": "#001c39",
+                    "inverse-on-surface": "#ebf1ff",
+                    "surface-tint": "#1960a6",
+                    "on-background": "#151c27",
+                    "on-primary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "tertiary-container": "#385f8f",
+                    "surface-container-high": "#e2e8f8",
+                    "secondary-fixed-dim": "#bec8d0",
+                    "on-primary-container": "#c1d9ff",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary": "#ffffff",
+                    "surface-container": "#e7eefe",
+                    "on-error": "#ffffff",
+                    "primary": "#004782",
+                    "on-primary-fixed-variant": "#004883",
+                    "inverse-primary": "#a4c9ff",
+                    "on-secondary-fixed-variant": "#3f484f",
+                    "primary-fixed": "#d4e3ff",
+                    "on-secondary-container": "#5b646b",
+                    "primary-container": "#185fa5",
+                    "on-tertiary-fixed-variant": "#1e4877",
+                    "outline-variant": "#c2c6d2",
+                    "surface-container-low": "#f0f3ff",
+                    "error": "#ba1a1a",
+                    "secondary": "#565f67",
+                    "on-tertiary-fixed": "#001c39",
+                    "surface-bright": "#f9f9ff",
+                    "primary-fixed-dim": "#a4c9ff",
+                    "on-surface-variant": "#424751",
+                    "background": "#f9f9ff",
+                    "tertiary-fixed": "#d3e3ff",
+                    "surface-variant": "#dce2f3",
+                    "secondary-container": "#d8e1ea",
+                    "secondary-fixed": "#dbe4ec",
+                    "surface-dim": "#d3daea"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xl": "32px",
+                    "lg": "24px",
+                    "md": "16px",
+                    "xs": "4px",
+                    "gutter": "24px",
+                    "2xl": "48px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "32px",
+                    "sm": "8px",
+                    "base": "4px"
+            },
+            "fontFamily": {
+                    "body-lg": ["DM Sans"],
+                    "headline-md": ["DM Sans"],
+                    "body-sm": ["DM Sans"],
+                    "label-md": ["DM Sans"],
+                    "display-lg-mobile": ["DM Sans"],
+                    "body-md": ["DM Sans"],
+                    "label-sm": ["DM Sans"],
+                    "headline-sm": ["DM Sans"],
+                    "display-lg": ["DM Sans"]
+            },
+            "fontSize": {
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                    "display-lg-mobile": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'DM Sans', sans-serif; background-color: #f9f9ff; }
+        .sidebar-active { background-color: #0E3D6B; border-left: 3px solid #ffffff; opacity: 1 !important; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-modal { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        tr:hover { background-color: #f0f3ff; transition: background 0.2s ease; }
+    </style>
+</head>
+<body class="flex min-h-screen text-on-surface">
+<!-- Sidebar Shell (280px wide based on JSON style_component_shape) -->
+<aside class="fixed left-0 top-0 h-full w-[280px] bg-primary-container dark:bg-primary shadow-md flex flex-col py-xl text-on-primary">
+<div class="px-lg mb-xl">
+<h1 class="font-headline-sm text-headline-sm font-bold text-on-primary">PAWLIV OBRAS</h1>
+<p class="font-body-md text-body-md opacity-80">Construção Civil</p>
+</div>
+<nav class="flex-1 overflow-y-auto">
+<a class="flex items-center gap-md px-lg py-sm text-on-primary/80 hover:bg-primary/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-md px-lg py-sm text-on-primary/80 hover:bg-primary/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="construction">construction</span>
+<span class="font-body-md text-body-md">Obras</span>
+</a>
+<a class="flex items-center gap-md px-lg py-sm text-on-primary/80 hover:bg-primary/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="account_tree">account_tree</span>
+<span class="font-body-md text-body-md">Fases</span>
+</a>
+<a class="flex items-center gap-md px-lg py-sm text-on-primary/80 hover:bg-primary/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+<span class="font-body-md text-body-md">Progresso</span>
+</a>
+<a class="flex items-center gap-md px-lg py-sm text-on-primary/80 hover:bg-primary/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-body-md text-body-md">Financeiro</span>
+</a>
+<!-- Desabilitado -->
+<div class="flex items-center gap-md px-lg py-sm text-on-primary/40 cursor-not-allowed">
+<span class="material-symbols-outlined opacity-50" data-icon="engineering">engineering</span>
+<span class="font-body-md text-body-md">Fornecedores</span>
+</div>
+<!-- Ativo mapping from JSON style_active_navigation -->
+<a class="sidebar-active flex items-center gap-md px-lg py-sm text-on-primary border-l-[3px] border-on-primary" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-body-md text-body-md">Usuários</span>
+</a>
+<a class="flex items-center gap-md px-lg py-sm text-on-primary/80 hover:bg-primary/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-md text-body-md">Configurações</span>
+</a>
+</nav>
+<div class="mt-auto px-lg">
+<a class="flex items-center gap-md py-sm text-on-primary/80 hover:text-on-primary transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-body-md text-body-md">Sair</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 ml-[280px]">
+<!-- TopAppBar -->
+<header class="fixed top-0 right-0 h-[56px] w-[calc(100%-280px)] bg-surface-container-lowest dark:bg-inverse-surface border-b border-outline-variant flex justify-between items-center px-gutter z-10">
+<h2 class="font-headline-sm text-headline-sm font-bold text-primary">Usuários</h2>
+<div class="flex items-center gap-md">
+<button class="p-sm hover:bg-surface-container-low rounded-full transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="notifications">notifications</span>
+</button>
+<div class="flex items-center gap-sm pl-sm border-l border-outline-variant">
+<div class="text-right">
+<p class="font-label-md text-label-md text-on-surface leading-tight">Eng. Ricardo Silva</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Administrador</p>
+</div>
+<img alt="User Avatar" class="w-10 h-10 rounded-full border-2 border-primary-container object-cover" data-alt="A professional headshot of an experienced civil engineer in his late 40s, Ricardo Silva, wearing a crisp white shirt. The background is a blurred modern corporate office with soft, natural lighting. The image style is clean, high-fidelity corporate photography with a warm yet professional color palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoA3X-mXk0c5OVrSDkmOfW0x9kRbJahURvmMOEwnoEFtrUk7k1QoUx7EcCCEmDcSnJLc4IcCmSmOReVs8AGrOx_bytn54EhTSQOqtC1u2ioB4psPSTGRoGjZWVIdX_sVyLFCmtdVaEqx8BG8mt7Hv-FAqcTiv_CquLYxVbdx9UTw-qHJAO5pYpGa18rDPtOusshvs814RXaO3As9qmcZhdmlAvIqINxQRNZTv9tAe_cSEnqvLGcMoftRzXfaIElZeO9KT4Gb189w0"/>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="pt-[56px] p-margin-desktop space-y-lg">
+<!-- Filters & Actions -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-md bg-white p-md rounded-lg border border-outline-variant shadow-sm">
+<div class="flex flex-1 items-center gap-sm max-w-2xl">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
+<input class="w-full pl-10 pr-4 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none text-body-sm transition-all" placeholder="Buscar por nome ou e-mail..." type="text"/>
+</div>
+<select class="border border-outline-variant rounded-lg px-3 py-2 text-body-sm outline-none focus:ring-primary focus:border-primary">
+<option value="">Todos Papéis</option>
+<option>Admin</option>
+<option>Engenheiro</option>
+<option>Gestor</option>
+<option>Diretor</option>
+<option>Cliente</option>
+</select>
+<select class="border border-outline-variant rounded-lg px-3 py-2 text-body-sm outline-none focus:ring-primary focus:border-primary">
+<option value="">Status: Todos</option>
+<option>Ativo</option>
+<option>Inativo</option>
+</select>
+</div>
+<button class="flex items-center gap-sm bg-primary-container text-on-primary px-lg py-2 rounded-lg font-label-md hover:bg-primary transition-all active:scale-95" onclick="document.getElementById('modal-invite').classList.remove('hidden')">
+<span class="material-symbols-outlined" data-icon="person_add">person_add</span>
+                    + Convidar Usuário
+                </button>
+</div>
+<!-- Table Card -->
+<div class="bg-white rounded-lg border border-outline-variant shadow-sm overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low">
+<tr class="border-b border-outline-variant">
+<th class="px-lg py-md font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Avatar / Nome</th>
+<th class="px-lg py-md font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">E-mail</th>
+<th class="px-lg py-md font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Papel</th>
+<th class="px-lg py-md font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Obras com Acesso</th>
+<th class="px-lg py-md font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Último Acesso</th>
+<th class="px-lg py-md font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Status</th>
+<th class="px-lg py-md font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Ações</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="group">
+<td class="px-lg py-md">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center font-bold text-primary text-xs">JS</div>
+<span class="font-label-md text-label-md text-on-surface">João Silva</span>
+</div>
+</td>
+<td class="px-lg py-md text-body-sm text-on-surface-variant">joao.silva@pawliv.com.br</td>
+<td class="px-lg py-md">
+<span class="px-sm py-xs rounded bg-gray-200 text-gray-800 text-[11px] font-bold uppercase">Admin</span>
+</td>
+<td class="px-lg py-md text-body-sm text-on-surface-variant">Todas</td>
+<td class="px-lg py-md text-body-sm text-on-surface-variant">Hoje, 10:45</td>
+<td class="px-lg py-md">
+<span class="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-full text-[11px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-green-600"></span> Ativo
+                                </span>
+</td>
+<td class="px-lg py-md">
+<button class="text-outline hover:text-primary transition-colors"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="group">
+<td class="px-lg py-md">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center font-bold text-primary text-xs">MO</div>
+<span class="font-label-md text-label-md text-on-surface">Maria Oliveira</span>
+</div>
+</td>
+<td class="px-lg py-md text-body-sm text-on-surface-variant">m.oliveira@constru.com</td>
+<td class="px-lg py-md">
+<span class="px-sm py-xs rounded bg-blue-100 text-blue-800 text-[11px] font-bold uppercase">Engenheiro</span>
+</td>
+<td class="px-lg py-md text-body-sm text-on-surface-variant">Edifício Horizon, Vila Olimpia</td>
+<td class="px-lg py-md text-body-sm text-on-surface-variant">Ontem, 16:20</td>
+<td class="px-lg py-md">
+<span class="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-full text-[11px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-green-600"></span> Ativo
+                                </span>
+</td>
+<td class="px-lg py-md">
+<button class="text-outline hover:text-primary transition-colors"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="group">
+<td class="px-lg py-md">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center font-bold text-purple-800 text-xs">CS</div>
+<span class="font-label-md text-label-md text-on-surface">Carlos Santos</span>
+</div>
+</td>
+<td class="px-lg py-md text-body-sm text-on-surface-variant">carlos.gestor@pawliv.com.br</td>
+<td class="px-lg py-md">
+<span class="px-sm py-xs rounded bg-purple-100 text-purple-800 text-[11px] font-bold uppercase">Gestor</span>
+</td>
+<td class="px-lg py-md text-body-sm text-on-surface-variant">Condomínio Solar, Pq das Flores</td>
+<td class="px-lg py-md text-body-sm text-on-surface-variant">02/10/2023</td>
+<td class="px-lg py-md">
+<span class="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-full text-[11px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-green-600"></span> Ativo
+                                </span>
+</td>
+<td class="px-lg py-md">
+<button class="text-outline hover:text-primary transition-colors"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="group">
+<td class="px-lg py-md">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center font-bold text-orange-800 text-xs">AS</div>
+<span class="font-label-md text-label-md text-on-surface">Ana Souza</span>
+</div>
+</td>
+<td class="px-lg py-md text-body-sm text-on-surface-variant">ana.diretoria@invest.com</td>
+<td class="px-lg py-md">
+<span class="px-sm py-xs rounded bg-orange-100 text-orange-800 text-[11px] font-bold uppercase">Diretor</span>
+</td>
+<td class="px-lg py-md text-body-sm text-on-surface-variant">Todas</td>
+<td class="px-lg py-md text-body-sm text-on-surface-variant">28/09/2023</td>
+<td class="px-lg py-md">
+<span class="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-full text-[11px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-green-600"></span> Ativo
+                                </span>
+</td>
+<td class="px-lg py-md">
+<button class="text-outline hover:text-primary transition-colors"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="group">
+<td class="px-lg py-md">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-on-tertiary-container flex items-center justify-center font-bold text-on-tertiary-fixed-variant text-xs">PL</div>
+<span class="font-label-md text-label-md text-on-surface">Pedro Lima</span>
+</div>
+</td>
+<td class="px-lg py-md text-body-sm text-on-surface-variant">pedro.cliente@gmail.com</td>
+<td class="px-lg py-md">
+<span class="px-sm py-xs rounded bg-green-100 text-green-800 text-[11px] font-bold uppercase">Cliente</span>
+</td>
+<td class="px-lg py-md text-body-sm text-on-surface-variant">Edifício Horizon</td>
+<td class="px-lg py-md text-body-sm text-on-surface-variant">15/09/2023</td>
+<td class="px-lg py-md">
+<span class="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2 py-0.5 rounded-full text-[11px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-red-600"></span> Inativo
+                                </span>
+</td>
+<td class="px-lg py-md">
+<button class="text-outline hover:text-primary transition-colors"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="px-lg py-md border-t border-outline-variant bg-surface-container-low flex justify-between items-center">
+<p class="text-body-sm text-on-surface-variant">Mostrando 5 de 5 usuários registrados</p>
+<div class="flex gap-sm">
+<button class="p-xs border border-outline-variant rounded hover:bg-white transition-colors disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined text-[20px]" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="p-xs border border-outline-variant rounded bg-white font-label-md text-primary px-3">1</button>
+<button class="p-xs border border-outline-variant rounded hover:bg-white transition-colors disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined text-[20px]" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Modal 'Convidar Usuário' (Initially Hidden) -->
+<div class="hidden fixed inset-0 z-50 flex items-center justify-center px-4" id="modal-invite">
+<!-- Backdrop -->
+<div class="absolute inset-0 bg-inverse-surface/60 backdrop-blur-sm" onclick="document.getElementById('modal-invite').classList.add('hidden')"></div>
+<!-- Modal Content -->
+<div class="glass-modal w-full max-w-lg rounded-xl shadow-2xl overflow-hidden relative animate-[fadeIn_0.2s_ease-out]">
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-white">
+<h3 class="font-headline-sm text-headline-sm text-primary">Convidar Novo Usuário</h3>
+<button class="p-sm hover:bg-surface-container-low rounded-full" onclick="document.getElementById('modal-invite').classList.add('hidden')">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<div class="p-lg space-y-md">
+<div class="space-y-base">
+<label class="font-label-md text-label-md text-on-surface-variant">Nome completo</label>
+<input class="w-full px-md py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" placeholder="Ex: Roberto Almeida" type="text"/>
+</div>
+<div class="space-y-base">
+<label class="font-label-md text-label-md text-on-surface-variant">E-mail institucional</label>
+<input class="w-full px-md py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" placeholder="nome@empresa.com.br" type="email"/>
+</div>
+<div class="grid grid-cols-1 gap-md">
+<div class="space-y-base">
+<label class="font-label-md text-label-md text-on-surface-variant">Papel</label>
+<select class="w-full px-md py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none bg-white" id="role-select" onchange="updateRoleDescription(this.value)">
+<option value="Admin">Admin</option>
+<option selected="" value="Engenheiro">Engenheiro</option>
+<option value="Gestor">Gestor</option>
+<option value="Diretor">Diretor</option>
+<option value="Cliente">Cliente</option>
+</select>
+<p class="text-body-sm text-primary-container bg-primary-fixed/30 p-sm rounded border border-primary-fixed leading-tight" id="role-desc">
+                            Engenheiro: Acesso técnico às obras e registros de progresso.
+                        </p>
+</div>
+</div>
+<div class="space-y-base">
+<label class="font-label-md text-label-md text-on-surface-variant">Obras com Acesso</label>
+<div class="flex flex-wrap gap-xs p-2 border border-outline-variant rounded-lg min-h-[42px] items-center bg-white">
+<span class="flex items-center gap-1 bg-surface-container-highest px-2 py-0.5 rounded text-[12px] font-bold text-primary">Edifício Horizon <span class="material-symbols-outlined text-[14px] cursor-pointer" data-icon="close">close</span></span>
+<span class="flex items-center gap-1 bg-surface-container-highest px-2 py-0.5 rounded text-[12px] font-bold text-primary">Vila Olimpia <span class="material-symbols-outlined text-[14px] cursor-pointer" data-icon="close">close</span></span>
+<span class="flex items-center gap-1 bg-surface-container-highest px-2 py-0.5 rounded text-[12px] font-bold text-primary">Condomínio Solar <span class="material-symbols-outlined text-[14px] cursor-pointer" data-icon="close">close</span></span>
+<input class="border-none focus:ring-0 text-body-sm flex-1 bg-transparent py-0" placeholder="Adicionar obra..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-sm pt-sm">
+<input checked="" class="w-4 h-4 rounded text-primary focus:ring-primary border-outline-variant" id="welcome-email" type="checkbox"/>
+<label class="font-body-sm text-body-sm text-on-surface" for="welcome-email">Enviar e-mail de boas-vindas com instruções de acesso</label>
+</div>
+</div>
+<div class="px-lg py-md border-t border-outline-variant bg-surface-container-low flex justify-end gap-md">
+<button class="px-lg py-2 rounded-lg font-label-md text-primary hover:bg-primary/10 transition-colors" onclick="document.getElementById('modal-invite').classList.add('hidden')">Cancelar</button>
+<button class="bg-primary-container text-on-primary px-lg py-2 rounded-lg font-label-md hover:bg-primary transition-all active:scale-95 shadow-md">Enviar Convite</button>
+</div>
+</div>
+</div>
+<script>
+        function updateRoleDescription(role) {
+            const desc = document.getElementById('role-desc');
+            const map = {
+                'Admin': 'Admin: Controle total do sistema, usuários e configurações globais.',
+                'Engenheiro': 'Engenheiro: Acesso técnico às obras e registros de progresso.',
+                'Gestor': 'Gestor: Supervisão financeira e administrativa de múltiplos projetos.',
+                'Diretor': 'Diretor: Visão estratégica e relatórios consolidados de alta governança.',
+                'Cliente': 'Cliente: Acesso restrito para acompanhamento visual do cronograma.'
+            };
+            desc.innerText = map[role];
+        }
+
+        // Micro-interaction for modal escape key
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.getElementById('modal-invite').classList.add('hidden');
+            }
+        });
+    </script>
+</body></html>
