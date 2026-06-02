@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-type StatusKey = 'andamento' | 'atrasada' | 'planejamento' | 'concluida';
+import { OBRAS, StatusKey } from '../data/obras';
 
 const STATUS: Record<StatusKey, { label: string; chip: string; bar: string; pctText: string }> = {
   andamento: { label: 'Em Andamento', chip: 'bg-primary-container/10 text-primary-container border-primary-container/20', bar: 'bg-primary', pctText: 'text-secondary' },
@@ -9,19 +8,6 @@ const STATUS: Record<StatusKey, { label: string; chip: string; bar: string; pctT
   planejamento: { label: 'Planejamento', chip: 'bg-outline-variant/30 text-on-surface-variant border-outline-variant', bar: 'bg-outline', pctText: 'text-secondary' },
   concluida: { label: 'Concluída', chip: 'bg-emerald-100 text-emerald-800 border-emerald-200', bar: 'bg-emerald-600', pctText: 'text-emerald-700' },
 };
-
-interface Obra { id: string; nome: string; cliente: string; tipo: string; inicio: string; termino: string; pct: number; status: StatusKey; }
-
-const OBRAS: Obra[] = [
-  { id: '101', nome: 'Edifício Horizonte', cliente: 'Construtora Alpha S.A.', tipo: 'Residencial', inicio: '15/01/2024', termino: '30/11/2025', pct: 35, status: 'andamento' },
-  { id: '102', nome: 'Galpão Logístico Norte', cliente: 'LogisBraz Corp', tipo: 'Comercial', inicio: '05/03/2024', termino: '15/08/2024', pct: 85, status: 'andamento' },
-  { id: '103', nome: 'Reforma Shopping Central', cliente: 'Malls Brasil', tipo: 'Comercial', inicio: '10/11/2023', termino: '20/12/2024', pct: 40, status: 'atrasada' },
-  { id: '104', nome: 'Viaduto Ayrton Senna', cliente: 'Prefeitura Municipal', tipo: 'Infraestrutura', inicio: '01/05/2024', termino: '30/05/2026', pct: 0, status: 'planejamento' },
-  { id: '099', nome: 'Condomínio Vila Verde', cliente: 'Habitar Engenharia', tipo: 'Residencial', inicio: '10/02/2022', termino: '15/12/2023', pct: 100, status: 'concluida' },
-  { id: '105', nome: 'Hospital Memorial Sul', cliente: 'Grupo Saúde+', tipo: 'Comercial', inicio: '20/06/2023', termino: '20/06/2025', pct: 22, status: 'andamento' },
-  { id: '106', nome: 'Escola Técnica Bandeirantes', cliente: 'Governo Estadual', tipo: 'Infraestrutura', inicio: '01/09/2023', termino: '30/08/2024', pct: 65, status: 'atrasada' },
-  { id: '107', nome: 'Praça das Águas', cliente: 'Prefeitura Municipal', tipo: 'Infraestrutura', inicio: '15/07/2024', termino: '15/12/2024', pct: 0, status: 'planejamento' },
-];
 
 const SELECT = 'appearance-none pl-4 pr-10 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary text-body-sm text-on-surface cursor-pointer';
 const FIELD = 'w-full rounded-lg border-outline-variant text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary py-2 px-3';

@@ -1,5 +1,5 @@
 import React from 'react';
-import ObraTabs from '../components/ObraTabs';
+import ObraHeader from '../components/ObraHeader';
 
 const BARS = [
   { fase: 'Fundações', orcado: 80, realizado: 85 },
@@ -23,23 +23,8 @@ const DELTA_TONE = { error: 'text-error', green: 'text-[#16A34A]', flat: 'text-o
 
 export default function ObraFinanceiroPage() {
   return (
-    <div className="flex flex-col gap-lg w-full max-w-7xl mx-auto">
-      {/* Context header */}
-      <div className="bg-primary-container text-on-primary rounded-xl p-lg ambient-shadow flex flex-col md:flex-row items-start md:items-center justify-between gap-md relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-primary/20 pointer-events-none" />
-        <div className="flex items-center gap-md relative z-10">
-          <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
-            <span className="material-symbols-outlined text-white text-3xl">apartment</span>
-          </div>
-          <div>
-            <h2 className="text-display-lg font-bold text-white">Edifício Horizonte — Torre A</h2>
-            <p className="text-body-md text-on-primary-container mt-1">Av. Paulista, 1000 - São Paulo, SP</p>
-          </div>
-        </div>
-        <span className="relative z-10 px-3 py-1 bg-white/20 rounded-full text-label-md text-white backdrop-blur-sm border border-white/30">Em Andamento</span>
-      </div>
-
-      <ObraTabs />
+    <div className="flex flex-col gap-lg">
+      <ObraHeader />
 
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">

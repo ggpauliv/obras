@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 
 const FEATURES = [
   { icon: 'photo_camera', text: 'Progresso com prova fotográfica' },
@@ -9,11 +10,20 @@ const FEATURES = [
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [showPwd, setShowPwd] = useState(false);
+  const [username, setUsername] = useState('');
+  const [senha, setSenha] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/dashboard');
+    setErro(null);
+    if (login(username, senha)) {
+      navigate('/dashboard');
+    } else {
+      setErro('Usuário ou senha inválidos.');
+    }
   };
 
   return (
@@ -72,12 +82,12 @@ export default function LoginPage() {
 
           <form className="space-y-lg" onSubmit={handleSubmit}>
             <div className="space-y-sm">
-              <label className="block text-label-md text-on-surface" htmlFor="email">Email</label>
+              <label className="block text-label-md text-on-surface" htmlFor="username">Usuário</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <span className="material-symbols-outlined text-on-surface-variant text-[20px]">mail</span>
+                  <span className="material-symbols-outlined text-on-surface-variant text-[20px]">person</span>
                 </div>
-                <input className="block w-full pl-10 pr-3 py-2 border border-outline-variant rounded-lg text-on-surface text-body-md bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary-container/20 focus:border-primary-container transition-all" id="email" name="email" placeholder="seu@email.com" type="email" defaultValue="" />
+                <input className="block w-full pl-10 pr-3 py-2 border border-outline-variant rounded-lg text-on-surface text-body-md bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary-container/20 focus:border-primary-container transition-all" id="username" name="username" placeholder="seu.usuario" type="text" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} />
               </div>
             </div>
 
@@ -87,12 +97,19 @@ export default function LoginPage() {
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <span className="material-symbols-outlined text-on-surface-variant text-[20px]">lock</span>
                 </div>
-                <input className="block w-full pl-10 pr-10 py-2 border border-outline-variant rounded-lg text-on-surface text-body-md bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary-container/20 focus:border-primary-container transition-all" id="password" name="password" placeholder="••••••••" type={showPwd ? 'text' : 'password'} />
+                <input className="block w-full pl-10 pr-10 py-2 border border-outline-variant rounded-lg text-on-surface text-body-md bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary-container/20 focus:border-primary-container transition-all" id="password" name="password" placeholder="••••••••" type={showPwd ? 'text' : 'password'} autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} />
                 <button type="button" onClick={() => setShowPwd((v) => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-on-surface-variant hover:text-on-surface transition-colors">
                   <span className="material-symbols-outlined text-[20px]">{showPwd ? 'visibility_off' : 'visibility'}</span>
                 </button>
               </div>
             </div>
+
+            {erro && (
+              <div className="flex items-center gap-2 text-error text-body-sm bg-error-container/30 border border-error/20 rounded-lg px-3 py-2">
+                <span className="material-symbols-outlined text-[18px]">error</span>
+                {erro}
+              </div>
+            )}
 
             <div className="flex items-center justify-between">
               <div className="flex items-center">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import ObraTabs from '../components/ObraTabs';
+import ObraHeader from '../components/ObraHeader';
 
 interface Foto { src: string; data: string; fase: string; resp: string; verified?: boolean; id: string; }
 
@@ -16,31 +16,8 @@ export default function ObraFotosPage() {
   const [sel, setSel] = useState<Foto | null>(null);
 
   return (
-    <div className="space-y-xl max-w-7xl mx-auto w-full">
-      {/* Header */}
-      <div className="bg-primary-container text-on-primary rounded-xl p-lg md:p-xl shadow-sm relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-lg">
-        <div className="absolute -right-20 -top-20 opacity-10 pointer-events-none"><span className="material-symbols-outlined text-[300px]">domain</span></div>
-        <div className="z-10">
-          <div className="flex items-center gap-sm mb-2">
-            <span className="text-label-sm uppercase tracking-wider text-on-primary-container">Projeto Residencial</span>
-            <span className="w-1 h-1 rounded-full bg-on-primary-container" />
-            <span className="text-label-sm text-on-primary-container">Cod: PJ-2023-42</span>
-          </div>
-          <h1 className="text-display-lg-mobile md:text-display-lg text-on-primary mb-1">Edifício Horizonte — Torre A</h1>
-          <p className="text-body-md text-inverse-primary max-w-2xl">Gestão visual e auditoria técnica da fase estrutural.</p>
-        </div>
-        <div className="z-10 flex flex-col items-end gap-sm">
-          <div className="bg-[#16A34A]/20 text-[#4ADE80] text-label-md px-3 py-1 rounded border border-[#16A34A]/30 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#4ADE80] animate-pulse" /> Em Andamento
-          </div>
-          <div className="text-right">
-            <span className="text-label-sm text-on-primary-container block">Progresso Geral</span>
-            <span className="text-headline-md text-on-primary font-bold block">42%</span>
-          </div>
-        </div>
-      </div>
-
-      <ObraTabs />
+    <div className="flex flex-col gap-lg">
+      <ObraHeader />
 
       {/* Toolbar */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-md">

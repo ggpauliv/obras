@@ -1,5 +1,5 @@
 import React from 'react';
-import ObraTabs from '../components/ObraTabs';
+import ObraHeader from '../components/ObraHeader';
 
 const FASES = [
   { nome: 'Fundações', desc: 'Infraestrutura base e estacas', pct: 100, label: '100% Concluída', icon: 'check', iconWrap: 'bg-[#16A34A]/10 text-[#16A34A]', bar: 'bg-[#16A34A]', text: 'text-[#16A34A] font-bold', extra: '' },
@@ -16,61 +16,7 @@ function Kpi({ children }: { children: React.ReactNode }) {
 export default function ObraDetalhePage() {
   return (
     <div className="flex flex-col gap-lg">
-      {/* Hero */}
-      <section className="bg-[#185FA5] rounded-xl p-lg text-white shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-md relative z-10">
-          <div className="flex flex-col gap-sm">
-            <div className="flex items-center gap-md flex-wrap">
-              <h1 className="text-display-lg font-bold">Edifício Horizonte — Torre A</h1>
-              <span className="bg-error-container text-on-error-container text-label-sm px-2 py-1 rounded flex items-center gap-1 border border-error/20">
-                <span className="material-symbols-outlined text-[14px]">warning</span> Em risco
-              </span>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-y-sm gap-x-lg mt-md text-body-sm text-primary-fixed">
-              {[
-                ['Cliente', 'Construtora Apex S.A.'],
-                ['Tipo', 'Residencial Multi-Familiar'],
-                ['Responsável', 'Eng. Carlos Silva'],
-                ['Cronograma', '10 Fev 2023 - 15 Nov 2024'],
-              ].map(([k, v]) => (
-                <div key={k}>
-                  <span className="text-primary-fixed-dim block text-[12px] uppercase tracking-wider mb-xs">{k}</span>
-                  <span className="font-medium text-white">{v}</span>
-                </div>
-              ))}
-              <div className="mt-sm">
-                <span className="text-primary-fixed-dim block text-[12px] uppercase tracking-wider mb-xs">Dias Restantes</span>
-                <span className="text-headline-sm text-white">134</span>
-              </div>
-              <div className="mt-sm">
-                <span className="text-primary-fixed-dim block text-[12px] uppercase tracking-wider mb-xs">Orçamento Total</span>
-                <span className="text-headline-sm text-white">R$ 8.5M</span>
-              </div>
-              <div className="mt-sm col-span-2">
-                <span className="text-primary-fixed-dim block text-[12px] uppercase tracking-wider mb-xs">Realizado Financeiro</span>
-                <div className="flex items-center gap-sm">
-                  <span className="text-headline-sm text-white">R$ 4.1M</span>
-                  <div className="flex-1 h-2 bg-primary-fixed-dim/30 rounded-full overflow-hidden max-w-[120px]">
-                    <div className="h-full bg-white rounded-full" style={{ width: '48%' }} />
-                  </div>
-                  <span className="text-white text-label-sm">48%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-sm shrink-0">
-            <button className="px-md py-sm rounded-lg border border-white/30 text-white text-label-md hover:bg-white/10 transition-colors flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">download</span> Exportar Relatório
-            </button>
-            <button className="px-md py-sm rounded-lg bg-white text-[#185FA5] text-label-md hover:bg-surface-dim transition-colors flex items-center gap-2 font-bold shadow-sm">
-              <span className="material-symbols-outlined text-[18px]">edit</span> Editar Obra
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <ObraTabs />
+      <ObraHeader />
 
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">

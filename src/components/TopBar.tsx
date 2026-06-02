@@ -1,10 +1,17 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { ROUTE_META } from '../config/nav';
+import { useAuth } from '../auth/AuthContext';
+
+function iniciais(nome: string): string {
+  const partes = nome.trim().split(/\s+/);
+  return ((partes[0]?.[0] ?? '') + (partes.length > 1 ? partes[partes.length - 1][0] : '')).toUpperCase();
+}
 
 export default function TopBar({ onMenu }: { onMenu: () => void }) {
   const { pathname } = useLocation();
   const meta = ROUTE_META[pathname] || { title: '', breadcrumb: [] };
+  const { usuario } = useAuth();
 
   return (
     <header className="flex items-center justify-between px-margin-mobile md:px-margin-desktop w-full h-16 bg-surface border-b border-outline-variant sticky top-0 z-10">
@@ -34,8 +41,18 @@ export default function TopBar({ onMenu }: { onMenu: () => void }) {
         <button className="p-2 rounded-full text-on-surface-variant hover:bg-primary-container/10 transition-colors">
           <span className="material-symbols-outlined">help</span>
         </button>
-        <div className="h-8 w-8 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden border border-outline-variant cursor-pointer">
-          <span className="material-symbols-outlined text-on-surface-variant text-xl">person</span>
+        {usuario && (
+          <div className="hidden sm:flex flex-col items-end leading-tight">
+            <span className="text-label-md text-on-surface font-medium">{usuario.nome}</span>
+            <span className="text-label-sm text-outline">{usuario.papel}</span>
+          </div>
+        )}
+        <div className="h-8 w-8 rounded-full bg-primary-container flex items-center justify-center overflow-hidden border border-outline-variant cursor-pointer" title={usuario?.nome}>
+          {usuario ? (
+            <span className="text-label-md text-on-primary font-bold">{iniciais(usuario.nome)}</span>
+          ) : (
+            <span className="material-symbols-outlined text-on-surface-variant text-xl">person</span>
+          )}
         </div>
       </div>
     </header>

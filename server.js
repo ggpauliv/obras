@@ -45,14 +45,32 @@ app.post('/api/process-document', async (req, res) => {
       });
     }
 
-    console.log('📨 Enviando requisição para Gemini API...');
+    const systemPrompt = `Você é um especialista em gestão de obras industriais e comerciais. Analise o documento fornecido e extraia itens de obra em formato JSON.
 
-    const systemPrompt = `Você é um especialista em análise de documentos de construção. Analise o documento fornecido e extraia as seguintes informações em formato JSON:
+O documento pode ser de DIVERSOS tipos, todos válidos:
+- Cronograma físico-financeiro
+- Orçamento detalhado / planilha orçamentária
+- Estrutura Analítica de Projeto (EAP)
+- Nota Fiscal (NF-e / NFS-e), pedido de compra, ordem de serviço ou contrato
 
-1. **Fases do projeto**: Identifique cada fase/etapa do projeto
-2. **Cronograma**: Data de início e término de cada fase
-3. **Orçamento**: Valor total de cada fase (se disponível)
-4. **Descrição**: Breve descrição das atividades de cada fase
+IMPORTANTE: Em uma obra industrial, cada AQUISIÇÃO, INSTALAÇÃO, MANUTENÇÃO ou SERVIÇO é um item válido da obra — mesmo que o documento descreva um único item. Exemplos válidos a serem extraídos como "fases":
+- Compra de equipamento (ar-condicionado, motores, elevadores, máquinas)
+- Compra de mobiliário (mesas, cadeiras, computadores)
+- Instalação elétrica / hidráulica (passagem de cabos, ligação de motor, contatoras)
+- Manutenção, conserto, restauração ou revisão de equipamentos
+
+NÃO rejeite Notas Fiscais. Trate cada serviço/produto descrito como uma fase, usando:
+- nome: o produto/serviço (ex.: "Instalação elétrica - passagem de cabos")
+- inicio: data de emissão da nota, se houver
+- termino: data de vencimento/entrega, se houver
+- orc: valor do item (ou valor total da nota se for item único)
+Se houver vários itens/produtos discriminados, crie uma fase para cada um.
+
+Cada fase deve ter um campo "categoria": "compra", "instalacao", "manutencao", "servico" ou "etapa_obra".
+
+REGRA DE ORÇAMENTO (importante):
+- NUNCA repita o valor total em cada item. Se o documento traz valor por item, use o valor de cada item.
+- Se o documento traz apenas UM valor total para vários itens (ex.: uma nota fiscal com vários serviços e um único total), deixe "orc" como null em cada item e informe o valor total uma única vez em "avisos" (campo "Orçamento"), explicando que o total não pôde ser separado por item.
 
 Retorne APENAS um JSON VÁLIDO com a seguinte estrutura:
 {
@@ -63,6 +81,7 @@ Retorne APENAS um JSON VÁLIDO com a seguinte estrutura:
       "inicio": "DD/MM/YYYY",
       "termino": "DD/MM/YYYY",
       "orc": "R$ X.XXX,XX",
+      "categoria": "compra",
       "descricao": "Descrição breve",
       "confianca": 95
     }
@@ -73,9 +92,21 @@ Retorne APENAS um JSON VÁLIDO com a seguinte estrutura:
       "mensagem": "Descrição do aviso ou inconsistência detectada"
     }
   ],
+  "financeiro": {
+    "fornecedor": "Razão social do emitente/prestador (ou null)",
+    "cnpj": "CNPJ do emitente (ou null)",
+    "numeroNota": "Número da nota fiscal (ou null)",
+    "serie": "Série da nota (ou null)",
+    "chaveAcesso": "Chave de acesso de 44 dígitos da NF-e/NFS-e (ou null)",
+    "naturezaOperacao": "Natureza da operação / descrição do serviço (ou null)",
+    "dataEmissao": "DD/MM/YYYY ou null",
+    "valorTotal": "R$ X.XXX,XX ou null"
+  },
   "confiancaGeral": 90,
-  "tipoDocumento": "Cronograma/Orçamento/Projeto/Outro"
-}`;
+  "tipoDocumento": "Cronograma/Orçamento/Nota Fiscal/Pedido de Compra/Projeto/Outro"
+}
+
+REGRA FINANCEIRO: o bloco "financeiro" registra a DESPESA da obra (não gestão de pagamentos). Preencha-o SOMENTE quando o documento for uma nota fiscal, fatura ou pedido de compra. Caso contrário, retorne "financeiro": null.`;
 
     // Preparar conteúdo para Gemini
     let parts = [];
@@ -118,8 +149,6 @@ Retorne APENAS um JSON VÁLIDO com a seguinte estrutura:
       },
     };
 
-    console.log('🔍 Enviando para Gemini 2.5 Flash...');
-
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -147,41 +176,23 @@ Retorne APENAS um JSON VÁLIDO com a seguinte estrutura:
       throw new Error('Resposta não é JSON válido');
     }
 
-    console.log('✅ Resposta recebida do Gemini');
-    console.log('🔍 Chaves da resposta:', Object.keys(data));
-
-    // Log detalhado
-    if (data.candidates) {
-      console.log('📊 Candidates encontrados:', data.candidates.length);
-      if (data.candidates[0]) {
-        console.log('🔎 Candidate[0] keys:', Object.keys(data.candidates[0]));
-        if (data.candidates[0].content) {
-          console.log('📝 Content keys:', Object.keys(data.candidates[0].content));
-          if (data.candidates[0].content.parts) {
-            console.log('📦 Parts encontradas:', data.candidates[0].content.parts.length);
-            console.log('📄 Part[0]:', JSON.stringify(data.candidates[0].content.parts[0]).substring(0, 300));
-          }
-        }
-      }
-    } else {
-      console.error('❌ Nenhum candidates na resposta. Data completa:', JSON.stringify(data, null, 2));
+    if (!data.candidates) {
+      console.error('❌ Resposta do Gemini sem candidates:', JSON.stringify(data));
       throw new Error('Resposta sem candidates');
     }
 
     if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-      console.error('❌ Estrutura incompleta');
       throw new Error('Resposta sem texto');
     }
 
     const textoResposta = data.candidates[0].content.parts[0].text;
-    console.log('📄 Resposta (primeiros 300 chars):', textoResposta.substring(0, 300));
-
     const dadosExtraidos = JSON.parse(textoResposta);
 
     res.json({
       sucesso: true,
       fases: dadosExtraidos.fases || [],
       avisos: dadosExtraidos.avisos || [],
+      financeiro: dadosExtraidos.financeiro || null,
       metadados: {
         tipoDocumento: dadosExtraidos.tipoDocumento || 'Desconhecido',
         confiancaGeral: dadosExtraidos.confiancaGeral || 75,

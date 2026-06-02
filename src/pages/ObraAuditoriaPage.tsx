@@ -1,5 +1,5 @@
 import React from 'react';
-import ObraTabs from '../components/ObraTabs';
+import ObraHeader from '../components/ObraHeader';
 
 interface Evento { icon: string; fill?: boolean; border: string; text?: string; titulo: string; desc: string; data: string; tituloClass?: string; }
 
@@ -16,25 +16,8 @@ const CTRL = 'bg-surface border border-outline-variant text-on-surface text-labe
 
 export default function ObraAuditoriaPage() {
   return (
-    <div className="space-y-xl">
-      {/* Header */}
-      <div className="bg-primary-container text-on-primary-container rounded-xl p-lg ambient-shadow flex flex-col md:flex-row justify-between items-start md:items-center border border-tertiary-container relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -translate-y-1/2 translate-x-1/3" />
-        <div className="space-y-sm z-10">
-          <div className="flex items-center gap-md flex-wrap">
-            <h2 className="text-display-lg text-white">Edifício Horizonte — Torre A</h2>
-            <span className="bg-[#ffdad6]/20 text-[#ffdad6] text-label-sm px-2 py-1 rounded border border-[#ffdad6]/30 flex items-center gap-xs">
-              <span className="material-symbols-outlined text-[14px]">warning</span> Em risco
-            </span>
-          </div>
-          <div className="flex items-center gap-gutter text-body-sm text-on-primary-container flex-wrap">
-            <span className="flex items-center gap-xs"><span className="material-symbols-outlined text-[16px]">domain</span> Cliente: Construtora Meridional S.A.</span>
-            <span className="flex items-center gap-xs"><span className="material-symbols-outlined text-[16px]">person</span> Responsável: Eng. Carlos Motta</span>
-          </div>
-        </div>
-      </div>
-
-      <ObraTabs />
+    <div className="flex flex-col gap-lg">
+      <ObraHeader />
 
       {/* Controles */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-md">

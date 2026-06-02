@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { processarDocumento, DocumentExtractionResult, ExtractedPhase } from '../services/geminiDocumentProcessor';
+import { OBRAS } from '../data/obras';
 
 const STEPS = ['Upload', 'Processamento', 'Revisão'];
+
+const CATEGORIA_INFO: Record<string, { label: string; cls: string }> = {
+  compra: { label: 'Compra', cls: 'bg-blue-100 text-blue-800' },
+  instalacao: { label: 'Instalação', cls: 'bg-purple-100 text-purple-800' },
+  manutencao: { label: 'Manutenção', cls: 'bg-orange-100 text-orange-800' },
+  servico: { label: 'Serviço', cls: 'bg-teal-100 text-teal-800' },
+  etapa_obra: { label: 'Etapa de obra', cls: 'bg-green-100 text-green-800' },
+};
 
 function Stepper({ step }: { step: number }) {
   return (
@@ -25,6 +34,21 @@ function Stepper({ step }: { step: number }) {
   );
 }
 
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className="flex items-center gap-2 text-label-md text-on-surface"
+    >
+      <span className={`relative w-10 h-6 rounded-full transition-colors ${checked ? 'bg-primary' : 'bg-outline-variant'}`}>
+        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-4' : ''}`} />
+      </span>
+      {label}
+    </button>
+  );
+}
+
 export default function ImportarPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
@@ -33,6 +57,12 @@ export default function ImportarPage() {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [fases, setFases] = useState<ExtractedPhase[]>([]);
+  const [obraId, setObraId] = useState('');
+  const [faseDestino, setFaseDestino] = useState('');
+  const [gerarFases, setGerarFases] = useState(true);
+  const [gerarDespesa, setGerarDespesa] = useState(true);
+
+  const obraSelecionada = OBRAS.find((o) => o.id === obraId);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -232,21 +262,97 @@ export default function ImportarPage() {
                   <h3 className="text-headline-md text-on-surface">Fases Extraídas</h3>
                   <p className="text-body-sm text-on-surface-variant">Revise as informações abaixo antes de confirmar a importação.</p>
                 </div>
-                <button className="px-4 py-2 text-primary hover:bg-primary-container/10 rounded-lg text-label-md flex items-center gap-2">
-                  <span className="material-symbols-outlined text-lg">edit</span> Editar tudo
-                </button>
+                <Toggle checked={gerarFases} onChange={setGerarFases} label="Importar fases para a obra" />
               </div>
-              <div className="border border-outline-variant rounded-xl overflow-hidden bg-white shadow-sm overflow-x-auto">
+
+              {/* Vínculo com obra/fase (quando não identificado no documento) */}
+              <div className="border border-outline-variant rounded-xl bg-surface-container-lowest p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="material-symbols-outlined text-primary text-xl">link</span>
+                  <p className="text-label-lg text-on-surface font-bold">Vincular a uma obra</p>
+                  <span className="text-body-sm text-on-surface-variant">— selecione caso o documento não identifique a obra/fase</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-label-sm text-on-surface-variant mb-1">Obra de destino</label>
+                    <select
+                      value={obraId}
+                      onChange={(e) => { setObraId(e.target.value); setFaseDestino(''); }}
+                      className="w-full px-3 py-2 border border-outline-variant rounded-lg bg-white text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                    >
+                      <option value="">Selecione a obra…</option>
+                      {OBRAS.map((o) => (
+                        <option key={o.id} value={o.id}>{o.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-label-sm text-on-surface-variant mb-1">Fase / etapa</label>
+                    <input
+                      list="fases-obra"
+                      value={faseDestino}
+                      onChange={(e) => setFaseDestino(e.target.value)}
+                      disabled={!obraId}
+                      placeholder={obraId ? 'Selecione ou digite a fase…' : 'Selecione a obra primeiro'}
+                      className="w-full px-3 py-2 border border-outline-variant rounded-lg bg-white text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:bg-surface-container-low disabled:cursor-not-allowed"
+                    />
+                    <datalist id="fases-obra">
+                      {(obraSelecionada?.fases ?? []).map((nome) => (
+                        <option key={nome} value={nome} />
+                      ))}
+                    </datalist>
+                  </div>
+                </div>
+              </div>
+
+              {/* Despesa da obra — extraída de nota fiscal / fatura */}
+              {resultado.financeiro && (
+                <div className="border border-outline-variant rounded-xl bg-white shadow-sm p-4">
+                  <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary text-xl">request_quote</span>
+                      <p className="text-label-lg text-on-surface font-bold">Despesa da obra</p>
+                      <span className="text-body-sm text-on-surface-variant">— dados da nota para rastreio da despesa</span>
+                    </div>
+                    <Toggle checked={gerarDespesa} onChange={setGerarDespesa} label="Registrar despesa da obra" />
+                  </div>
+                  <div className={`transition-opacity ${gerarDespesa ? '' : 'opacity-40 pointer-events-none'}`}>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {([
+                        ['Fornecedor', resultado.financeiro.fornecedor],
+                        ['CNPJ', resultado.financeiro.cnpj],
+                        ['Nº da nota', resultado.financeiro.numeroNota],
+                        ['Série', resultado.financeiro.serie],
+                        ['Natureza da operação', resultado.financeiro.naturezaOperacao],
+                        ['Emissão', resultado.financeiro.dataEmissao],
+                        ['Valor total', resultado.financeiro.valorTotal],
+                      ] as Array<[string, string | null]>).map(([label, valor]) => (
+                        <div key={label}>
+                          <span className="block text-label-sm text-on-surface-variant mb-0.5">{label}</span>
+                          <span className="text-body-md text-on-surface">{valor || '—'}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {resultado.financeiro.chaveAcesso && (
+                      <div className="mt-3">
+                        <span className="block text-label-sm text-on-surface-variant mb-0.5">Chave de acesso</span>
+                        <span className="text-body-sm text-on-surface font-mono break-all">{resultado.financeiro.chaveAcesso}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              <div className={`border border-outline-variant rounded-xl overflow-hidden bg-white shadow-sm overflow-x-auto max-h-[60vh] overflow-y-auto transition-opacity ${gerarFases ? '' : 'opacity-40 pointer-events-none'}`}>
                 <table className="w-full text-left border-collapse min-w-[800px]">
                   <thead>
                     <tr className="bg-surface-container border-b border-outline-variant">
-                      {['#', 'Nome da Fase', 'Início', 'Término', 'Orçamento', 'Confiança', 'Ações'].map((h) => (
+                      {['#', 'Nome da Fase', 'Categoria', 'Início', 'Término', 'Orçamento', 'Confiança', 'Ações'].map((h) => (
                         <th key={h} className="px-6 py-4 text-label-md text-on-surface whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant">
-                    {fases.slice(0, 3).map((f) => {
+                    {fases.map((f) => {
                       const aviso = resultado.avisos.find((a) => a.campo === f.nome);
                       return (
                         <tr key={f.id} className={aviso ? 'bg-yellow-50/50' : ''}>
@@ -259,6 +365,16 @@ export default function ImportarPage() {
                               />
                               {aviso && <span className="text-[10px] text-yellow-800 font-bold mt-1 uppercase">{aviso.mensagem}</span>}
                             </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            {f.categoria && (() => {
+                              const cat = CATEGORIA_INFO[f.categoria] ?? { label: f.categoria, cls: 'bg-gray-100 text-gray-700' };
+                              return (
+                                <span className={`inline-block px-2 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${cat.cls}`}>
+                                  {cat.label}
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td className="px-6 py-4 text-body-md">{f.inicio}</td>
                           <td className="px-6 py-4 text-body-md">{f.termino}</td>
@@ -287,13 +403,11 @@ export default function ImportarPage() {
                     })}
                   </tbody>
                 </table>
-                {fases.length > 3 && (
-                  <div className="p-4 bg-surface-container-low text-center">
-                    <button className="text-body-md text-secondary text-label-md hover:text-primary transition-colors flex items-center gap-2 mx-auto">
-                      Ver mais {fases.length - 3} fase{fases.length - 3 !== 1 ? 's' : ''} extraída{fases.length - 3 !== 1 ? 's' : ''} <span className="material-symbols-outlined">expand_more</span>
-                    </button>
-                  </div>
-                )}
+                <div className="p-4 bg-surface-container-low text-center">
+                  <span className="text-body-md text-secondary">
+                    {fases.length} {fases.length === 1 ? 'item extraído' : 'itens extraídos'}
+                  </span>
+                </div>
               </div>
             </div>
             )}
@@ -326,11 +440,17 @@ export default function ImportarPage() {
               <button
                 onClick={() => {
                   if (resultado) {
-                    localStorage.setItem('lastImport', JSON.stringify({ fases, resultado }));
+                    localStorage.setItem('lastImport', JSON.stringify({
+                      fases: gerarFases ? fases : [],
+                      resultado,
+                      financeiro: gerarDespesa ? resultado.financeiro : null,
+                      vinculo: { obraId, obraNome: obraSelecionada?.nome ?? null, fase: faseDestino || null },
+                      gerar: { fases: gerarFases, despesa: gerarDespesa && !!resultado.financeiro },
+                    }));
                   }
                   navigate('/obra-fases');
                 }}
-                disabled={!resultado?.sucesso || fases.length === 0}
+                disabled={!resultado?.sucesso || (!gerarFases && !(gerarDespesa && !!resultado?.financeiro))}
                 className="px-10 py-4 bg-primary text-on-primary text-headline-sm rounded-xl shadow-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center gap-3"
               >
                 <span className="material-symbols-outlined">check_circle</span> Confirmar e Importar para Obra

@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { NAV_ITEMS, SETTINGS_ITEM, NavItem } from '../config/nav';
+import { useAuth } from '../auth/AuthContext';
 
 const baseItem =
   'flex items-center gap-md px-md py-sm rounded-lg transition-all duration-200 cursor-pointer font-label-md text-label-md';
@@ -35,6 +36,7 @@ interface SidebarProps {
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   return (
     <nav
@@ -68,7 +70,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       <div className="mt-auto pt-md border-t border-white/10 space-y-sm">
         <SidebarLink item={SETTINGS_ITEM} onClose={onClose} />
         <button
-          onClick={() => { onClose(); navigate('/login'); }}
+          onClick={() => { logout(); onClose(); navigate('/login'); }}
           className={`${baseItem} w-full text-white/70 hover:text-white hover:bg-white/5`}
         >
           <span className="material-symbols-outlined">logout</span>

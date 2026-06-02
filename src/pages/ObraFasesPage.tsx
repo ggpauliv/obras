@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import ObraTabs from '../components/ObraTabs';
+import ObraHeader from '../components/ObraHeader';
 
 interface Fase { n: number; nome: string; inicio: string; termino: string; warnInicio?: boolean; pct: number; bar: string; pctText: string; status: string; chip: string; active?: boolean; }
 
@@ -26,33 +26,8 @@ export default function ObraFasesPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col gap-lg max-w-[1280px] mx-auto w-full">
-      {/* Header */}
-      <section className="bg-primary-container text-on-primary rounded-xl p-lg ambient-shadow relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-primary rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/3" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-start justify-between gap-md">
-          <div className="flex flex-col gap-sm">
-            <div className="flex items-center gap-md flex-wrap">
-              <h2 className="text-display-lg-mobile md:text-display-lg text-on-primary">Edifício Horizonte — Torre A</h2>
-              <span className="bg-error text-on-error text-label-sm px-sm py-xs rounded flex items-center gap-xs"><span className="material-symbols-outlined text-[14px]">warning</span> Em risco</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md mt-sm text-on-primary/90 text-body-sm">
-              {[['Cliente', 'Construtora Meridional S.A.'], ['Tipo', 'Residencial'], ['Responsável', 'Eng. Carlos Motta'], ['Cronograma', '15 Mar 2023 - 15 Nov 2024']].map(([k, v]) => (
-                <div key={k}>
-                  <span className="block text-on-primary/70 text-label-sm mb-xs">{k}</span>
-                  <span className="font-medium">{v}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="flex gap-sm shrink-0">
-            <button className="bg-transparent border border-on-primary text-on-primary text-label-md px-md py-sm rounded-lg hover:bg-on-primary/10 transition-colors flex items-center gap-sm"><span className="material-symbols-outlined text-[18px]">edit</span> Editar Obra</button>
-            <button className="bg-transparent border border-on-primary text-on-primary text-label-md px-md py-sm rounded-lg hover:bg-on-primary/10 transition-colors flex items-center gap-sm"><span className="material-symbols-outlined text-[18px]">download</span> Exportar</button>
-          </div>
-        </div>
-      </section>
-
-      <ObraTabs />
+    <div className="flex flex-col gap-lg">
+      <ObraHeader />
 
       {/* Action bar */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-md">
