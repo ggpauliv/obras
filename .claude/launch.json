@@ -2,9 +2,21 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "pawliv-obras",
+      "name": "pawliv-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["start"],
+      "port": 3000
+    },
+    {
+      "name": "pawliv-backend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "backend"],
+      "port": 3001
+    },
+    {
+      "name": "pawliv-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "frontend"],
       "port": 3000
     }
   ]
