@@ -4,10 +4,10 @@
 
 ### ✅ Implementado
 - **React 18 + TypeScript** com Create React App (port 3000)
-- **Backend Node.js + Express** proxy para Claude API (port 3001)
+- **Backend Node.js + Express** proxy para a API do Google Gemini (port 3001)
 - **Layout responsivo** (Sidebar + TopBar) com Tailwind CSS
 - **12 páginas** de UI para gestão de obras
-- **Integração Claude API** para processamento de documentos
+- **Integração Gemini API** para processamento de documentos
 
 ---
 
@@ -15,12 +15,12 @@
 
 ```
 ┌──────────────────────┐         ┌──────────────────────┐         ┌──────────────┐
-│  React Frontend      │         │  Express Backend     │         │ Claude API   │
+│  React Frontend      │         │  Express Backend     │         │ Gemini API   │
 │  (port 3000)         │────────▶│  (port 3001)         │────────▶│  (proxy)     │
 │                      │         │                      │         │              │
 │ - Upload arquivo     │         │ - POST /api/         │         │ - Processa   │
 │ - Drag-drop UI       │         │   process-document   │         │   documento  │
-│ - Revisão de dados   │         │ - Chama Claude       │         │ - Retorna    │
+│ - Revisão de dados   │         │ - Chama Gemini       │         │ - Retorna    │
 │ - Salva em cache     │         │   (com chave)        │         │   JSON       │
 └──────────────────────┘         │ - Evita CORS         │         │              │
                                  └──────────────────────┘         └──────────────┘
@@ -34,8 +34,8 @@
 - Express.js rodando em **http://localhost:3001**
 - Carrega chave API do `.env.local` via dotenv
 - **POST /api/process-document**
-  - Recebe `{ content: [...] }` (array de partes para Claude)
-  - Chama Claude API com `claude-opus-4-8`
+  - Recebe `{ content: [...] }` (array de partes para a IA)
+  - Chama a API do Gemini com `gemini-2.5-flash`
   - Retorna resposta JSON estruturada
 - **GET /api/health** — health check
 
@@ -48,7 +48,7 @@
 
 ### Interface (`src/pages/ImportarPage.tsx`)
 - **Etapa 1 (Upload)**: Drag-drop ou seleção de arquivo
-- **Etapa 2 (Processamento)**: Spinner enquanto Claude processa
+- **Etapa 2 (Processamento)**: Spinner enquanto a IA processa
 - **Etapa 3 (Revisão)**: Tabela com fases extraídas
   - Edição inline de nomes
   - Indicador de confiança (cores)
@@ -62,10 +62,10 @@
 **Arquivo `.env.local` (não versionado — criar localmente):**
 
 ```bash
-REACT_APP_ANTHROPIC_API_KEY=sk-ant-...sua-chave-aqui...
+REACT_APP_GEMINI_API_KEY=...sua-chave-aqui...
 ```
 
-**Obtenha chave em:** https://console.anthropic.com/account/keys
+**Obtenha chave em:** https://aistudio.google.com/app/apikey
 
 ---
 
@@ -103,8 +103,8 @@ npm run build
 2. **Processamento**
    - Frontend converte arquivo → base64
    - Chama `POST /api/process-document` (backend)
-   - Backend chama Claude API com a imagem/texto
-   - Claude analisa e retorna JSON com fases extraídas
+   - Backend chama a API do Gemini com a imagem/texto
+   - Gemini analisa e retorna JSON com fases extraídas
 3. **Revisão**
    - Tabela mostra: ID, nome, datas, orçamento, confiança
    - Usuário pode editar nomes
@@ -149,7 +149,7 @@ npm run build
 ```
 src/
 ├── services/
-│   └── geminiDocumentProcessor.ts    ← Integração com Claude API
+│   └── geminiDocumentProcessor.ts    ← Integração com Gemini API
 ├── pages/
 │   ├── ImportarPage.tsx              ← Upload + Processamento + Revisão
 │   ├── ObraFasesPage.tsx             ← Deve usar dados de lastImport
@@ -182,10 +182,10 @@ server.js                             ← Backend Express proxy
 npm start  # Roda backend + frontend simultaneamente
 ```
 
-**"REACT_APP_ANTHROPIC_API_KEY não está configurada"**
+**"REACT_APP_GEMINI_API_KEY não está configurada"**
 ```bash
 # Crie .env.local com sua chave:
-echo "REACT_APP_ANTHROPIC_API_KEY=sk-ant-..." > .env.local
+echo "REACT_APP_GEMINI_API_KEY=..." > .env.local
 ```
 
 **Backend na porta 3001 já está em uso**

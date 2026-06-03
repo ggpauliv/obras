@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { processarDocumento, DocumentExtractionResult, ExtractedPhase } from '../services/geminiDocumentProcessor';
-import { OBRAS } from '../data/obras';
+import { listarObras, adicionarFasesImportadas, salvarDespesa, registrarEvento, setObraAtivaId } from '../store';
+import { useAuth } from '../auth/AuthContext';
+import { validarArquivo, TAMANHO_MAX_MB } from '../utils/arquivos';
 
 const STEPS = ['Upload', 'Processamento', 'Revisão'];
 
@@ -51,6 +53,8 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 
 export default function ImportarPage() {
   const navigate = useNavigate();
+  const { usuario } = useAuth();
+  const OBRAS = listarObras();
   const [step, setStep] = useState(0);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [resultado, setResultado] = useState<DocumentExtractionResult | null>(null);
@@ -64,23 +68,33 @@ export default function ImportarPage() {
 
   const obraSelecionada = OBRAS.find((o) => o.id === obraId);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setArquivo(file);
-      setErro(null);
+  const aceitarArquivo = (file: File | undefined) => {
+    if (!file) return;
+    const erroValidacao = validarArquivo(file);
+    if (erroValidacao) {
+      setArquivo(null);
+      setErro(erroValidacao);
+      return;
     }
+    setArquivo(file);
+    setErro(null);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    aceitarArquivo(e.target.files?.[0]);
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      setArquivo(file);
-      setErro(null);
-    }
+    aceitarArquivo(e.dataTransfer.files?.[0]);
   };
+
+  // Edição inline das fases na revisão.
+  const atualizarFase = (id: string, campo: keyof ExtractedPhase, valor: string) =>
+    setFases((lista) => lista.map((f) => (f.id === id ? { ...f, [campo]: valor } : f)));
+  const removerFaseRevisao = (id: string) =>
+    setFases((lista) => lista.filter((f) => f.id !== id));
 
   const processarArquivo = async () => {
     if (!arquivo) {
@@ -132,7 +146,7 @@ export default function ImportarPage() {
               >
                 <input
                   type="file"
-                  accept=".pdf,.xlsx,.docx,.csv"
+                  accept=".pdf,.xlsx,.xls,.docx,.csv,.png,.jpg,.jpeg,.webp"
                   onChange={handleFileSelect}
                   className="absolute inset-0 opacity-0 cursor-pointer"
                 />
@@ -179,7 +193,7 @@ export default function ImportarPage() {
                 ))}
               </ul>
               <div className="mt-8 pt-8 border-t border-outline-variant">
-                <p className="text-body-sm text-on-surface-variant">Formatos suportados: .pdf, .xlsx, .docx, .csv (Máximo 50MB)</p>
+                <p className="text-body-sm text-on-surface-variant">Formatos: .pdf, .xlsx, .docx, .csv, imagens (Máximo {TAMANHO_MAX_MB}MB)</p>
               </div>
             </div>
           </div>
@@ -354,30 +368,38 @@ export default function ImportarPage() {
                   <tbody className="divide-y divide-outline-variant">
                     {fases.map((f) => {
                       const aviso = resultado.avisos.find((a) => a.campo === f.nome);
+                      const cellInput = 'bg-transparent p-1 w-full text-body-md rounded border border-transparent hover:border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none';
                       return (
                         <tr key={f.id} className={aviso ? 'bg-yellow-50/50' : ''}>
                           <td className="px-6 py-4 text-body-md text-outline">{f.id}</td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 min-w-[200px]">
                             <div className="flex flex-col">
                               <input
-                                className={`bg-transparent p-1 w-full text-body-md focus:ring-2 focus:ring-primary/20 rounded ${aviso ? 'border-b border-yellow-400' : 'border-none'}`}
-                                defaultValue={f.nome}
+                                className={`${cellInput} ${aviso ? 'border-b-yellow-400' : ''}`}
+                                value={f.nome}
+                                onChange={(e) => atualizarFase(f.id, 'nome', e.target.value)}
                               />
                               {aviso && <span className="text-[10px] text-yellow-800 font-bold mt-1 uppercase">{aviso.mensagem}</span>}
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            {f.categoria && (() => {
-                              const cat = CATEGORIA_INFO[f.categoria] ?? { label: f.categoria, cls: 'bg-gray-100 text-gray-700' };
-                              return (
-                                <span className={`inline-block px-2 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${cat.cls}`}>
-                                  {cat.label}
-                                </span>
-                              );
-                            })()}
+                            <select
+                              className={`${cellInput} text-[12px] font-semibold`}
+                              value={f.categoria ?? ''}
+                              onChange={(e) => atualizarFase(f.id, 'categoria', e.target.value)}
+                            >
+                              <option value="">—</option>
+                              {Object.entries(CATEGORIA_INFO).map(([key, info]) => (
+                                <option key={key} value={key}>{info.label}</option>
+                              ))}
+                            </select>
                           </td>
-                          <td className="px-6 py-4 text-body-md">{f.inicio}</td>
-                          <td className="px-6 py-4 text-body-md">{f.termino}</td>
+                          <td className="px-6 py-4">
+                            <input className={`${cellInput} w-28`} value={f.inicio} onChange={(e) => atualizarFase(f.id, 'inicio', e.target.value)} placeholder="DD/MM/AAAA" />
+                          </td>
+                          <td className="px-6 py-4">
+                            <input className={`${cellInput} w-28`} value={f.termino} onChange={(e) => atualizarFase(f.id, 'termino', e.target.value)} placeholder="DD/MM/AAAA" />
+                          </td>
                           <td className={`px-6 py-4 text-body-md text-right ${aviso ? 'text-error font-bold' : ''}`}>{f.orc}</td>
                           <td className="px-6 py-4">
                             <div className="flex justify-center">
@@ -394,8 +416,8 @@ export default function ImportarPage() {
                             </div>
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <button className={`p-2 rounded-full transition-colors ${aviso ? 'text-primary hover:bg-yellow-100' : 'text-outline hover:text-primary'}`}>
-                              <span className="material-symbols-outlined">{aviso ? 'warning' : 'edit'}</span>
+                            <button onClick={() => removerFaseRevisao(f.id)} title="Remover esta linha" className="p-2 rounded-full transition-colors text-outline hover:text-error hover:bg-error-container/30">
+                              <span className="material-symbols-outlined">delete</span>
                             </button>
                           </td>
                         </tr>
@@ -439,15 +461,52 @@ export default function ImportarPage() {
               </button>
               <button
                 onClick={() => {
-                  if (resultado) {
-                    localStorage.setItem('lastImport', JSON.stringify({
-                      fases: gerarFases ? fases : [],
-                      resultado,
-                      financeiro: gerarDespesa ? resultado.financeiro : null,
-                      vinculo: { obraId, obraNome: obraSelecionada?.nome ?? null, fase: faseDestino || null },
-                      gerar: { fases: gerarFases, despesa: gerarDespesa && !!resultado.financeiro },
-                    }));
+                  if (!resultado) return;
+                  if (!obraId) {
+                    setErro('Selecione a obra de destino antes de confirmar.');
+                    return;
                   }
+
+                  const usuarioNome = usuario?.nome ?? 'Usuário';
+                  let qtdeFases = 0;
+
+                  if (gerarFases && fases.length > 0) {
+                    const novas = adicionarFasesImportadas(obraId, fases.map((f) => ({
+                      nome: f.nome,
+                      inicio: f.inicio,
+                      termino: f.termino,
+                      categoria: f.categoria,
+                      descricao: f.descricao,
+                    })));
+                    qtdeFases = novas.length;
+                  }
+
+                  if (gerarDespesa && resultado.financeiro) {
+                    const fin = resultado.financeiro;
+                    salvarDespesa({
+                      id: '',
+                      obraId,
+                      faseId: null,
+                      descricao: fin.naturezaOperacao || `Nota ${fin.numeroNota ?? ''}`.trim(),
+                      categoria: 'Importado (NF)',
+                      valor: fin.valorTotal || '—',
+                      data: fin.dataEmissao || new Date().toLocaleDateString('pt-BR'),
+                      fornecedor: fin.fornecedor,
+                      cnpj: fin.cnpj,
+                      numeroNota: fin.numeroNota,
+                      chaveAcesso: fin.chaveAcesso,
+                    });
+                  }
+
+                  registrarEvento({
+                    obraId,
+                    tipo: 'importacao',
+                    titulo: 'Importação via IA',
+                    descricao: `${usuarioNome} importou ${qtdeFases} fase(s)${gerarDespesa && resultado.financeiro ? ' e 1 despesa' : ''} do documento "${resultado.metadados.nomeDocumento}"`,
+                    usuario: usuarioNome,
+                  });
+
+                  setObraAtivaId(obraId);
                   navigate('/obra-fases');
                 }}
                 disabled={!resultado?.sucesso || (!gerarFases && !(gerarDespesa && !!resultado?.financeiro))}

@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { OBRAS, StatusKey } from '../data/obras';
+import { StatusKey } from '../data/obras';
+import { listarObras, salvarObra, removerObra, setObraAtivaId } from '../store';
+import type { Obra } from '../store';
+import { brParaInput, inputParaBr } from '../utils/datas';
 
 const STATUS: Record<StatusKey, { label: string; chip: string; bar: string; pctText: string }> = {
   andamento: { label: 'Em Andamento', chip: 'bg-primary-container/10 text-primary-container border-primary-container/20', bar: 'bg-primary', pctText: 'text-secondary' },
@@ -10,11 +13,59 @@ const STATUS: Record<StatusKey, { label: string; chip: string; bar: string; pctT
 };
 
 const SELECT = 'appearance-none pl-4 pr-10 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary text-body-sm text-on-surface cursor-pointer';
-const FIELD = 'w-full rounded-lg border-outline-variant text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary py-2 px-3';
+const FIELD = 'w-full rounded-lg border border-outline-variant text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary py-2 px-3';
+
+const VAZIA: Obra = { id: '', nome: '', cliente: '', tipo: 'Residencial', inicio: '', termino: '', pct: 0, status: 'planejamento' };
 
 export default function ObrasPage() {
   const navigate = useNavigate();
+  const [obras, setObras] = useState<Obra[]>(() => listarObras());
+  const [busca, setBusca] = useState('');
+  const [filtroStatus, setFiltroStatus] = useState('');
+  const [filtroTipo, setFiltroTipo] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [form, setForm] = useState<Obra>(VAZIA);
+  const [menuId, setMenuId] = useState<string | null>(null);
+
+  const recarregar = () => setObras(listarObras());
+
+  const abrirObra = (id: string) => {
+    setObraAtivaId(id);
+    navigate('/obra-detalhe');
+  };
+
+  const novaObra = () => { setForm(VAZIA); setModalOpen(true); };
+  const editarObra = (o: Obra) => { setForm(o); setModalOpen(true); setMenuId(null); };
+
+  const excluirObra = (id: string) => {
+    if (window.confirm('Excluir esta obra? Esta ação não pode ser desfeita.')) {
+      removerObra(id);
+      recarregar();
+    }
+    setMenuId(null);
+  };
+
+  const salvar = () => {
+    if (!form.nome.trim() || !form.cliente.trim()) {
+      window.alert('Preencha pelo menos Nome e Cliente.');
+      return;
+    }
+    salvarObra({ ...form, pct: Number(form.pct) || 0 });
+    recarregar();
+    setModalOpen(false);
+  };
+
+  const filtradas = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    return obras.filter((o) => {
+      const okBusca = !q || o.nome.toLowerCase().includes(q) || o.cliente.toLowerCase().includes(q);
+      const okStatus = !filtroStatus || o.status === filtroStatus;
+      const okTipo = !filtroTipo || o.tipo === filtroTipo;
+      return okBusca && okStatus && okTipo;
+    });
+  }, [obras, busca, filtroStatus, filtroTipo]);
+
+  const set = (campo: keyof Obra, valor: string | number) => setForm((f) => ({ ...f, [campo]: valor }));
 
   return (
     <div>
@@ -23,29 +74,29 @@ export default function ObrasPage() {
         <div className="flex flex-wrap items-center gap-sm w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">search</span>
-            <input className="w-full pl-10 pr-4 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-sm text-on-surface placeholder:text-outline" placeholder="Buscar obras..." type="text" />
+            <input value={busca} onChange={(e) => setBusca(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-sm text-on-surface placeholder:text-outline" placeholder="Buscar obras..." type="text" />
           </div>
           <div className="relative">
-            <select className={SELECT}>
+            <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className={SELECT}>
               <option value="">Status (Todos)</option>
-              <option>Em Andamento</option>
-              <option>Concluída</option>
-              <option>Atrasada</option>
-              <option>Em Planejamento</option>
+              <option value="andamento">Em Andamento</option>
+              <option value="concluida">Concluída</option>
+              <option value="atrasada">Atrasada</option>
+              <option value="planejamento">Planejamento</option>
             </select>
             <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none text-[20px]">expand_more</span>
           </div>
           <div className="relative hidden lg:block">
-            <select className={SELECT}>
+            <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)} className={SELECT}>
               <option value="">Tipo (Todos)</option>
-              <option>Residencial</option>
-              <option>Comercial</option>
-              <option>Infraestrutura</option>
+              <option value="Residencial">Residencial</option>
+              <option value="Comercial">Comercial</option>
+              <option value="Infraestrutura">Infraestrutura</option>
             </select>
             <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none text-[20px]">expand_more</span>
           </div>
         </div>
-        <button onClick={() => setModalOpen(true)} className="w-full sm:w-auto flex items-center justify-center gap-xs px-lg py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors shadow-sm text-label-md shrink-0">
+        <button onClick={novaObra} className="w-full sm:w-auto flex items-center justify-center gap-xs px-lg py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors shadow-sm text-label-md shrink-0">
           <span className="material-symbols-outlined text-[20px]">add</span> Nova Obra
         </button>
       </div>
@@ -62,12 +113,15 @@ export default function ObrasPage() {
               </tr>
             </thead>
             <tbody className="text-body-sm divide-y divide-outline-variant/50">
-              {OBRAS.map((o, idx) => {
+              {filtradas.length === 0 && (
+                <tr><td colSpan={9} className="py-xl px-md text-center text-on-surface-variant">Nenhuma obra encontrada.</td></tr>
+              )}
+              {filtradas.map((o, idx) => {
                 const s = STATUS[o.status];
                 return (
                   <tr key={o.id} className={`hover:bg-surface-container-low transition-colors group ${idx % 2 === 1 ? 'bg-surface-bright' : ''}`}>
                     <td className="py-sm px-md text-on-surface-variant text-center">{o.id}</td>
-                    <td onClick={() => navigate('/obra-detalhe')} className="py-sm px-md font-medium text-on-surface group-hover:text-primary transition-colors cursor-pointer">{o.nome}</td>
+                    <td onClick={() => abrirObra(o.id)} className="py-sm px-md font-medium text-on-surface group-hover:text-primary transition-colors cursor-pointer">{o.nome}</td>
                     <td className="py-sm px-md text-secondary">{o.cliente}</td>
                     <td className="py-sm px-md text-secondary">{o.tipo}</td>
                     <td className="py-sm px-md text-secondary">{o.inicio}</td>
@@ -83,8 +137,15 @@ export default function ObrasPage() {
                     <td className="py-sm px-md text-center">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-label-sm border ${s.chip}`}>{s.label}</span>
                     </td>
-                    <td className="py-sm px-md text-center">
-                      <button className="p-xs text-outline hover:text-primary transition-colors rounded-md hover:bg-primary-container/10"><span className="material-symbols-outlined text-[20px]">more_vert</span></button>
+                    <td className="py-sm px-md text-center relative">
+                      <button onClick={() => setMenuId(menuId === o.id ? null : o.id)} className="p-xs text-outline hover:text-primary transition-colors rounded-md hover:bg-primary-container/10"><span className="material-symbols-outlined text-[20px]">more_vert</span></button>
+                      {menuId === o.id && (
+                        <div className="absolute right-8 top-2 z-20 bg-surface border border-outline-variant rounded-lg shadow-lg py-1 w-40 text-left">
+                          <button onClick={() => abrirObra(o.id)} className="w-full px-md py-2 text-body-sm text-on-surface hover:bg-surface-container-low flex items-center gap-sm"><span className="material-symbols-outlined text-[18px]">visibility</span> Abrir</button>
+                          <button onClick={() => editarObra(o)} className="w-full px-md py-2 text-body-sm text-on-surface hover:bg-surface-container-low flex items-center gap-sm"><span className="material-symbols-outlined text-[18px]">edit</span> Editar</button>
+                          <button onClick={() => excluirObra(o.id)} className="w-full px-md py-2 text-body-sm text-error hover:bg-error-container/30 flex items-center gap-sm"><span className="material-symbols-outlined text-[18px]">delete</span> Excluir</button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );
@@ -92,91 +153,79 @@ export default function ObrasPage() {
             </tbody>
           </table>
         </div>
-        {/* Paginação */}
         <div className="bg-surface-container-low border-t border-outline-variant p-md flex items-center justify-between text-body-sm text-secondary">
-          <p>Mostrando 1 a 8 de 42 obras</p>
-          <div className="flex items-center gap-xs">
-            <button className="p-1 rounded border border-outline-variant bg-surface text-outline opacity-50" disabled>
-              <span className="material-symbols-outlined text-[20px]">chevron_left</span>
-            </button>
-            <button className="w-8 h-8 rounded border border-primary bg-primary text-white flex items-center justify-center font-medium">1</button>
-            <button className="w-8 h-8 rounded border border-outline-variant bg-surface hover:bg-surface-variant text-on-surface transition-colors flex items-center justify-center">2</button>
-            <button className="w-8 h-8 rounded border border-outline-variant bg-surface hover:bg-surface-variant text-on-surface transition-colors flex items-center justify-center">3</button>
-            <span className="px-1">...</span>
-            <button className="w-8 h-8 rounded border border-outline-variant bg-surface hover:bg-surface-variant text-on-surface transition-colors flex items-center justify-center">6</button>
-            <button className="p-1 rounded border border-outline-variant bg-surface hover:bg-surface-variant text-on-surface transition-colors">
-              <span className="material-symbols-outlined text-[20px]">chevron_right</span>
-            </button>
-          </div>
+          <p>Mostrando {filtradas.length} de {obras.length} obras</p>
         </div>
       </div>
 
-      {/* Modal Nova Obra */}
+      {/* Modal Nova/Editar Obra */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/60 backdrop-blur-sm p-margin-mobile" onClick={() => setModalOpen(false)}>
           <div className="bg-surface-container-lowest w-full max-w-3xl rounded-xl shadow-xl flex flex-col max-h-[90vh] border border-outline-variant overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="px-lg py-md border-b border-outline-variant flex items-center justify-between bg-surface">
-              <h3 className="text-headline-sm font-semibold text-on-surface">Nova Obra</h3>
+              <h3 className="text-headline-sm font-semibold text-on-surface">{form.id ? 'Editar Obra' : 'Nova Obra'}</h3>
               <button onClick={() => setModalOpen(false)} className="p-xs text-outline hover:text-error transition-colors rounded-md hover:bg-error-container/50">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <div className="p-lg overflow-y-auto flex-1 bg-surface-bright space-y-lg">
-              <div className="p-md rounded-lg border-2 border-dashed border-primary/40 bg-surface-container hover:border-primary transition-colors cursor-pointer" onClick={() => { setModalOpen(false); navigate('/importar'); }}>
-                <div className="flex items-start gap-md">
-                  <span className="material-symbols-outlined text-primary-container">auto_awesome</span>
-                  <div>
-                    <p className="text-label-md font-semibold text-on-surface">Importar via documento (IA)</p>
-                    <p className="text-body-sm text-on-surface-variant mt-1">Anexe um cronograma, planilha orçamentária ou memorial descritivo e a IA preencherá as fases e custos automaticamente.</p>
-                    <span className="inline-flex items-center gap-2 mt-sm px-3 py-1.5 rounded-md border border-outline-variant bg-surface text-label-sm text-on-surface">
-                      <span className="material-symbols-outlined text-[18px]">description</span> Selecionar Arquivo
-                    </span>
+              {!form.id && (
+                <div className="p-md rounded-lg border-2 border-dashed border-primary/40 bg-surface-container hover:border-primary transition-colors cursor-pointer" onClick={() => { setModalOpen(false); navigate('/importar'); }}>
+                  <div className="flex items-start gap-md">
+                    <span className="material-symbols-outlined text-primary-container">auto_awesome</span>
+                    <div>
+                      <p className="text-label-md font-semibold text-on-surface">Importar via documento (IA)</p>
+                      <p className="text-body-sm text-on-surface-variant mt-1">Anexe um cronograma, planilha orçamentária ou memorial descritivo e a IA preencherá as fases e custos automaticamente.</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              <div className="text-center text-label-sm text-outline tracking-wider">OU PREENCHA MANUALMENTE</div>
+              )}
 
               <div className="space-y-md">
                 <div>
                   <label className="block text-label-sm text-on-surface mb-1">Nome da Obra *</label>
-                  <input className={FIELD} placeholder="Ex: Residencial Flores do Bosque" />
+                  <input className={FIELD} value={form.nome} onChange={(e) => set('nome', e.target.value)} placeholder="Ex: Residencial Flores do Bosque" />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
                   <div>
                     <label className="block text-label-sm text-on-surface mb-1">Cliente *</label>
-                    <select className={`${FIELD} appearance-none`}><option>Selecione um cliente</option></select>
+                    <input className={FIELD} value={form.cliente} onChange={(e) => set('cliente', e.target.value)} placeholder="Nome do cliente" />
                   </div>
                   <div>
                     <label className="block text-label-sm text-on-surface mb-1">Tipo de Obra</label>
-                    <select className={`${FIELD} appearance-none`}><option>Selecione o tipo</option></select>
+                    <select className={`${FIELD} appearance-none`} value={form.tipo} onChange={(e) => set('tipo', e.target.value)}>
+                      <option>Residencial</option>
+                      <option>Comercial</option>
+                      <option>Infraestrutura</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-label-sm text-on-surface mb-1">Data de Início</label>
-                    <input type="date" className={FIELD} />
+                    <input type="date" className={FIELD} value={brParaInput(form.inicio)} onChange={(e) => set('inicio', inputParaBr(e.target.value))} />
                   </div>
                   <div>
                     <label className="block text-label-sm text-on-surface mb-1">Término Previsto</label>
-                    <input type="date" className={FIELD} />
+                    <input type="date" className={FIELD} value={brParaInput(form.termino)} onChange={(e) => set('termino', inputParaBr(e.target.value))} />
                   </div>
-                </div>
-                <div>
-                  <label className="block text-label-sm text-on-surface mb-1">Orçamento Estimado (R$)</label>
-                  <input className={FIELD} placeholder="R$ 0,00" />
-                </div>
-                <div>
-                  <label className="block text-label-sm text-on-surface mb-1">Endereço Completo</label>
-                  <input className={FIELD} placeholder="Rua, número, bairro, cidade – UF" />
-                </div>
-                <div>
-                  <label className="block text-label-sm text-on-surface mb-1">Engenheiro/Responsável</label>
-                  <select className={`${FIELD} appearance-none`}><option>Selecione um responsável da equipe</option></select>
+                  <div>
+                    <label className="block text-label-sm text-on-surface mb-1">Status</label>
+                    <select className={`${FIELD} appearance-none`} value={form.status} onChange={(e) => set('status', e.target.value as StatusKey)}>
+                      <option value="planejamento">Planejamento</option>
+                      <option value="andamento">Em Andamento</option>
+                      <option value="atrasada">Atrasada</option>
+                      <option value="concluida">Concluída</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-label-sm text-on-surface mb-1">% Conclusão</label>
+                    <input type="number" min={0} max={100} className={FIELD} value={form.pct} onChange={(e) => set('pct', Number(e.target.value))} />
+                  </div>
                 </div>
               </div>
             </div>
             <div className="px-lg py-md border-t border-outline-variant flex justify-end gap-sm bg-surface">
               <button onClick={() => setModalOpen(false)} className="px-lg py-2 rounded-lg border border-outline-variant text-on-surface hover:bg-surface-variant transition-colors text-label-md">Cancelar</button>
-              <button onClick={() => setModalOpen(false)} className="px-lg py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors text-label-md">Salvar Obra</button>
+              <button onClick={salvar} className="px-lg py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors text-label-md">Salvar Obra</button>
             </div>
           </div>
         </div>

@@ -1,3 +1,6 @@
+// O cadastro de usuários vive em src/store/usuarios.ts (fonte de verdade).
+import { listarUsuarios, type Usuario } from '../store/usuarios';
+
 export type Papel = 'Admin' | 'Diretor' | 'Gestor' | 'Engenheiro' | 'Cliente';
 
 /** Permissões granulares do sistema. Adicione novas conforme necessário. */
@@ -21,30 +24,14 @@ export const PERMISSOES_POR_PAPEL: Record<Papel, Permissao[] | 'all'> = {
   Cliente: ['obras.ver'],
 };
 
-export interface Usuario {
-  username: string;
-  senha: string;
-  nome: string;
-  email: string;
-  papel: Papel;
-}
-
-/** Usuários cadastrados (provisório, até existir banco de dados). */
-export const USUARIOS: Usuario[] = [
-  {
-    username: 'ggpauliv',
-    senha: '110989',
-    nome: 'Guilherme Pauliv',
-    email: 'ggpauliv@pawliv.com.br',
-    papel: 'Admin',
-  },
-];
+export type { Usuario };
 
 export function autenticar(username: string, senha: string): Usuario | null {
-  const u = USUARIOS.find(
+  const u = listarUsuarios().find(
     (x) => x.username.toLowerCase() === username.trim().toLowerCase() && x.senha === senha
   );
-  return u ?? null;
+  if (!u || u.ativo === false) return null;
+  return u;
 }
 
 export function temPermissao(papel: Papel, permissao: Permissao): boolean {

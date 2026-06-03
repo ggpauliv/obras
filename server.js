@@ -1,7 +1,7 @@
 /**
- * Backend proxy para Claude API
+ * Backend proxy para a API do Google Gemini
  * Roda em http://localhost:3001
- * Recebe requisições do frontend React e chama Claude API
+ * Recebe requisições do frontend React e chama a API do Gemini
  */
 
 const express = require('express');

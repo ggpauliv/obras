@@ -36,6 +36,27 @@ export interface DocumentExtractionResult {
 
 // Chave API agora está no backend - frontend não precisa dela
 
+/** Tempo máximo de espera pelo processamento (ms). */
+const TIMEOUT_MS = 60_000;
+/** Tentativas extras em caso de falha transitória (rede / 5xx). */
+const MAX_RETRIES = 2;
+
+/** Erro com mensagem já amigável para exibição ao usuário. */
+class ErroAmigavel extends Error {}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** fetch com timeout via AbortController. */
+async function fetchComTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 const EXTRACTION_PROMPT = `Você é um especialista em gestão de obras industriais e comerciais. Analise o documento e extraia itens de obra em JSON.
 
 O documento pode ser cronograma, orçamento, EAP, Nota Fiscal (NF-e/NFS-e), pedido de compra, ordem de serviço ou contrato — TODOS são válidos.
@@ -77,9 +98,9 @@ export async function processarDocumento(
     const conteudoBase64 = await fileToBase64(arquivo);
     const mimeType = arquivo.type || 'application/octet-stream';
 
-    console.log(`Processando arquivo com Claude: ${arquivo.name} (${mimeType})`);
+    console.log(`Processando arquivo com Gemini: ${arquivo.name} (${mimeType})`);
 
-    // Preparar conteúdo para enviar ao Claude
+    // Preparar conteúdo para enviar à IA
     const content: any[] = [
       {
         type: 'text',
@@ -88,7 +109,7 @@ export async function processarDocumento(
     ];
 
     // Adicionar imagem/arquivo como base64
-    const mediaType = getMimeTypeForClaude(mimeType);
+    const mediaType = getMimeTypeParaIA(mimeType);
     if (mediaType) {
       content.push({
         type: 'image',
@@ -109,29 +130,56 @@ export async function processarDocumento(
       }
     }
 
-    // Fazer requisição para o backend proxy (evita CORS)
-    const response = await fetch('http://localhost:3001/api/process-document', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        content,
-      }),
-    });
+    // Fazer requisição para o backend proxy (evita CORS), com timeout e retry.
+    const body = JSON.stringify({ content });
+    let response: Response | null = null;
+
+    for (let tentativa = 0; tentativa <= MAX_RETRIES; tentativa++) {
+      try {
+        response = await fetchComTimeout(
+          'http://localhost:3001/api/process-document',
+          { method: 'POST', headers: { 'content-type': 'application/json' }, body },
+          TIMEOUT_MS
+        );
+      } catch (e) {
+        // Falha de rede ou abort (timeout).
+        if (e instanceof DOMException && e.name === 'AbortError') {
+          if (tentativa < MAX_RETRIES) { await sleep(1000 * (tentativa + 1)); continue; }
+          throw new ErroAmigavel('O processamento demorou mais de 60s e foi cancelado. Tente um arquivo menor ou mais simples.');
+        }
+        // "Failed to fetch" → backend provavelmente offline.
+        if (tentativa < MAX_RETRIES) { await sleep(1000 * (tentativa + 1)); continue; }
+        throw new ErroAmigavel('Não foi possível conectar ao servidor de importação. Verifique se ele está rodando (npm start) e tente novamente.');
+      }
+
+      // 5xx é transitório: vale repetir. 4xx não.
+      if (response.status >= 500 && tentativa < MAX_RETRIES) {
+        await sleep(1000 * (tentativa + 1));
+        continue;
+      }
+      break;
+    }
+
+    if (!response) {
+      throw new ErroAmigavel('Não foi possível concluir a requisição de importação.');
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        `Erro da API Claude: ${response.status} - ${
-          errorData.error?.message || response.statusText
-        }`
+      throw new ErroAmigavel(
+        errorData.erro || errorData.error?.message ||
+        `O servidor retornou um erro (${response.status}). Tente novamente em instantes.`
       );
     }
 
-    // O backend já processa a resposta do Gemini e devolve o objeto
+    // O backend já processa a resposta da IA e devolve o objeto
     // estruturado { sucesso, fases, avisos, metadados }.
-    const dadosExtraidos = await response.json();
+    let dadosExtraidos: any;
+    try {
+      dadosExtraidos = await response.json();
+    } catch {
+      throw new ErroAmigavel('Não conseguimos interpretar a resposta da IA. Tente novamente.');
+    }
 
     if (dadosExtraidos.erro) {
       throw new Error(dadosExtraidos.erro);
@@ -178,7 +226,7 @@ export async function processarDocumento(
   }
 }
 
-function getMimeTypeForClaude(
+function getMimeTypeParaIA(
   mimeType: string
 ): string | null {
   if (mimeType.includes('pdf')) return 'application/pdf';

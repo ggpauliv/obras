@@ -1,17 +1,10 @@
-export type StatusKey = 'andamento' | 'atrasada' | 'planejamento' | 'concluida';
+// Dados iniciais (seed) das obras.
+// Os tipos agora vivem em src/store/types.ts (fonte única de verdade).
+// `OBRAS` é mantido para compatibilidade com telas ainda não migradas;
+// telas novas devem usar as funções de src/store/obras.ts.
+import type { Obra, StatusKey } from '../store/types';
 
-export interface Obra {
-  id: string;
-  nome: string;
-  cliente: string;
-  tipo: string;
-  inicio: string;
-  termino: string;
-  pct: number;
-  status: StatusKey;
-  /** Fases conhecidas da obra (para vincular itens importados). */
-  fases?: string[];
-}
+export type { Obra, StatusKey };
 
 export const OBRAS: Obra[] = [
   { id: '101', nome: 'Edifício Horizonte', cliente: 'Construtora Alpha S.A.', tipo: 'Residencial', inicio: '15/01/2024', termino: '30/11/2025', pct: 35, status: 'andamento', fases: ['Fundações', 'Estrutura', 'Alvenaria', 'Instalações', 'Acabamento'] },

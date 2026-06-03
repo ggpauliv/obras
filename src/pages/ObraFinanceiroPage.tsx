@@ -1,5 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ObraHeader from '../components/ObraHeader';
+import { listarDespesas, salvarDespesa, removerDespesa, getObraAtivaId } from '../store';
+import type { Despesa } from '../store';
+
+const FIELD = 'w-full rounded-lg border border-outline-variant text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary py-2 px-3';
 
 const BARS = [
   { fase: 'Fundações', orcado: 80, realizado: 85 },
@@ -22,6 +26,24 @@ const TONE = { error: 'text-error', green: 'text-[#16A34A]', flat: 'text-on-surf
 const DELTA_TONE = { error: 'text-error', green: 'text-[#16A34A]', flat: 'text-outline' };
 
 export default function ObraFinanceiroPage() {
+  const obraId = getObraAtivaId();
+  const [despesas, setDespesas] = useState<Despesa[]>(() => listarDespesas(obraId));
+  const [modalOpen, setModalOpen] = useState(false);
+  const [form, setForm] = useState<Despesa | null>(null);
+
+  const recarregar = () => setDespesas(listarDespesas(obraId));
+  const vazia = (): Despesa => ({ id: '', obraId, faseId: null, descricao: '', categoria: '', valor: '', data: new Date().toLocaleDateString('pt-BR'), fornecedor: '', cnpj: '', numeroNota: '' });
+  const nova = () => { setForm(vazia()); setModalOpen(true); };
+  const editar = (d: Despesa) => { setForm({ ...d }); setModalOpen(true); };
+  const excluir = (id: string) => { if (window.confirm('Excluir esta despesa?')) { removerDespesa(id); recarregar(); } };
+  const salvar = () => {
+    if (!form || !form.descricao.trim()) { window.alert('Informe a descrição da despesa.'); return; }
+    salvarDespesa(form);
+    recarregar();
+    setModalOpen(false);
+  };
+  const setCampo = (campo: keyof Despesa, valor: string) => setForm((f) => (f ? { ...f, [campo]: valor } : f));
+
   return (
     <div className="flex flex-col gap-lg">
       <ObraHeader />
@@ -112,6 +134,92 @@ export default function ObraFinanceiroPage() {
           </div>
         </div>
       </div>
+
+      {/* Despesas lançadas (dados reais do store, incl. importadas via IA) */}
+      <div className="bg-surface border border-outline-variant rounded-lg ambient-shadow overflow-hidden">
+        <div className="p-lg border-b border-outline-variant flex justify-between items-center bg-surface-bright">
+          <h3 className="text-headline-sm font-bold text-on-surface">Despesas Lançadas <span className="text-label-sm text-on-surface-variant font-normal">({despesas.length})</span></h3>
+          <button onClick={nova} className="flex items-center gap-xs px-md py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-label-md">
+            <span className="material-symbols-outlined text-[20px]">add</span> Nova Despesa
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[760px]">
+            <thead className="bg-surface-container-low">
+              <tr>
+                {['Descrição', 'Categoria', 'Fornecedor', 'Nº Nota', 'Data', 'Valor', ''].map((h, i) => (
+                  <th key={i} className="py-sm px-md text-label-sm text-on-surface-variant font-medium border-b border-outline-variant whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-outline-variant/50 text-body-sm">
+              {despesas.length === 0 && (
+                <tr><td colSpan={7} className="py-xl px-md text-center text-on-surface-variant">
+                  Nenhuma despesa lançada. Clique em “Nova Despesa” ou importe uma nota fiscal em “Importar”.
+                </td></tr>
+              )}
+              {despesas.map((d, i) => (
+                <tr key={d.id} className={`group hover:bg-surface-container-lowest transition-colors ${i % 2 === 1 ? 'bg-surface-bright' : ''}`}>
+                  <td className="py-md px-md text-on-surface">{d.descricao}</td>
+                  <td className="py-md px-md text-on-surface-variant">{d.categoria || '—'}</td>
+                  <td className="py-md px-md text-on-surface-variant">{d.fornecedor || '—'}</td>
+                  <td className="py-md px-md text-on-surface-variant">{d.numeroNota || '—'}</td>
+                  <td className="py-md px-md text-on-surface-variant">{d.data}</td>
+                  <td className="py-md px-md text-on-surface font-medium text-right">{d.valor}</td>
+                  <td className="py-md px-md text-right whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => editar(d)} className="text-on-surface-variant hover:text-primary p-xs"><span className="material-symbols-outlined text-[18px]">edit</span></button>
+                    <button onClick={() => excluir(d.id)} className="text-on-surface-variant hover:text-error p-xs"><span className="material-symbols-outlined text-[18px]">delete</span></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal Nova/Editar Despesa */}
+      {modalOpen && form && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/60 backdrop-blur-sm p-4" onClick={() => setModalOpen(false)}>
+          <div className="bg-surface-container-lowest w-full max-w-xl rounded-xl shadow-xl border border-outline-variant overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="px-lg py-md border-b border-outline-variant flex items-center justify-between bg-surface">
+              <h3 className="text-headline-sm font-semibold text-on-surface">{form.id ? 'Editar Despesa' : 'Nova Despesa'}</h3>
+              <button onClick={() => setModalOpen(false)} className="p-xs text-outline hover:text-error transition-colors rounded-md hover:bg-error-container/50"><span className="material-symbols-outlined">close</span></button>
+            </div>
+            <div className="p-lg space-y-md bg-surface-bright">
+              <div>
+                <label className="block text-label-sm text-on-surface mb-1">Descrição *</label>
+                <input className={FIELD} value={form.descricao} onChange={(e) => setCampo('descricao', e.target.value)} placeholder="Ex: Compra de cimento" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
+                <div>
+                  <label className="block text-label-sm text-on-surface mb-1">Categoria</label>
+                  <input className={FIELD} value={form.categoria} onChange={(e) => setCampo('categoria', e.target.value)} placeholder="Ex: Materiais" />
+                </div>
+                <div>
+                  <label className="block text-label-sm text-on-surface mb-1">Valor</label>
+                  <input className={FIELD} value={form.valor} onChange={(e) => setCampo('valor', e.target.value)} placeholder="R$ 0,00" />
+                </div>
+                <div>
+                  <label className="block text-label-sm text-on-surface mb-1">Fornecedor</label>
+                  <input className={FIELD} value={form.fornecedor || ''} onChange={(e) => setCampo('fornecedor', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-label-sm text-on-surface mb-1">Nº da Nota</label>
+                  <input className={FIELD} value={form.numeroNota || ''} onChange={(e) => setCampo('numeroNota', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-label-sm text-on-surface mb-1">Data</label>
+                  <input className={FIELD} value={form.data} onChange={(e) => setCampo('data', e.target.value)} placeholder="DD/MM/AAAA" />
+                </div>
+              </div>
+            </div>
+            <div className="px-lg py-md border-t border-outline-variant flex justify-end gap-sm bg-surface">
+              <button onClick={() => setModalOpen(false)} className="px-lg py-2 rounded-lg border border-outline-variant text-on-surface hover:bg-surface-variant transition-colors text-label-md">Cancelar</button>
+              <button onClick={salvar} className="px-lg py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors text-label-md">Salvar Despesa</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
