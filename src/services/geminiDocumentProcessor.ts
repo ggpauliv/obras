@@ -1,3 +1,5 @@
+import * as XLSX from 'xlsx';
+
 export interface ExtractedPhase {
   id: string;
   nome: string;
@@ -120,13 +122,15 @@ export async function processarDocumento(
         },
       });
     } else {
-      // Para não-imagens, incluir conteúdo como texto
-      const textoConteudo = await arquivo.text().catch(() => '');
-      if (textoConteudo) {
+      // Para não-imagens (planilhas, CSV, texto), extrair conteúdo como texto.
+      const textoConteudo = await extrairTextoArquivo(arquivo);
+      if (textoConteudo.trim()) {
         content.push({
           type: 'text',
-          text: `\n\n### Conteúdo do arquivo:\n${textoConteudo.substring(0, 10000)}`,
+          text: `\n\n### Conteúdo do arquivo (${arquivo.name}):\n${textoConteudo.substring(0, 100000)}`,
         });
+      } else {
+        throw new ErroAmigavel('Não foi possível ler o conteúdo do arquivo. Verifique se a planilha não está vazia ou protegida.');
       }
     }
 
@@ -235,6 +239,38 @@ function getMimeTypeParaIA(
   if (mimeType.includes('image/gif')) return 'image/gif';
   if (mimeType.includes('image/webp')) return 'image/webp';
   return null;
+}
+
+function extensao(nome: string): string {
+  const i = nome.lastIndexOf('.');
+  return i >= 0 ? nome.slice(i + 1).toLowerCase() : '';
+}
+
+/**
+ * Extrai texto legível de planilhas (.xlsx/.xls) e arquivos de texto (.csv/.txt).
+ * Planilhas são convertidas para CSV (uma seção por aba) para a IA conseguir ler.
+ */
+async function extrairTextoArquivo(arquivo: File): Promise<string> {
+  const ext = extensao(arquivo.name);
+
+  if (ext === 'xlsx' || ext === 'xls') {
+    try {
+      const buffer = await arquivo.arrayBuffer();
+      const wb = XLSX.read(buffer, { type: 'array' });
+      return wb.SheetNames
+        .map((nome) => {
+          const csv = XLSX.utils.sheet_to_csv(wb.Sheets[nome], { blankrows: false });
+          return `### Aba: ${nome}\n${csv}`;
+        })
+        .join('\n\n');
+    } catch (e) {
+      console.error('Erro ao ler planilha:', e);
+      return '';
+    }
+  }
+
+  // CSV, TXT e demais formatos baseados em texto.
+  return arquivo.text().catch(() => '');
 }
 
 function fileToBase64(file: File): Promise<string> {

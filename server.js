@@ -68,6 +68,15 @@ Se houver vários itens/produtos discriminados, crie uma fase para cada um.
 
 Cada fase deve ter um campo "categoria": "compra", "instalacao", "manutencao", "servico" ou "etapa_obra".
 
+PLANILHAS ORÇAMENTÁRIAS / MAPA DE CONCORRÊNCIA (importante):
+Quando o documento for uma planilha orçamentária hierárquica (itens numerados como 1, 1.1, 1.2, 2, 3, 3.1...), o conteúdo virá em formato CSV (uma linha por item, colunas separadas por vírgula). Nesse caso:
+- Trate os itens de NÍVEL PRINCIPAL (números inteiros: 1, 2, 3, ...) como as "fases" da obra (ex.: "Indiretos", "Serviços Preliminares", "Fundações", "Estruturas de Concreto", "Piso de Concreto Industrial").
+- Use a coluna "Valor Total" do grupo como "orc" da fase. Se o grupo não tiver total próprio, some os sub-itens.
+- Liste os principais sub-itens (1.1, 1.2...) no campo "descricao" da fase correspondente, de forma resumida.
+- categoria = "etapa_obra" para essas fases.
+- NÃO crie uma fase separada para cada sub-item; consolide por grupo principal para não gerar dezenas de fases.
+- Use o cabeçalho da planilha para identificar a obra, o fornecedor/empreiteiro e a data de emissão, citando-os em "avisos" quando relevante.
+
 REGRA DE ORÇAMENTO (importante):
 - NUNCA repita o valor total em cada item. Se o documento traz valor por item, use o valor de cada item.
 - Se o documento traz apenas UM valor total para vários itens (ex.: uma nota fiscal com vários serviços e um único total), deixe "orc" como null em cada item e informe o valor total uma única vez em "avisos" (campo "Orçamento"), explicando que o total não pôde ser separado por item.
