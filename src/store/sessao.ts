@@ -1,15 +1,23 @@
 // Estado de navegação: qual obra está "aberta" nas telas de detalhe.
-// Como as rotas de detalhe (/obra-fases, /obra-financeiro, ...) não carregam
-// o id na URL, guardamos a obra ativa aqui (selecionada na lista de obras).
-import { read, write } from './db';
+const KEY = 'pawliv.obraAtiva';
 
-const KEY = 'obraAtiva';
-const PADRAO = '101';
+// Limpa IDs antigos no formato numérico (legado localStorage)
+const raw = localStorage.getItem(KEY);
+if (raw && /^"\d+"$/.test(raw)) localStorage.removeItem(KEY);
 
 export function getObraAtivaId(): string {
-  return read<string>(KEY, PADRAO);
+  try {
+    const val = localStorage.getItem(KEY);
+    if (!val) return '';
+    const parsed = JSON.parse(val);
+    // Só aceita UUIDs (formato 8-4-4-4-12)
+    if (typeof parsed === 'string' && /^[0-9a-f-]{36}$/i.test(parsed)) return parsed;
+    return '';
+  } catch {
+    return '';
+  }
 }
 
 export function setObraAtivaId(id: string): void {
-  write(KEY, id);
+  localStorage.setItem(KEY, JSON.stringify(id));
 }

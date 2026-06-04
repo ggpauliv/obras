@@ -1,0 +1,64 @@
+services:
+
+  # ── Banco de dados PostgreSQL ──────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: pawliv-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${DB_NAME}
+      POSTGRES_USER:     ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pawliv-network
+
+  # ── API Node.js ────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: pawliv-backend
+    restart: unless-stopped
+    env_file: .env.local
+    environment:
+      DB_HOST: postgres     # nome do serviço Docker (não localhost)
+      DB_PORT: 5432         # porta interna do container
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - pawliv-network
+
+  # ── Frontend React + Nginx ─────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        REACT_APP_API_URL: ""
+        REACT_APP_GEMINI_API_KEY: ${REACT_APP_GEMINI_API_KEY}
+    container_name: pawliv-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - pawliv-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  pawliv-network:
+    driver: bridge

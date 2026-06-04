@@ -1,0 +1,358 @@
+.orcamentos-comparativa-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.orcamentos-comparativa-container h2 {
+  font-size: 28px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.orcamentos-comparativa-container h3 {
+  font-size: 18px;
+  color: #333;
+  margin-bottom: 15px;
+}
+
+.carregando,
+.sem-orcamentos {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+  font-size: 16px;
+}
+
+.dica {
+  color: #4CAF50;
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+/* Cards de Resumo */
+.cards-resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  border-left: 4px solid #ddd;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card.destaque {
+  border-left-color: #4CAF50;
+  background: #f0f8f4;
+}
+
+.card-valor {
+  font-size: 32px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.card-label {
+  font-size: 14px;
+  color: #999;
+}
+
+/* Seleção */
+.secao-selecao {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 40px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.lista-orcamentos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px;
+  border: 2px solid #eee;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.checkbox-item:hover {
+  border-color: #4CAF50;
+  background: #f9fdf9;
+}
+
+.checkbox-item input[type='checkbox'] {
+  margin-right: 12px;
+  margin-top: 2px;
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+.checkbox-label {
+  font-size: 14px;
+  color: #666;
+  flex: 1;
+}
+
+.checkbox-label strong {
+  color: #333;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.checkbox-label small {
+  color: #999;
+  font-size: 12px;
+}
+
+/* Gráfico de Barras */
+.secao-grafico {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 40px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.grafico-barras {
+  margin-top: 15px;
+}
+
+.barra-item {
+  margin-bottom: 20px;
+}
+
+.barra-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.barra-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  overflow: hidden;
+  height: 40px;
+}
+
+.barra {
+  background: linear-gradient(90deg, #4CAF50, #45a049);
+  height: 100%;
+  min-width: 2%;
+  transition: width 0.3s ease;
+}
+
+.barra-valor {
+  padding-right: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+}
+
+/* Tabela */
+.secao-tabela {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 40px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tabela-wrapper {
+  overflow-x: auto;
+}
+
+.tabela-comparacao {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tabela-comparacao thead {
+  background: #f9f9f9;
+  border-bottom: 2px solid #ddd;
+}
+
+.tabela-comparacao th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+}
+
+.tabela-comparacao tbody tr {
+  border-bottom: 1px solid #eee;
+  transition: background 0.2s;
+}
+
+.tabela-comparacao tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.tabela-comparacao tbody tr.melhor-preco {
+  background: #f0f8f4;
+  font-weight: 500;
+}
+
+.tabela-comparacao td {
+  padding: 12px;
+  color: #666;
+}
+
+.cell-fornecedor {
+  font-weight: 500;
+  color: #333;
+}
+
+.sub-info {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+}
+
+.cell-valor,
+.cell-diferenca {
+  color: #333;
+  font-weight: 500;
+}
+
+.cell-percentual {
+  color: #f57c00;
+}
+
+.cell-prazo {
+  color: #999;
+}
+
+.cell-status {
+  text-align: center;
+}
+
+.badge-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #eee;
+  color: #666;
+}
+
+.badge-status.ativo {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.badge-status.aceito {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.badge-status.vencido {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+/* Ranking */
+.secao-ranking {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.ranking-lista {
+  list-style: decimal;
+  margin: 15px 0 0 20px;
+  padding: 0;
+}
+
+.ranking-lista li {
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-left: 20px;
+}
+
+.ranking-info {
+  flex: 1;
+}
+
+.ranking-info strong {
+  display: block;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.ranking-preco {
+  font-size: 14px;
+  color: #4CAF50;
+  font-weight: 500;
+}
+
+.badge-first {
+  background: #ffd700;
+  color: #333;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 10px;
+}
+
+@media (max-width: 768px) {
+  .orcamentos-comparativa-container {
+    padding: 10px;
+  }
+
+  .cards-resumo {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .lista-orcamentos {
+    grid-template-columns: 1fr;
+  }
+
+  .tabela-comparacao {
+    font-size: 12px;
+  }
+
+  .tabela-comparacao th,
+  .tabela-comparacao td {
+    padding: 8px;
+  }
+
+  .ranking-lista li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .badge-first {
+    margin-left: 0;
+    margin-top: 8px;
+  }
+}

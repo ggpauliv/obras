@@ -16,10 +16,11 @@ export default function LoginPage() {
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro(null);
-    if (login(username, senha)) {
+    const ok = await login(username, senha);
+    if (ok) {
       navigate('/dashboard');
     } else {
       setErro('Usuário ou senha inválidos.');

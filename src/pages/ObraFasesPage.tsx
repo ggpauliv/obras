@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ObraHeader from '../components/ObraHeader';
 import { listarFases, salvarFase, removerFase, getObraAtivaId } from '../store';
@@ -66,12 +66,16 @@ const FIELD = 'w-full rounded-lg border border-outline-variant text-body-sm text
 export default function ObraFasesPage() {
   const navigate = useNavigate();
   const obraId = getObraAtivaId();
-  const [fasesAll, setFasesAll] = useState<Fase[]>(() => listarFases(obraId));
+  const [fasesAll, setFasesAll] = useState<Fase[]>([]);
   const [busca, setBusca] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<Fase | null>(null);
 
-  const recarregar = () => setFasesAll(listarFases(obraId));
+  useEffect(() => {
+    listarFases(obraId).then(setFasesAll);
+  }, [obraId]);
+
+  const recarregar = () => listarFases(obraId).then(setFasesAll);
 
   const novaFase = () => {
     const ordem = fasesAll.reduce((m, f) => Math.max(m, f.ordem), 0) + 1;

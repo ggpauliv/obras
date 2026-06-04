@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ObraTabs from './ObraTabs';
 import { getObraAtivaId, obterObra } from '../store';
+import type { Obra } from '../store';
 
 /**
  * Cabeçalho compacto e consistente da obra, usado em todas as abas
@@ -10,7 +11,12 @@ import { getObraAtivaId, obterObra } from '../store';
  */
 
 export default function ObraHeader() {
-  const obra = obterObra(getObraAtivaId());
+  const [obra, setObra] = useState<Obra | undefined>();
+
+  useEffect(() => {
+    obterObra(getObraAtivaId()).then(setObra);
+  }, []);
+
   const emRisco = obra?.status === 'atrasada';
 
   const info: Array<[string, string, string]> = [

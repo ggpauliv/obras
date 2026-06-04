@@ -21,3 +21,9 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Arquivos locais sensíveis
+pg_hba.conf
+test-conn.js
+test-db.js
+test.js

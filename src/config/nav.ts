@@ -14,6 +14,8 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Financeiro', route: '/obra-financeiro', icon: 'payments' },
   { label: 'Fornecedores', route: '/fornecedores', icon: 'engineering' },
   { label: 'Importar (IA)', route: '/importar', icon: 'auto_awesome' },
+  { label: 'Orçamentos', route: '/orcamentos/upload', icon: 'request_quote' },
+  { label: 'Comparar Orçamentos', route: '/orcamentos/comparativa', icon: 'compare_arrows' },
   { label: 'Usuários', route: '/usuarios', icon: 'group' },
 ];
 
@@ -40,6 +42,8 @@ export const ROUTE_META: Record<string, RouteMeta> = {
   '/obra-auditoria': { title: 'Auditoria', breadcrumb: ['Obras', 'Edifício Horizonte', 'Auditoria'] },
   '/progresso': { title: 'Registro de Progresso', breadcrumb: ['Início', 'Progresso'] },
   '/importar': { title: 'Importar Documento', breadcrumb: ['Início', 'Importar Documento'] },
+  '/orcamentos/upload': { title: 'Importar Orçamentos', breadcrumb: ['Início', 'Orçamentos', 'Importar'] },
+  '/orcamentos/comparativa': { title: 'Comparar Orçamentos', breadcrumb: ['Início', 'Orçamentos', 'Comparativa'] },
   '/usuarios': { title: 'Usuários', breadcrumb: ['Início', 'Usuários'] },
   '/configuracoes': { title: 'Configurações', breadcrumb: ['Início', 'Configurações'] },
 };

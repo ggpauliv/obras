@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ObraHeader from '../components/ObraHeader';
 import { listarDespesas, salvarDespesa, removerDespesa, getObraAtivaId } from '../store';
 import type { Despesa } from '../store';
@@ -27,11 +27,15 @@ const DELTA_TONE = { error: 'text-error', green: 'text-[#16A34A]', flat: 'text-o
 
 export default function ObraFinanceiroPage() {
   const obraId = getObraAtivaId();
-  const [despesas, setDespesas] = useState<Despesa[]>(() => listarDespesas(obraId));
+  const [despesas, setDespesas] = useState<Despesa[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<Despesa | null>(null);
 
-  const recarregar = () => setDespesas(listarDespesas(obraId));
+  useEffect(() => {
+    listarDespesas(obraId).then(setDespesas);
+  }, [obraId]);
+
+  const recarregar = () => listarDespesas(obraId).then(setDespesas);
   const vazia = (): Despesa => ({ id: '', obraId, faseId: null, descricao: '', categoria: '', valor: '', data: new Date().toLocaleDateString('pt-BR'), fornecedor: '', cnpj: '', numeroNota: '' });
   const nova = () => { setForm(vazia()); setModalOpen(true); };
   const editar = (d: Despesa) => { setForm({ ...d }); setModalOpen(true); };

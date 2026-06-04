@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ObraHeader from '../components/ObraHeader';
 import { listarEventos, getObraAtivaId } from '../store';
+import type { EventoAuditoria } from '../store';
 
 interface Evento { icon: string; fill?: boolean; border: string; text?: string; titulo: string; desc: string; data: string; tituloClass?: string; }
 
@@ -23,17 +24,24 @@ const TIPO_ESTILO: Record<string, { icon: string; border: string; fill?: boolean
 };
 
 export default function ObraAuditoriaPage() {
-  const eventosStore: Evento[] = listarEventos(getObraAtivaId()).map((e) => {
-    const est = TIPO_ESTILO[e.tipo] ?? { icon: 'event', border: 'border-[#8B5CF6] text-[#8B5CF6]' };
-    return {
-      icon: est.icon,
-      fill: est.fill,
-      border: est.border,
-      titulo: e.titulo,
-      desc: e.descricao,
-      data: new Date(e.data).toLocaleString('pt-BR'),
-    };
-  });
+  const [eventosStore, setEventosStore] = useState<Evento[]>([]);
+
+  useEffect(() => {
+    listarEventos(getObraAtivaId()).then((eventos) => {
+      const transformados = eventos.map((e: EventoAuditoria) => {
+        const est = TIPO_ESTILO[e.tipo] ?? { icon: 'event', border: 'border-[#8B5CF6] text-[#8B5CF6]' };
+        return {
+          icon: est.icon,
+          fill: est.fill,
+          border: est.border,
+          titulo: e.titulo,
+          desc: e.descricao,
+          data: new Date(e.data).toLocaleString('pt-BR'),
+        };
+      });
+      setEventosStore(transformados);
+    });
+  }, []);
 
   const EVENTOS: Evento[] = [...eventosStore, ...EVENTOS_EXEMPLO];
 

@@ -15,6 +15,8 @@ import ProgressoPage from './pages/ProgressoPage';
 import ImportarPage from './pages/ImportarPage';
 import UsuariosPage from './pages/UsuariosPage';
 import ConfiguracoesPage from './pages/ConfiguracoesPage';
+import { OrcamentosUploadPage } from './pages/OrcamentosUploadPage';
+import { OrcamentosComparativaPage } from './pages/OrcamentosComparativaPage';
 
 export default function App() {
   return (
@@ -36,6 +38,8 @@ export default function App() {
           <Route path="/importar" element={<ImportarPage />} />
           <Route path="/usuarios" element={<UsuariosPage />} />
           <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+          <Route path="/orcamentos/upload" element={<OrcamentosUploadPage />} />
+          <Route path="/orcamentos/comparativa" element={<OrcamentosComparativaPage />} />
         </Route>
 
         <Route path="/" element={<Navigate to="/login" replace />} />

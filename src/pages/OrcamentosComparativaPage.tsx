@@ -1,0 +1,488 @@
+import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell,
+} from 'recharts';
+import { listarObras } from '../store';
+import type { Obra } from '../store';
+import { apiClient } from '../api/client';
+
+// ────────────────────────────────────────────────────────────────────────────
+// Constantes
+// ────────────────────────────────────────────────────────────────────────────
+const CORES = ['#2563EB', '#7C3AED', '#16A34A', '#EA580C', '#0891B2', '#DC2626'];
+const ABAS = ['Visão Geral', 'Por Categorias', 'Itens Detalhados'] as const;
+type Aba = typeof ABAS[number];
+
+const fmt = (v: any) =>
+  Number(v)?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) ?? '—';
+const fmtK = (v: number) =>
+  v >= 1_000_000 ? `R$${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `R$${(v / 1_000).toFixed(0)}K` : fmt(v);
+
+// ────────────────────────────────────────────────────────────────────────────
+// Componente principal
+// ────────────────────────────────────────────────────────────────────────────
+export function OrcamentosComparativaPage() {
+  const navigate = useNavigate();
+  const [obras, setObras] = useState<Obra[]>([]);
+  const [obraId, setObraId] = useState('');
+  const [todos, setTodos] = useState<any[]>([]);
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [linhasPorOrc, setLinhasPorOrc] = useState<Record<string, any[]>>({});
+  const [carregandoLinhas, setCarregandoLinhas] = useState(false);
+  const [carregando, setCarregando] = useState(false);
+  const [aba, setAba] = useState<Aba>('Visão Geral');
+  const [expandidoTabela, setExpandidoTabela] = useState<string | null>(null);
+
+  useEffect(() => { listarObras().then(setObras); }, []);
+
+  useEffect(() => {
+    if (!obraId) { setTodos([]); setSelecionados(new Set()); setLinhasPorOrc({}); return; }
+    setCarregando(true);
+    apiClient.listarOrcamentos(obraId)
+      .then(data => { setTodos(data); setSelecionados(new Set(data.map((o: any) => o.id))); })
+      .catch(() => setTodos([]))
+      .finally(() => setCarregando(false));
+  }, [obraId]);
+
+  // Carrega linhas de todos os orçamentos selecionados quando muda de aba
+  useEffect(() => {
+    if (aba === 'Visão Geral') return;
+    const faltando = Array.from(selecionados).filter(id => !linhasPorOrc[id]);
+    if (faltando.length === 0) return;
+    setCarregandoLinhas(true);
+    Promise.all(faltando.map(id =>
+      apiClient.obterOrcamento(id).then(d => ({ id, linhas: d.linhas || [] })).catch(() => ({ id, linhas: [] }))
+    )).then(results => {
+      const novo: Record<string, any[]> = {};
+      results.forEach(r => { novo[r.id] = r.linhas; });
+      setLinhasPorOrc(prev => ({ ...prev, ...novo }));
+    }).finally(() => setCarregandoLinhas(false));
+  }, [aba, selecionados]);
+
+  const lista = useMemo(() =>
+    todos.filter(o => selecionados.has(o.id)).sort((a, b) => Number(a.valorTotal) - Number(b.valorTotal)),
+    [todos, selecionados]
+  );
+
+  const coresPorId = useMemo(() => {
+    const m: Record<string, string> = {};
+    todos.forEach((o, i) => { m[o.id] = CORES[i % CORES.length]; });
+    return m;
+  }, [todos]);
+
+  const melhor = Number(lista[0]?.valorTotal) || 0;
+  const maior = Number(lista[lista.length - 1]?.valorTotal) || 0;
+  const economia = maior > 0 ? ((maior - melhor) / maior * 100).toFixed(1) : '0';
+
+  // ── Dados para gráfico por categoria ──
+  const dadosCategorias = useMemo(() => {
+    if (lista.length === 0) return [];
+    const cats = new Set<string>();
+    lista.forEach(o => (linhasPorOrc[o.id] || []).forEach((l: any) => cats.add(l.categoria || 'Outros')));
+    return Array.from(cats).sort().map(cat => {
+      const entry: any = { categoria: cat };
+      lista.forEach(o => {
+        const nome = o.fornecedorNome || o.nome?.split(' - ')[0] || o.id.slice(0, 6);
+        const total = (linhasPorOrc[o.id] || [])
+          .filter((l: any) => (l.categoria || 'Outros') === cat)
+          .reduce((s: number, l: any) => s + (Number(l.valorTotal) || 0), 0);
+        entry[nome] = total || null;
+      });
+      return entry;
+    });
+  }, [lista, linhasPorOrc]);
+
+  // ── Matriz de cobertura ──
+  const matrizCategorias = useMemo(() => {
+    if (lista.length === 0) return [];
+    const cats = new Set<string>();
+    lista.forEach(o => (linhasPorOrc[o.id] || []).forEach((l: any) => cats.add(l.categoria || 'Outros')));
+    return Array.from(cats).sort().map(cat => {
+      const row: any = { categoria: cat };
+      lista.forEach(o => {
+        const nome = o.fornecedorNome || o.nome?.split(' - ')[0] || o.id.slice(0, 6);
+        const itens = (linhasPorOrc[o.id] || []).filter((l: any) => (l.categoria || 'Outros') === cat);
+        row[o.id] = {
+          presente: itens.length > 0,
+          total: itens.reduce((s: number, l: any) => s + (Number(l.valorTotal) || 0), 0),
+          qtd: itens.length,
+          nome,
+        };
+      });
+      return row;
+    });
+  }, [lista, linhasPorOrc]);
+
+  const FIELD = 'w-full rounded-lg border border-outline-variant text-body-sm text-on-surface focus:border-primary py-2 px-3 bg-surface-container-lowest';
+
+  return (
+    <div className="flex flex-col gap-lg">
+
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-md">
+        <div>
+          <h2 className="text-headline-md font-bold text-on-surface">Comparativo de Orçamentos</h2>
+          <p className="text-body-sm text-on-surface-variant mt-1">Analise e compare propostas de fornecedores</p>
+        </div>
+        <button onClick={() => navigate('/orcamentos/upload')}
+          className="flex items-center gap-xs px-lg py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 text-label-md transition-colors">
+          <span className="material-symbols-outlined text-[18px]">upload_file</span> Importar
+        </button>
+      </div>
+
+      {/* Filtros: obra + chips fornecedores */}
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-wrap gap-lg items-end">
+        <div className="flex-1 min-w-[220px]">
+          <label className="block text-label-sm text-on-surface mb-1">Obra</label>
+          <select className={FIELD} value={obraId} onChange={e => setObraId(e.target.value)}>
+            <option value="">Selecione a obra…</option>
+            {obras.map(o => <option key={o.id} value={o.id}>{o.nome} — {o.cliente}</option>)}
+          </select>
+        </div>
+        {todos.length > 0 && (
+          <div className="flex flex-wrap gap-sm">
+            {todos.map((o, i) => {
+              const nome = o.fornecedorNome || o.nome?.split(' - ')[0] || `Orc. ${i + 1}`;
+              const sel = selecionados.has(o.id);
+              const cor = CORES[i % CORES.length];
+              return (
+                <button key={o.id} onClick={() => {
+                  setSelecionados(prev => { const s = new Set(prev); s.has(o.id) ? s.delete(o.id) : s.add(o.id); return s; });
+                  setLinhasPorOrc(prev => { const n = { ...prev }; delete n[o.id]; return n; });
+                }}
+                  className="flex items-center gap-xs px-md py-xs rounded-full text-label-sm border transition-all"
+                  style={sel ? { background: cor, borderColor: cor, color: 'white' } : { borderColor: '#e0e0e0', color: '#666' }}>
+                  <span className="material-symbols-outlined text-[14px]">{sel ? 'check' : 'add'}</span>
+                  {nome}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Estado vazio */}
+      {!obraId && (
+        <div className="flex flex-col items-center gap-md py-2xl text-center bg-surface-container-lowest border border-outline-variant rounded-xl">
+          <span className="material-symbols-outlined text-[56px] text-outline">compare_arrows</span>
+          <p className="text-headline-sm text-on-surface">Selecione uma obra para começar</p>
+        </div>
+      )}
+
+      {obraId && carregando && (
+        <div className="flex items-center gap-sm p-xl text-on-surface-variant">
+          <span className="material-symbols-outlined animate-spin text-[22px]">progress_activity</span> Carregando…
+        </div>
+      )}
+
+      {obraId && !carregando && todos.length === 0 && (
+        <div className="flex flex-col items-center gap-md py-2xl text-center bg-surface-container-lowest border border-outline-variant rounded-xl">
+          <span className="material-symbols-outlined text-[56px] text-outline">inbox</span>
+          <p className="text-headline-sm text-on-surface">Nenhum orçamento para esta obra</p>
+          <button onClick={() => navigate('/orcamentos/upload')} className="px-xl py-2 bg-primary text-on-primary rounded-lg text-label-md">Importar</button>
+        </div>
+      )}
+
+      {lista.length > 0 && (
+        <>
+          {/* KPIs sempre visíveis */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-md">
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg">
+              <p className="text-label-sm text-on-surface-variant">Propostas</p>
+              <p className="text-display-lg font-bold text-on-surface mt-xs">{lista.length}</p>
+              <p className="text-body-sm text-on-surface-variant mt-xs">{todos.length - lista.length > 0 ? `${todos.length - lista.length} ocultas` : 'todas visíveis'}</p>
+            </div>
+            <div className="bg-primary rounded-xl p-lg text-on-primary">
+              <div className="flex items-center justify-between">
+                <p className="text-label-sm opacity-80">Melhor Proposta</p>
+                <span className="material-symbols-outlined text-[20px] opacity-70">emoji_events</span>
+              </div>
+              <p className="text-headline-sm font-bold mt-xs">{fmt(melhor)}</p>
+              <p className="text-body-sm opacity-80 mt-xs truncate">{lista[0]?.fornecedorNome || lista[0]?.nome?.split(' - ')[0]}</p>
+            </div>
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg">
+              <p className="text-label-sm text-on-surface-variant">Diferença</p>
+              <p className="text-headline-sm font-bold text-error mt-xs">{fmt(maior - melhor)}</p>
+              <p className="text-body-sm text-on-surface-variant mt-xs">menor vs. maior</p>
+            </div>
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg">
+              <p className="text-label-sm text-on-surface-variant">Economia Potencial</p>
+              <p className="text-headline-sm font-bold text-emerald-600 mt-xs">{economia}%</p>
+              <p className="text-body-sm text-on-surface-variant mt-xs">ao escolher o melhor</p>
+            </div>
+          </div>
+
+          {/* Abas */}
+          <div className="flex gap-0 border-b border-outline-variant">
+            {ABAS.map(a => (
+              <button key={a} onClick={() => setAba(a)}
+                className={`px-lg py-sm text-label-md transition-colors border-b-2 -mb-px ${aba === a ? 'border-primary text-primary font-semibold' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}>
+                {a}
+              </button>
+            ))}
+          </div>
+
+          {/* ── ABA 1: Visão Geral ── */}
+          {aba === 'Visão Geral' && (
+            <>
+              {/* Cards de fornecedores */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-md">
+                {lista.map((o, idx) => {
+                  const nome = o.fornecedorNome || o.nome?.split(' - ')[0] || `Fornecedor ${idx + 1}`;
+                  const diff = Number(o.valorTotal) - melhor;
+                  const pctDiff = melhor > 0 ? ((diff / melhor) * 100).toFixed(1) : '0';
+                  const cor = coresPorId[o.id];
+                  return (
+                    <div key={o.id}
+                      className={`bg-surface-container-lowest rounded-xl border overflow-hidden transition-shadow hover:shadow-md ${idx === 0 ? 'border-emerald-400' : 'border-outline-variant'}`}>
+                      <div className="h-1.5" style={{ background: cor }} />
+                      <div className="p-lg flex flex-col gap-sm">
+                        <div className="flex items-start justify-between gap-sm">
+                          <div className="flex items-center gap-sm">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-label-sm font-bold text-white shrink-0" style={{ background: cor }}>
+                              {idx === 0 ? '🏆' : idx + 1}
+                            </div>
+                            <p className="text-label-md font-semibold text-on-surface leading-snug">{nome}</p>
+                          </div>
+                          {idx === 0 && <span className="shrink-0 px-xs py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-label-sm border border-emerald-200">Melhor</span>}
+                        </div>
+                        <p className="text-headline-sm font-bold text-on-surface">{fmt(o.valorTotal)}</p>
+                        {diff > 0
+                          ? <p className="text-body-sm text-error">+{fmt(diff)} (+{pctDiff}% acima)</p>
+                          : <p className="text-body-sm text-emerald-600">Menor preço entre os selecionados</p>}
+                        {o.prazoDias && (
+                          <div className="flex items-center gap-xs text-body-sm text-on-surface-variant">
+                            <span className="material-symbols-outlined text-[16px]">schedule</span>{o.prazoDias} dias
+                          </div>
+                        )}
+                        <div className="h-2 bg-surface-container-highest rounded-full overflow-hidden mt-auto">
+                          <div className="h-full rounded-full" style={{ width: `${maior > 0 ? (Number(o.valorTotal) / maior) * 100 : 0}%`, background: cor }} />
+                        </div>
+                        <button onClick={() => { setAba('Itens Detalhados'); setExpandidoTabela(o.id); }}
+                          className="flex items-center justify-between text-body-sm text-primary hover:text-primary/80 pt-sm border-t border-outline-variant/50 transition-colors">
+                          <span>Ver itens detalhados</span>
+                          <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Gráfico de barras lateral rápido */}
+              <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg">
+                <h3 className="text-label-lg font-semibold text-on-surface mb-lg">Valores por Fornecedor</h3>
+                <div className="flex flex-col gap-md">
+                  {lista.map((o, idx) => {
+                    const nome = o.fornecedorNome || o.nome?.split(' - ')[0] || `F${idx + 1}`;
+                    const pct = maior > 0 ? (Number(o.valorTotal) / maior) * 100 : 0;
+                    const cor = coresPorId[o.id];
+                    return (
+                      <div key={o.id} className="flex items-center gap-md">
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-label-sm font-bold text-white shrink-0" style={{ background: cor }}>{idx + 1}</div>
+                        <div className="min-w-[160px] text-body-sm font-medium text-on-surface truncate">{nome}</div>
+                        <div className="flex-1 h-8 bg-surface-container-highest rounded-lg overflow-hidden">
+                          <div className="h-full rounded-lg" style={{ width: `${pct}%`, background: cor }} />
+                        </div>
+                        <div className="text-label-md font-bold text-on-surface w-36 text-right shrink-0">{fmt(o.valorTotal)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── ABA 2: Por Categorias ── */}
+          {aba === 'Por Categorias' && (
+            <div className="flex flex-col gap-lg">
+              {carregandoLinhas && (
+                <div className="flex items-center gap-sm p-lg text-on-surface-variant">
+                  <span className="material-symbols-outlined animate-spin text-[22px]">progress_activity</span> Carregando itens de todos os orçamentos…
+                </div>
+              )}
+
+              {!carregandoLinhas && dadosCategorias.length > 0 && (
+                <>
+                  {/* Gráfico de barras agrupadas por categoria */}
+                  <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg">
+                    <h3 className="text-label-lg font-semibold text-on-surface mb-lg">Valores por Categoria</h3>
+                    <ResponsiveContainer width="100%" height={360}>
+                      <BarChart data={dadosCategorias} margin={{ top: 10, right: 20, left: 20, bottom: 80 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="categoria" angle={-35} textAnchor="end" tick={{ fontSize: 11 }} />
+                        <YAxis tickFormatter={fmtK} tick={{ fontSize: 11 }} width={80} />
+                        <Tooltip formatter={(v: any) => fmt(v)} labelStyle={{ fontWeight: 600 }} />
+                        <Legend />
+                        {lista.map((o, i) => {
+                          const nome = o.fornecedorNome || o.nome?.split(' - ')[0] || `F${i + 1}`;
+                          return <Bar key={o.id} dataKey={nome} fill={coresPorId[o.id]} radius={[3, 3, 0, 0]} />;
+                        })}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Matriz de cobertura */}
+                  <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+                    <div className="px-lg py-md border-b border-outline-variant">
+                      <h3 className="text-label-lg font-semibold text-on-surface">Cobertura por Categoria</h3>
+                      <p className="text-body-sm text-on-surface-variant mt-xs">O que cada fornecedor contempla — células vermelhas indicam categoria ausente</p>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-body-sm min-w-[600px]">
+                        <thead className="bg-surface-container-low border-b border-outline-variant">
+                          <tr>
+                            <th className="py-sm px-md text-label-sm text-on-surface-variant font-semibold text-left w-48">Categoria</th>
+                            {lista.map((o, i) => {
+                              const nome = o.fornecedorNome || o.nome?.split(' - ')[0] || `F${i + 1}`;
+                              return (
+                                <th key={o.id} className="py-sm px-md text-label-sm font-semibold text-center whitespace-nowrap">
+                                  <span style={{ color: coresPorId[o.id] }}>{nome}</span>
+                                </th>
+                              );
+                            })}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-outline-variant/40">
+                          {matrizCategorias.map(row => {
+                            const ausentes = lista.filter(o => !row[o.id]?.presente).length;
+                            return (
+                              <tr key={row.categoria} className="hover:bg-surface-container-low/50">
+                                <td className="py-sm px-md font-medium text-on-surface">
+                                  <div className="flex items-center gap-xs">
+                                    {ausentes > 0 && <span className="material-symbols-outlined text-error text-[16px]" title={`${ausentes} fornecedor(es) sem este item`}>warning</span>}
+                                    {row.categoria}
+                                  </div>
+                                </td>
+                                {lista.map(o => {
+                                  const cell = row[o.id];
+                                  return (
+                                    <td key={o.id} className="py-sm px-md text-center">
+                                      {cell?.presente ? (
+                                        <div className="flex flex-col items-center gap-0.5">
+                                          <span className="text-label-sm font-semibold text-on-surface">{fmt(cell.total)}</span>
+                                          <span className="text-label-sm text-on-surface-variant">{cell.qtd} {cell.qtd === 1 ? 'item' : 'itens'}</span>
+                                        </div>
+                                      ) : (
+                                        <div className="flex flex-col items-center gap-0.5">
+                                          <span className="material-symbols-outlined text-error text-[18px]">block</span>
+                                          <span className="text-label-sm text-error">Ausente</span>
+                                        </div>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── ABA 3: Itens Detalhados ── */}
+          {aba === 'Itens Detalhados' && (
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+              <div className="px-lg py-md border-b border-outline-variant flex items-center justify-between">
+                <h3 className="text-label-lg font-semibold text-on-surface">Detalhamento por Fornecedor</h3>
+                <span className="text-body-sm text-on-surface-variant">Clique em um fornecedor para expandir</span>
+              </div>
+              {carregandoLinhas && (
+                <div className="flex items-center gap-sm p-lg text-on-surface-variant">
+                  <span className="material-symbols-outlined animate-spin text-[22px]">progress_activity</span> Carregando itens…
+                </div>
+              )}
+              <div className="divide-y divide-outline-variant">
+                {lista.map((o, idx) => {
+                  const nome = o.fornecedorNome || o.nome?.split(' - ')[0] || `Fornecedor ${idx + 1}`;
+                  const diff = Number(o.valorTotal) - melhor;
+                  const pctDiff = melhor > 0 ? ((diff / melhor) * 100).toFixed(1) : '0';
+                  const cor = coresPorId[o.id];
+                  const aberto = expandidoTabela === o.id;
+                  const itens = linhasPorOrc[o.id];
+
+                  return (
+                    <div key={o.id}>
+                      {/* Linha do fornecedor (clicável) */}
+                      <button
+                        onClick={() => setExpandidoTabela(aberto ? null : o.id)}
+                        className="w-full flex items-center gap-md px-lg py-md hover:bg-surface-container-low transition-colors text-left">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-label-sm font-bold text-white shrink-0" style={{ background: cor }}>
+                          {idx === 0 ? '🏆' : idx + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-sm flex-wrap">
+                            <span className="text-label-md font-semibold text-on-surface">{nome}</span>
+                            {idx === 0 && <span className="px-xs py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-label-sm border border-emerald-200">Melhor preço</span>}
+                          </div>
+                          <div className="flex items-center gap-lg mt-xs flex-wrap">
+                            <span className="text-label-md font-bold text-on-surface">{fmt(o.valorTotal)}</span>
+                            {diff > 0 && <span className="text-body-sm text-error">+{pctDiff}% acima do melhor</span>}
+                            {o.prazoDias && <span className="text-body-sm text-on-surface-variant">{o.prazoDias} dias</span>}
+                            {itens && <span className="text-body-sm text-on-surface-variant">{itens.length} itens</span>}
+                          </div>
+                        </div>
+                        <span className="material-symbols-outlined text-outline text-[22px] shrink-0 transition-transform" style={{ transform: aberto ? 'rotate(180deg)' : '' }}>
+                          expand_more
+                        </span>
+                      </button>
+
+                      {/* Tabela de itens expandida */}
+                      {aberto && (
+                        <div className="border-t border-outline-variant/50">
+                          {!itens
+                            ? <div className="flex items-center gap-sm p-lg text-on-surface-variant"><span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> Carregando…</div>
+                            : itens.length === 0
+                              ? <p className="p-lg text-body-sm text-on-surface-variant">Nenhum item registrado</p>
+                              : (
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-body-sm">
+                                    <thead className="bg-surface-container-low/80">
+                                      <tr>
+                                        {['Item', 'Descrição', 'Categoria', 'Qtd', 'Valor Unit.', 'Total'].map(h => (
+                                          <th key={h} className="py-xs px-md text-label-sm text-on-surface-variant font-semibold text-left whitespace-nowrap">{h}</th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-outline-variant/30">
+                                      {itens.map((l: any, i: number) => (
+                                        <tr key={i} className="hover:bg-surface-container-low/50">
+                                          <td className="py-xs px-md text-on-surface-variant whitespace-nowrap">{l.itemNumero}</td>
+                                          <td className="py-xs px-md text-on-surface max-w-xs">{l.descricao}</td>
+                                          <td className="py-xs px-md">
+                                            <span className="px-xs py-0.5 rounded text-label-sm" style={{ background: cor + '20', color: cor }}>{l.categoria}</span>
+                                          </td>
+                                          <td className="py-xs px-md text-on-surface-variant text-right whitespace-nowrap">{l.quantidade}</td>
+                                          <td className="py-xs px-md text-on-surface-variant text-right whitespace-nowrap">{fmt(l.valorUnitario)}</td>
+                                          <td className="py-xs px-md font-semibold text-on-surface text-right whitespace-nowrap">{fmt(l.valorTotal)}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                    <tfoot className="border-t border-outline-variant bg-surface-container-low">
+                                      <tr>
+                                        <td colSpan={5} className="py-sm px-md text-label-sm font-semibold text-on-surface">Total ({itens.length} itens)</td>
+                                        <td className="py-sm px-md text-right font-bold text-on-surface whitespace-nowrap">{fmt(o.valorTotal)}</td>
+                                      </tr>
+                                    </tfoot>
+                                  </table>
+                                </div>
+                              )
+                          }
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}

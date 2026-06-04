@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { listarFornecedores, salvarFornecedor, removerFornecedor } from '../store';
 import type { Fornecedor, FornecedorStatus } from '../store';
 
@@ -14,7 +14,7 @@ const FIELD = 'w-full rounded-lg border border-outline-variant text-body-sm text
 const VAZIO: Fornecedor = { id: '', nome: '', categoria: '', cnpj: '', contato: '', obras: 0, status: 'ativo' };
 
 export default function FornecedoresPage() {
-  const [fornecedores, setFornecedores] = useState<Fornecedor[]>(() => listarFornecedores());
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [busca, setBusca] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
@@ -22,7 +22,11 @@ export default function FornecedoresPage() {
   const [form, setForm] = useState<Fornecedor>(VAZIO);
   const [menuId, setMenuId] = useState<string | null>(null);
 
-  const recarregar = () => setFornecedores(listarFornecedores());
+  useEffect(() => {
+    listarFornecedores().then(setFornecedores);
+  }, []);
+
+  const recarregar = () => listarFornecedores().then(setFornecedores);
   const novo = () => { setForm(VAZIO); setModalOpen(true); };
   const editar = (f: Fornecedor) => { setForm(f); setModalOpen(true); setMenuId(null); };
   const excluir = (id: string) => { if (window.confirm('Excluir este fornecedor?')) { removerFornecedor(id); recarregar(); } setMenuId(null); };

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StatusKey } from '../data/obras';
 import { listarObras, salvarObra, removerObra, setObraAtivaId } from '../store';
@@ -19,7 +19,7 @@ const VAZIA: Obra = { id: '', nome: '', cliente: '', tipo: 'Residencial', inicio
 
 export default function ObrasPage() {
   const navigate = useNavigate();
-  const [obras, setObras] = useState<Obra[]>(() => listarObras());
+  const [obras, setObras] = useState<Obra[]>([]);
   const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('');
@@ -27,7 +27,11 @@ export default function ObrasPage() {
   const [form, setForm] = useState<Obra>(VAZIA);
   const [menuId, setMenuId] = useState<string | null>(null);
 
-  const recarregar = () => setObras(listarObras());
+  useEffect(() => {
+    listarObras().then(setObras);
+  }, []);
+
+  const recarregar = () => listarObras().then(setObras);
 
   const abrirObra = (id: string) => {
     setObraAtivaId(id);

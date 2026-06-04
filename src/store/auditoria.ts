@@ -1,28 +1,28 @@
-// Repositório de Eventos de Auditoria.
-import { read, write, uid } from './db';
+// Repositório de Eventos de Auditoria — com API REST
+import { apiClient } from '../api/client';
 import type { EventoAuditoria } from './types';
 
-const KEY = 'auditoria';
-
-function todos(): EventoAuditoria[] {
-  return read<EventoAuditoria[]>(KEY, []);
-}
-
 /** Lista eventos; se `obraId` for informado, filtra por obra (mais recentes primeiro). */
-export function listarEventos(obraId?: string): EventoAuditoria[] {
-  const lista = obraId ? todos().filter((e) => !e.obraId || e.obraId === obraId) : todos();
-  return [...lista].sort((a, b) => b.data.localeCompare(a.data));
+export async function listarEventos(obraId?: string): Promise<EventoAuditoria[]> {
+  if (obraId && (obraId === 'undefined' || obraId === 'null')) return [];
+  try {
+    const eventos = await apiClient.listarAuditoria(obraId);
+    return eventos.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+  } catch {
+    return [];
+  }
 }
 
-/** Registra um novo evento de auditoria. */
-export function registrarEvento(
-  evento: Omit<EventoAuditoria, 'id' | 'data'> & { data?: string }
-): EventoAuditoria {
-  const registro: EventoAuditoria = {
+/** Registra um novo evento de auditoria (registrado automaticamente pelo backend). */
+export async function registrarEvento(
+  evento: Omit<EventoAuditoria, 'id' | 'data'>
+): Promise<EventoAuditoria> {
+  // Nota: auditoria é registrada automaticamente pelo backend nas operações CRUD
+  // Esta função é mantida para compatibilidade com o código antigo
+  console.warn('⚠️  registrarEvento deve ser chamado pelo backend automaticamente');
+  return {
     ...evento,
-    id: uid('e'),
-    data: evento.data || new Date().toISOString(),
+    id: '',
+    data: new Date().toISOString(),
   };
-  write(KEY, [...todos(), registro]);
-  return registro;
 }

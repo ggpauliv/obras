@@ -1,30 +1,37 @@
-// Repositório de Despesas (por obra).
-import { read, write, uid } from './db';
+// Repositório de Despesas (por obra) — com API REST
+import { apiClient } from '../api/client';
 import type { Despesa } from './types';
 
-const KEY = 'despesas';
-
-function todas(): Despesa[] {
-  return read<Despesa[]>(KEY, []);
-}
-
 /** Lista as despesas de uma obra. */
-export function listarDespesas(obraId: string): Despesa[] {
-  return todas().filter((d) => d.obraId === obraId);
+export async function listarDespesas(obraId: string): Promise<Despesa[]> {
+  if (!obraId || obraId === 'undefined' || obraId === 'null') return [];
+  try {
+    return await apiClient.listarDespesas(obraId);
+  } catch {
+    return [];
+  }
 }
 
-/** Cria ou atualiza uma despesa (upsert pelo `id`). */
-export function salvarDespesa(despesa: Despesa): Despesa {
-  const despesas = todas();
-  const registro: Despesa = { ...despesa, id: despesa.id || uid('d') };
-  const idx = despesas.findIndex((d) => d.id === registro.id);
-  if (idx >= 0) despesas[idx] = registro;
-  else despesas.push(registro);
-  write(KEY, despesas);
-  return registro;
+/** Cria uma nova despesa. */
+export async function criarDespesa(despesa: Omit<Despesa, 'id'>): Promise<Despesa> {
+  return apiClient.criarDespesa(despesa);
+}
+
+/** Atualiza uma despesa existente. */
+export async function atualizarDespesa(id: string, despesa: Partial<Despesa>): Promise<Despesa> {
+  return apiClient.atualizarDespesa(id, despesa);
+}
+
+/** Cria ou atualiza uma despesa. */
+export async function salvarDespesa(despesa: Despesa): Promise<Despesa> {
+  if (despesa.id) {
+    return atualizarDespesa(despesa.id, despesa);
+  } else {
+    return criarDespesa(despesa);
+  }
 }
 
 /** Remove uma despesa pelo id. */
-export function removerDespesa(id: string): void {
-  write(KEY, todas().filter((d) => d.id !== id));
+export async function removerDespesa(id: string): Promise<void> {
+  await apiClient.deletarDespesa(id);
 }

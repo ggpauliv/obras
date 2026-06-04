@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { processarDocumento, DocumentExtractionResult, ExtractedPhase } from '../services/geminiDocumentProcessor';
 import { listarObras, adicionarFasesImportadas, salvarDespesa, registrarEvento, setObraAtivaId } from '../store';
+import type { Obra } from '../store';
 import { useAuth } from '../auth/AuthContext';
 import { validarArquivo, TAMANHO_MAX_MB } from '../utils/arquivos';
 
@@ -54,7 +55,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 export default function ImportarPage() {
   const navigate = useNavigate();
   const { usuario } = useAuth();
-  const OBRAS = listarObras();
+  const [OBRAS, setOBRAS] = useState<Obra[]>([]);
   const [step, setStep] = useState(0);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [resultado, setResultado] = useState<DocumentExtractionResult | null>(null);
@@ -65,6 +66,10 @@ export default function ImportarPage() {
   const [faseDestino, setFaseDestino] = useState('');
   const [gerarFases, setGerarFases] = useState(true);
   const [gerarDespesa, setGerarDespesa] = useState(true);
+
+  useEffect(() => {
+    listarObras().then(setOBRAS);
+  }, []);
 
   const obraSelecionada = OBRAS.find((o) => o.id === obraId);
 
@@ -460,7 +465,7 @@ export default function ImportarPage() {
                 Descartar e Recomeçar
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (!resultado) return;
                   if (!obraId) {
                     setErro('Selecione a obra de destino antes de confirmar.');
@@ -471,7 +476,7 @@ export default function ImportarPage() {
                   let qtdeFases = 0;
 
                   if (gerarFases && fases.length > 0) {
-                    const novas = adicionarFasesImportadas(obraId, fases.map((f) => ({
+                    const novas = await adicionarFasesImportadas(obraId, fases.map((f) => ({
                       nome: f.nome,
                       inicio: f.inicio,
                       termino: f.termino,
@@ -483,7 +488,7 @@ export default function ImportarPage() {
 
                   if (gerarDespesa && resultado.financeiro) {
                     const fin = resultado.financeiro;
-                    salvarDespesa({
+                    await salvarDespesa({
                       id: '',
                       obraId,
                       faseId: null,
@@ -498,7 +503,7 @@ export default function ImportarPage() {
                     });
                   }
 
-                  registrarEvento({
+                  await registrarEvento({
                     obraId,
                     tipo: 'importacao',
                     titulo: 'Importação via IA',

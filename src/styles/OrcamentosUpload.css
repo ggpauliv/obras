@@ -1,0 +1,282 @@
+.orcamentos-upload-container {
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.orcamentos-upload-container h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* Drop Zone */
+.drop-zone {
+  border: 3px dashed #ccc;
+  border-radius: 8px;
+  padding: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #fafafa;
+}
+
+.drop-zone:hover {
+  border-color: #4CAF50;
+  background-color: #f0f8f4;
+}
+
+.drop-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.drop-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: #333;
+  margin: 10px 0;
+}
+
+.drop-subtitle {
+  font-size: 14px;
+  color: #999;
+  margin: 0;
+}
+
+/* Arquivos Selecionados */
+.arquivos-selecionados {
+  margin-top: 30px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.arquivos-selecionados h3 {
+  margin-top: 0;
+  color: #333;
+}
+
+.arquivos-selecionados ul {
+  list-style: none;
+  padding: 0;
+  margin: 15px 0;
+}
+
+.arquivos-selecionados li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: white;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  border-left: 4px solid #4CAF50;
+}
+
+.arquivos-selecionados span {
+  font-size: 14px;
+  color: #666;
+  word-break: break-all;
+}
+
+.btn-remover {
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s;
+}
+
+.btn-remover:hover {
+  background: #ff5252;
+}
+
+/* Botões */
+.botoes {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn-importar,
+.btn-limpar {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.3s;
+}
+
+.btn-importar {
+  background: #4CAF50;
+  color: white;
+}
+
+.btn-importar:hover:not(:disabled) {
+  background: #45a049;
+}
+
+.btn-importar:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.btn-limpar {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.btn-limpar:hover {
+  background: #e0e0e0;
+}
+
+/* Progresso */
+.progresso-container {
+  margin-top: 30px;
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #eee;
+}
+
+.progresso-container h3 {
+  margin-top: 0;
+}
+
+.progresso-item {
+  margin-bottom: 20px;
+}
+
+.progresso-item span:first-child {
+  display: block;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.barra-progresso {
+  background: #f0f0f0;
+  border-radius: 4px;
+  height: 8px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.barra-preenchida {
+  background: #4CAF50;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.progresso-item span:last-child {
+  font-size: 12px;
+  color: #999;
+}
+
+/* Resultados */
+.resultados-container {
+  margin-top: 30px;
+}
+
+.resultados-container h3 {
+  color: #333;
+}
+
+.resultado-item {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border-left: 4px solid #4CAF50;
+}
+
+.resultado-item.erro {
+  border-left-color: #ff6b6b;
+}
+
+.resultado-arquivo {
+  font-weight: 500;
+  color: #333;
+  display: block;
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+
+.resultado-detalhe p,
+.resultado-erro p {
+  margin: 8px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.badge-sucesso,
+.badge-erro {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.badge-sucesso {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.badge-erro {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.avisos {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.aviso-item {
+  color: #f57c00;
+  font-size: 12px;
+  margin: 4px 0;
+}
+
+/* Erro Container */
+.erro-container {
+  margin-top: 20px;
+  background: #ffebee;
+  border-left: 4px solid #ff6b6b;
+  border-radius: 4px;
+  padding: 16px;
+}
+
+.erro-mensagem {
+  color: #c62828;
+  margin: 0;
+  font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  .orcamentos-upload-container {
+    padding: 10px;
+  }
+
+  .drop-zone {
+    padding: 20px;
+  }
+
+  .botoes {
+    flex-direction: column;
+  }
+}

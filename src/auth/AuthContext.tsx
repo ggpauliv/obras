@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { autenticar, temPermissao, Permissao, Papel } from './users';
+import { apiClient } from '../api/client';
+import type { Papel } from './users';
 
 interface SessaoUsuario {
+  id: string;
   username: string;
   nome: string;
   email: string;
@@ -11,9 +13,9 @@ interface SessaoUsuario {
 
 interface AuthContextValue {
   usuario: SessaoUsuario | null;
-  login: (username: string, senha: string) => boolean;
+  login: (username: string, senha: string) => Promise<boolean>;
   logout: () => void;
-  can: (permissao: Permissao) => boolean;
+  can: (permissao: string) => boolean;
 }
 
 const STORAGE_KEY = 'pawliv.sessao';
@@ -32,24 +34,35 @@ function carregarSessao(): SessaoUsuario | null {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [usuario, setUsuario] = useState<SessaoUsuario | null>(carregarSessao);
 
-  const login = useCallback((username: string, senha: string) => {
-    const u = autenticar(username, senha);
-    if (!u) return false;
-    const sessao: SessaoUsuario = { username: u.username, nome: u.nome, email: u.email, papel: u.papel };
-    setUsuario(sessao);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessao));
-    return true;
+  const login = useCallback(async (username: string, senha: string): Promise<boolean> => {
+    try {
+      const resp = await apiClient.login(username, senha);
+      if (!resp.token) return false;
+
+      apiClient.setToken(resp.token);
+
+      const sessao: SessaoUsuario = {
+        id: resp.usuario.id,
+        username: resp.usuario.email,
+        nome: resp.usuario.nome,
+        email: resp.usuario.email,
+        papel: 'Admin',
+      };
+      setUsuario(sessao);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessao));
+      return true;
+    } catch {
+      return false;
+    }
   }, []);
 
   const logout = useCallback(() => {
     setUsuario(null);
+    apiClient.clearToken();
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
-  const can = useCallback(
-    (permissao: Permissao) => (usuario ? temPermissao(usuario.papel, permissao) : false),
-    [usuario]
-  );
+  const can = useCallback((_permissao: string) => usuario !== null, [usuario]);
 
   return (
     <AuthContext.Provider value={{ usuario, login, logout, can }}>
