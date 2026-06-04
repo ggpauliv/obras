@@ -43,9 +43,21 @@ Legenda: `[ ]` pendente · `[~]` em andamento · `[x]` concluído
 - [x] **5. Nomenclatura da IA — Gemini** (decisão: manter Gemini)
   - Alinhados UI, comentários, `server.js` e `CLAUDE.md` (incl. variável `REACT_APP_GEMINI_API_KEY`)
 
-## ⏸️ Fase E — Persistência (Docker, depois)
-- [ ] `docker-compose.yml` com Postgres
-- [ ] API REST no backend (CRUD de obras, fases, financeiro, fornecedores)
-- [ ] Migrar `src/store/` de `localStorage` para chamadas à API
-- [ ] Autenticação real com hash de senha e tokens
-- [ ] Histórico / auditoria persistente multiusuário
+## Fase E — Persistência (Docker + PostgreSQL) ✅
+- [x] `docker-compose.yml` com Postgres 15 + pgAdmin
+- [x] API REST no backend (CRUD de obras, fases, financeiro, fornecedores)
+- [x] Migrar `src/store/` de `localStorage` para chamadas à API assincronas
+- [x] Autenticação real com JWT + hash bcrypt de senha
+- [x] Histórico / auditoria persistente multiusuário (registrado automaticamente)
+
+**Arquivos criados:**
+- `docker-compose.yml` — orquestração de contêineres
+- `db/init.sql` — schema do PostgreSQL
+- `db/seed.sql` — dados iniciais
+- `server-api.js` — API REST completa (Express + pg)
+- `db-client.js` — gerenciador de pool PostgreSQL
+- `auth-middleware.js` — middleware JWT
+- `src/api/client.ts` — cliente HTTP centralizado
+- `src/store/db-api.ts` — camada de acesso via API
+- `.env.local` — configurações de desenvolvimento
+- `FASE_E.md` — documentação completa
