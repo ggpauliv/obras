@@ -33,6 +33,7 @@ export function OrcamentosComparativaPage() {
   const [carregando, setCarregando] = useState(false);
   const [aba, setAba] = useState<Aba>('Visão Geral');
   const [expandidoTabela, setExpandidoTabela] = useState<string | null>(null);
+  const [removendo, setRemovendo] = useState<string | null>(null);
 
   useEffect(() => { listarObras().then(setObras); }, []);
 
@@ -59,6 +60,20 @@ export function OrcamentosComparativaPage() {
       setLinhasPorOrc(prev => ({ ...prev, ...novo }));
     }).finally(() => setCarregandoLinhas(false));
   }, [aba, selecionados]);
+
+  const remover = async (id: string, nome: string) => {
+    if (!window.confirm(`Remover orçamento de "${nome}"? Esta ação não pode ser desfeita.`)) return;
+    setRemovendo(id);
+    try {
+      await apiClient.deletarOrcamento(id);
+      setTodos(prev => prev.filter(o => o.id !== id));
+      setSelecionados(prev => { const s = new Set(prev); s.delete(id); return s; });
+      setLinhasPorOrc(prev => { const n = { ...prev }; delete n[id]; return n; });
+    } catch (err: any) {
+      alert('Erro ao remover: ' + err.message);
+    }
+    setRemovendo(null);
+  };
 
   const lista = useMemo(() =>
     todos.filter(o => selecionados.has(o.id)).sort((a, b) => Number(a.valorTotal) - Number(b.valorTotal)),
@@ -259,11 +274,22 @@ export function OrcamentosComparativaPage() {
                         <div className="h-2 bg-surface-container-highest rounded-full overflow-hidden mt-auto">
                           <div className="h-full rounded-full" style={{ width: `${maior > 0 ? (Number(o.valorTotal) / maior) * 100 : 0}%`, background: cor }} />
                         </div>
-                        <button onClick={() => { setAba('Itens Detalhados'); setExpandidoTabela(o.id); }}
-                          className="flex items-center justify-between text-body-sm text-primary hover:text-primary/80 pt-sm border-t border-outline-variant/50 transition-colors">
-                          <span>Ver itens detalhados</span>
-                          <span className="material-symbols-outlined text-[18px]">open_in_new</span>
-                        </button>
+                        <div className="flex items-center justify-between pt-sm border-t border-outline-variant/50">
+                          <button onClick={() => { setAba('Itens Detalhados'); setExpandidoTabela(o.id); }}
+                            className="flex items-center gap-xs text-body-sm text-primary hover:text-primary/80 transition-colors">
+                            <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                            <span>Ver itens</span>
+                          </button>
+                          <button
+                            onClick={() => remover(o.id, o.fornecedorNome || o.nome?.split(' - ')[0] || 'orçamento')}
+                            disabled={removendo === o.id}
+                            className="flex items-center gap-xs text-body-sm text-error hover:text-error/80 transition-colors disabled:opacity-50"
+                            title="Remover orçamento">
+                            <span className="material-symbols-outlined text-[18px]">
+                              {removendo === o.id ? 'progress_activity' : 'delete'}
+                            </span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -427,9 +453,20 @@ export function OrcamentosComparativaPage() {
                             {itens && <span className="text-body-sm text-on-surface-variant">{itens.length} itens</span>}
                           </div>
                         </div>
-                        <span className="material-symbols-outlined text-outline text-[22px] shrink-0 transition-transform" style={{ transform: aberto ? 'rotate(180deg)' : '' }}>
-                          expand_more
-                        </span>
+                        <div className="flex items-center gap-sm shrink-0">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); remover(o.id, nome); }}
+                            disabled={removendo === o.id}
+                            className="p-xs text-outline hover:text-error transition-colors rounded disabled:opacity-50"
+                            title="Remover orçamento">
+                            <span className="material-symbols-outlined text-[20px]">
+                              {removendo === o.id ? 'progress_activity' : 'delete'}
+                            </span>
+                          </button>
+                          <span className="material-symbols-outlined text-outline text-[22px] transition-transform" style={{ transform: aberto ? 'rotate(180deg)' : '' }}>
+                            expand_more
+                          </span>
+                        </div>
                       </button>
 
                       {/* Tabela de itens expandida */}
