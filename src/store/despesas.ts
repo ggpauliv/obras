@@ -1,12 +1,22 @@
 // Repositório de Despesas (por obra) — com API REST
 import { apiClient } from '../api/client';
 import type { Despesa } from './types';
+import { paraISO, paraBR, hojeISO } from '../utils/datas';
+
+// Data do banco (ISO) -> exibição BR.
+function deDB(d: any): Despesa {
+  return { ...d, data: paraBR(d.data) };
+}
+// Data da UI (BR) -> ISO; "data" é obrigatória no banco, usa hoje como fallback.
+function paraDB<T extends { data?: string }>(d: T): T {
+  return { ...d, data: paraISO(d.data || '') || hojeISO() };
+}
 
 /** Lista as despesas de uma obra. */
 export async function listarDespesas(obraId: string): Promise<Despesa[]> {
   if (!obraId || obraId === 'undefined' || obraId === 'null') return [];
   try {
-    return await apiClient.listarDespesas(obraId);
+    return (await apiClient.listarDespesas(obraId)).map(deDB);
   } catch {
     return [];
   }
@@ -14,12 +24,12 @@ export async function listarDespesas(obraId: string): Promise<Despesa[]> {
 
 /** Cria uma nova despesa. */
 export async function criarDespesa(despesa: Omit<Despesa, 'id'>): Promise<Despesa> {
-  return apiClient.criarDespesa(despesa);
+  return deDB(await apiClient.criarDespesa(paraDB(despesa)));
 }
 
 /** Atualiza uma despesa existente. */
 export async function atualizarDespesa(id: string, despesa: Partial<Despesa>): Promise<Despesa> {
-  return apiClient.atualizarDespesa(id, despesa);
+  return deDB(await apiClient.atualizarDespesa(id, paraDB(despesa)));
 }
 
 /** Cria ou atualiza uma despesa. */

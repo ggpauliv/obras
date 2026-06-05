@@ -1,13 +1,24 @@
 // Repositório de Fases (por obra) — com API REST
 import { apiClient } from '../api/client';
 import type { Fase } from './types';
+import { paraISO, paraBR, hojeISO } from '../utils/datas';
+
+// Datas do banco (ISO) -> exibição BR.
+function deDB(f: any): Fase {
+  return { ...f, inicio: paraBR(f.inicio), termino: paraBR(f.termino) };
+}
+// Datas da UI (BR) -> ISO. Como inicio/termino são obrigatórios no banco,
+// usa a data de hoje como fallback quando vierem vazias.
+function paraDB<T extends { inicio?: string; termino?: string }>(f: T): T {
+  return { ...f, inicio: paraISO(f.inicio || '') || hojeISO(), termino: paraISO(f.termino || '') || hojeISO() };
+}
 
 /** Lista as fases de uma obra, ordenadas. */
 export async function listarFases(obraId: string): Promise<Fase[]> {
   if (!obraId || obraId === 'undefined' || obraId === 'null') return [];
   try {
     const fases = await apiClient.listarFases(obraId);
-    return fases.sort((a, b) => a.ordem - b.ordem);
+    return fases.map(deDB).sort((a, b) => a.ordem - b.ordem);
   } catch {
     return [];
   }
@@ -15,12 +26,12 @@ export async function listarFases(obraId: string): Promise<Fase[]> {
 
 /** Cria uma nova fase. */
 export async function criarFase(fase: Omit<Fase, 'id'>): Promise<Fase> {
-  return apiClient.criarFase(fase);
+  return deDB(await apiClient.criarFase(paraDB(fase)));
 }
 
 /** Atualiza uma fase existente. */
 export async function atualizarFase(id: string, fase: Partial<Fase>): Promise<Fase> {
-  return apiClient.atualizarFase(id, fase);
+  return deDB(await apiClient.atualizarFase(id, paraDB(fase)));
 }
 
 /** Cria ou atualiza uma fase. */
