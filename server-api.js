@@ -763,11 +763,17 @@ async function chamarGeminiComRetry(prompt, maxTentativas = 4) {
         generationConfig: {
           temperature: 0.1,
           responseMimeType: 'application/json',
-          maxOutputTokens: 32768,
+          maxOutputTokens: 65536,
         },
       });
       const result = await model.generateContent(prompt);
-      return result.response.text();
+      const cand = result.response?.candidates?.[0];
+      const finish = cand?.finishReason;
+      const texto = result.response.text();
+      if (finish && finish !== 'STOP') {
+        console.warn(`⚠️ Gemini finishReason=${finish} (resposta possivelmente truncada), ${texto.length} chars`);
+      }
+      return texto;
     } catch (err) {
       ultimoErro = err;
       const msg = err.message || '';
@@ -862,12 +868,18 @@ REGRAS:
 
     let parsed;
     try {
-      const jsonMatch = resposta.match(/```json\s*([\s\S]*?)\s*```/) ||
-                        resposta.match(/```\s*([\s\S]*?)\s*```/) ||
-                        [null, resposta];
-      parsed = JSON.parse(jsonMatch[1].trim());
-    } catch {
-      return res.status(500).json({ erro: 'A IA não retornou JSON válido. Tente novamente.' });
+      // Remove cercas de código e isola do primeiro "{" ao último "}".
+      let txt = resposta.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const ini = txt.indexOf('{');
+      const fim = txt.lastIndexOf('}');
+      if (ini >= 0 && fim > ini) txt = txt.slice(ini, fim + 1);
+      parsed = JSON.parse(txt);
+    } catch (e) {
+      console.error('❌ JSON inválido da IA. Tamanho:', resposta.length, '| início:', resposta.slice(0, 200), '| fim:', resposta.slice(-200));
+      return res.status(500).json({
+        erro: 'A IA retornou uma resposta grande demais ou incompleta para este documento. ' +
+              'Tente um arquivo com menos fornecedores/itens, ou me avise para ajustar a extração.',
+      });
     }
 
     // Aceita {orcamentos:[...]} ou, por robustez, um objeto único antigo.
