@@ -129,9 +129,16 @@ export function OrcamentosComparativaPage() {
           Number(l.quantidade) || 0, Number(l.valorUnitario) || 0, Number(l.valorTotal) || 0,
         ]),
       }));
-      const categorias = matrizCategorias.map(row => ({
-        categoria: row.categoria,
-        valores: lista.map(o => (row[o.id]?.presente ? (row[o.id].total || 0) : null)),
+      // Categorias calculadas das linhas recém-carregadas (não do estado, que pode estar vazio)
+      const cats = Array.from(new Set(
+        lista.flatMap(o => (carregadas[o.id] || []).map((l: any) => l.categoria || 'Outros'))
+      )).sort();
+      const categorias = cats.map(cat => ({
+        categoria: cat,
+        valores: lista.map(o => {
+          const ls = (carregadas[o.id] || []).filter((l: any) => (l.categoria || 'Outros') === cat);
+          return ls.length ? ls.reduce((s: number, l: any) => s + (Number(l.valorTotal) || 0), 0) : null;
+        }),
       }));
       exportarComparativoPDF({ arquivo: `comparativo_${slug}`, obra: nomeObra, economia, fornecedores, categorias });
     } catch (e: any) {
