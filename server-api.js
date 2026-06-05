@@ -758,7 +758,14 @@ async function chamarGeminiComRetry(prompt, maxTentativas = 4) {
     const modelo = modelos[Math.min(tentativa - 1, modelos.length - 1)];
     try {
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: modelo });
+      const model = genAI.getGenerativeModel({
+        model: modelo,
+        generationConfig: {
+          temperature: 0.1,
+          responseMimeType: 'application/json',
+          maxOutputTokens: 32768,
+        },
+      });
       const result = await model.generateContent(prompt);
       return result.response.text();
     } catch (err) {
