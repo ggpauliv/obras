@@ -1010,6 +1010,17 @@ REGRAS CRÍTICAS:
 
     orcamentos = orcamentos.filter((o) => o.fornecedor || (o.linhas && o.linhas.length));
 
+    // Remove fornecedores duplicados (mesmo nome): mantém o de maior valor total.
+    const porNome = new Map();
+    for (const o of orcamentos) {
+      const chave = (o.fornecedor || '').trim().toLowerCase();
+      const existente = porNome.get(chave);
+      if (!existente || (o.valorTotal || 0) > (existente.valorTotal || 0)) {
+        porNome.set(chave, o);
+      }
+    }
+    orcamentos = Array.from(porNome.values());
+
     if (orcamentos.length === 0) {
       return res.status(422).json({ erro: 'Nenhum fornecedor/orçamento foi identificado no documento.' });
     }

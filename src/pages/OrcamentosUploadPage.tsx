@@ -20,6 +20,11 @@ interface DadosAnalisados {
 const fmt = (v: number) => v?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) ?? '—';
 const FIELD = 'w-full rounded-lg border border-outline-variant text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary py-2 px-3 bg-surface-container-lowest';
 
+const CATEGORIAS = [
+  'Estrutura', 'Alvenaria', 'Cobertura', 'Instalações Elétricas', 'Instalações Hidráulicas',
+  'Acabamento', 'Pintura', 'Fundações', 'Terraplanagem', 'Serviços Gerais', 'Materiais', 'Mão de Obra',
+];
+
 export function OrcamentosUploadPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -103,6 +108,21 @@ export function OrcamentosUploadPage() {
       if (!resultados[i].salvo) await salvarUm(i);
     }
   };
+
+  // Edições na revisão (antes de salvar)
+  const renomear = (idx: number, nome: string) =>
+    setResultados(prev => prev.map((r, i) => i === idx ? { ...r, fornecedor: nome } : r));
+
+  const removerCard = (idx: number) =>
+    setResultados(prev => prev.filter((_, i) => i !== idx));
+
+  // Como os itens são compartilhados, mudar a categoria de um item vale para
+  // todos os fornecedores (mesmo itemNumero).
+  const mudarCategoria = (itemNumero: string, categoria: string) =>
+    setResultados(prev => prev.map(r => ({
+      ...r,
+      linhas: (r.linhas || []).map((l: any) => l.itemNumero === itemNumero ? { ...l, categoria } : l),
+    })));
 
   const todosSalvos = resultados.length > 0 && resultados.every(r => r.salvo);
 
@@ -198,27 +218,45 @@ export function OrcamentosUploadPage() {
         <div key={d.arquivo} className={`bg-surface-container-lowest border rounded-xl overflow-hidden ${d.salvo ? 'border-emerald-300' : 'border-outline-variant'}`}>
           {/* Cabeçalho do card */}
           <div className={`px-lg py-md flex items-center justify-between ${d.salvo ? 'bg-emerald-50' : 'bg-surface-container-low'}`}>
-            <div className="flex items-center gap-sm min-w-0">
+            <div className="flex items-center gap-sm min-w-0 flex-1">
               {d.salvo
                 ? <span className="material-symbols-outlined text-emerald-600 text-[22px]">check_circle</span>
                 : <span className="material-symbols-outlined text-outline text-[22px]">description</span>
               }
-              <div className="min-w-0">
-                <p className="text-label-md font-semibold text-on-surface truncate">{d.arquivo}</p>
-                <p className="text-body-sm text-on-surface-variant">{d.salvo ? 'Salvo no banco' : 'Aguardando confirmação'}</p>
+              <div className="min-w-0 flex-1">
+                {d.salvo ? (
+                  <p className="text-label-md font-semibold text-on-surface truncate">{d.fornecedor || d.arquivo}</p>
+                ) : (
+                  <input
+                    value={d.fornecedor || ''}
+                    onChange={e => renomear(idx, e.target.value)}
+                    placeholder="Nome do fornecedor/orçamento"
+                    className="w-full max-w-md text-label-md font-semibold text-on-surface bg-transparent border-b border-outline-variant focus:border-primary outline-none py-0.5"
+                  />
+                )}
+                <p className="text-body-sm text-on-surface-variant truncate">{d.salvo ? 'Salvo no banco' : `de ${d.arquivo}`}</p>
               </div>
             </div>
             {!d.salvo && (
-              <button
-                onClick={() => salvarUm(idx)}
-                disabled={salvando[d.arquivo]}
-                className="shrink-0 px-lg py-2 rounded-lg bg-primary text-on-primary text-label-md hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-xs"
-              >
-                {salvando[d.arquivo]
-                  ? <><span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> Salvando…</>
-                  : <><span className="material-symbols-outlined text-[18px]">save</span> Salvar</>
-                }
-              </button>
+              <div className="shrink-0 flex items-center gap-sm">
+                <button
+                  onClick={() => removerCard(idx)}
+                  title="Remover este orçamento"
+                  className="p-2 rounded-lg text-outline hover:text-error hover:bg-error-container/30 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[20px]">delete</span>
+                </button>
+                <button
+                  onClick={() => salvarUm(idx)}
+                  disabled={salvando[d.arquivo]}
+                  className="px-lg py-2 rounded-lg bg-primary text-on-primary text-label-md hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-xs"
+                >
+                  {salvando[d.arquivo]
+                    ? <><span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> Salvando…</>
+                    : <><span className="material-symbols-outlined text-[18px]">save</span> Salvar</>
+                  }
+                </button>
+              </div>
             )}
           </div>
 
@@ -253,9 +291,9 @@ export function OrcamentosUploadPage() {
           )}
 
           {/* Tabela de itens (primeiros 8) */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-body-sm min-w-[600px]">
-              <thead className="bg-surface-container-low border-b border-outline-variant">
+          <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
+            <table className="w-full text-left text-body-sm min-w-[640px]">
+              <thead className="bg-surface-container-low border-b border-outline-variant sticky top-0 z-10">
                 <tr>
                   {['Item', 'Descrição', 'Categoria', 'Qtd', 'Unit.', 'Total'].map(h => (
                     <th key={h} className="py-sm px-md text-label-sm text-on-surface-variant font-semibold whitespace-nowrap">{h}</th>
@@ -263,11 +301,23 @@ export function OrcamentosUploadPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/40">
-                {(d.linhas || []).slice(0, 8).map((l, i) => (
+                {(d.linhas || []).map((l: any, i: number) => (
                   <tr key={i} className="hover:bg-surface-container-low/50">
                     <td className="py-xs px-md text-on-surface-variant whitespace-nowrap">{l.itemNumero}</td>
-                    <td className="py-xs px-md text-on-surface max-w-xs truncate">{l.descricao}</td>
-                    <td className="py-xs px-md"><span className="px-xs py-0.5 bg-primary/10 text-primary rounded text-label-sm whitespace-nowrap">{l.categoria}</span></td>
+                    <td className="py-xs px-md text-on-surface max-w-xs truncate" title={l.descricao}>{l.descricao}</td>
+                    <td className="py-xs px-md">
+                      {d.salvo ? (
+                        <span className="px-xs py-0.5 bg-primary/10 text-primary rounded text-label-sm whitespace-nowrap">{l.categoria}</span>
+                      ) : (
+                        <select
+                          value={l.categoria || ''}
+                          onChange={e => mudarCategoria(l.itemNumero, e.target.value)}
+                          className="text-label-sm bg-primary/10 text-primary rounded px-xs py-0.5 border border-transparent hover:border-primary/40 focus:border-primary outline-none cursor-pointer"
+                        >
+                          {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      )}
+                    </td>
                     <td className="py-xs px-md text-on-surface-variant text-right whitespace-nowrap">{l.quantidade}</td>
                     <td className="py-xs px-md text-on-surface-variant text-right whitespace-nowrap">{fmt(l.valorUnitario)}</td>
                     <td className="py-xs px-md font-medium text-on-surface text-right whitespace-nowrap">{fmt(l.valorTotal)}</td>
@@ -275,11 +325,6 @@ export function OrcamentosUploadPage() {
                 ))}
               </tbody>
             </table>
-            {(d.linhas?.length ?? 0) > 8 && (
-              <p className="text-body-sm text-on-surface-variant px-lg py-sm bg-surface-container-low border-t border-outline-variant">
-                + {d.linhas.length - 8} itens adicionais
-              </p>
-            )}
           </div>
         </div>
       ))}
