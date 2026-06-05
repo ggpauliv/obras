@@ -124,16 +124,16 @@ export function OrcamentosComparativaPage() {
       }
       const fornecedores = lista.map(o => ({
         nome: nomeDe(o), valorTotal: Number(o.valorTotal) || 0, prazoDias: o.prazoDias || null, cor: coresPorId[o.id],
+        itens: (carregadas[o.id] || []).map((l: any) => [
+          l.itemNumero || '', l.descricao || '', l.categoria || '',
+          Number(l.quantidade) || 0, Number(l.valorUnitario) || 0, Number(l.valorTotal) || 0,
+        ]),
       }));
       const categorias = matrizCategorias.map(row => ({
         categoria: row.categoria,
         valores: lista.map(o => (row[o.id]?.presente ? (row[o.id].total || 0) : null)),
       }));
-      const itens: (string | number)[][] = [];
-      lista.forEach(o => (carregadas[o.id] || []).forEach((l: any) =>
-        itens.push([nomeDe(o), l.itemNumero || '', l.descricao || '', l.categoria || '', Number(l.quantidade) || 0, Number(l.valorUnitario) || 0, Number(l.valorTotal) || 0])
-      ));
-      exportarComparativoPDF({ arquivo: `comparativo_${slug}`, obra: nomeObra, economia, fornecedores, categorias, itens });
+      exportarComparativoPDF({ arquivo: `comparativo_${slug}`, obra: nomeObra, economia, fornecedores, categorias });
     } catch (e: any) {
       alert('Erro ao gerar PDF: ' + e.message);
     }

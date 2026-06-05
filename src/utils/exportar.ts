@@ -18,9 +18,12 @@ export interface ComparativoPDF {
   arquivo: string;
   obra: string;
   economia: string;
-  fornecedores: { nome: string; valorTotal: number; prazoDias?: number | null; cor: string }[]; // melhor→pior
+  // melhor→pior; cada fornecedor leva seus próprios itens
+  fornecedores: {
+    nome: string; valorTotal: number; prazoDias?: number | null; cor: string;
+    itens: (string | number)[][]; // [item, desc, categoria, qtd, unit, total]
+  }[];
   categorias: { categoria: string; valores: (number | null)[] }[];
-  itens: (string | number)[][]; // [fornecedor, item, desc, categoria, qtd, unit, total]
 }
 
 /** Gera um PDF de apresentação, estruturado e completo (3 seções). */
@@ -107,39 +110,73 @@ export function exportarComparativoPDF(d: ComparativoPDF): void {
   });
   y += 4;
 
-  // ── Comparativo por Categoria ──
+  // ── Comparativo por Categoria (mini-gráficos, um por categoria) ──
+  const H = doc.internal.pageSize.getHeight();
   doc.addPage(); cabecalho(); y = 32;
   doc.setTextColor(...AZUL); doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
   doc.text('Comparativo por Categoria', margem, y);
-  autoTable(doc, {
-    startY: y + 4,
-    head: [['Categoria', ...d.fornecedores.map((f) => f.nome)]],
-    body: d.categorias.map((c) => [
-      c.categoria,
-      ...c.valores.map((v) => (v == null ? '—' : brlK(v))),
-    ]),
-    theme: 'grid',
-    headStyles: { fillColor: AZUL, fontSize: 6.5, halign: 'center' },
-    styles: { fontSize: 6.5, cellPadding: 1.5, overflow: 'linebreak' },
-    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 } },
+  y += 6;
+  const labW = 44, vW = 24;
+  const barMaxCat = W - margem * 2 - labW - vW - 6;
+  d.categorias.forEach((c) => {
+    const presentes = c.valores.filter((v): v is number => v != null);
+    const maxV = presentes.length ? Math.max(...presentes) : 0;
+    const minV = presentes.length ? Math.min(...presentes) : 0;
+    const h = 8 + d.fornecedores.length * 5 + 3;
+    if (y + h > H - 12) { doc.addPage(); cabecalho(); y = 32; }
+    doc.setDrawColor(228); doc.setFillColor(252, 252, 253);
+    doc.roundedRect(margem, y, W - margem * 2, h - 2, 2, 2, 'FD');
+    doc.setTextColor(40); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+    doc.text(c.categoria, margem + 3, y + 5.5);
+    let by = y + 9;
+    d.fornecedores.forEach((f, i) => {
+      const v = c.valores[i];
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(70);
+      doc.text(f.nome.length > 26 ? f.nome.slice(0, 25) + '…' : f.nome, margem + 3, by + 3);
+      doc.setFillColor(235, 237, 241);
+      doc.roundedRect(margem + labW, by, barMaxCat, 4, 0.8, 0.8, 'F');
+      if (v != null && maxV > 0) {
+        doc.setFillColor(...hexRgb(f.cor));
+        doc.roundedRect(margem + labW, by, Math.max(1, (v / maxV) * barMaxCat), 4, 0.8, 0.8, 'F');
+      }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+      if (v == null) { doc.setTextColor(180, 40, 40); doc.text('Ausente', W - margem - 2, by + 3, { align: 'right' }); }
+      else {
+        doc.setTextColor(v === minV ? 22 : 60, v === minV ? 101 : 60, v === minV ? 52 : 60);
+        doc.text(brlK(v), W - margem - 2, by + 3, { align: 'right' });
+      }
+      by += 5;
+    });
+    y += h;
   });
 
-  // ── Itens Detalhados ──
+  // ── Itens Detalhados — agrupados por empresa (cabeçalho + itens) ──
   doc.addPage(); cabecalho(); y = 32;
   doc.setTextColor(...AZUL); doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
   doc.text('Itens Detalhados', margem, y);
-  autoTable(doc, {
-    startY: y + 4,
-    head: [['Fornecedor', 'Item', 'Descrição', 'Categoria', 'Qtd', 'Unit.', 'Total']],
-    body: d.itens.map((r) => [
-      r[0], r[1], r[2], r[3],
-      typeof r[4] === 'number' ? r[4] : r[4],
-      brl(Number(r[5]) || 0), brl(Number(r[6]) || 0),
-    ]),
-    theme: 'striped',
-    headStyles: { fillColor: AZUL, fontSize: 7.5 },
-    styles: { fontSize: 7, cellPadding: 1.2, overflow: 'linebreak' },
-    columnStyles: { 2: { cellWidth: 60 }, 5: { halign: 'right' }, 6: { halign: 'right' }, 4: { halign: 'right' } },
+  y += 6;
+  d.fornecedores.forEach((f) => {
+    if (y + 16 > H - 12) { doc.addPage(); cabecalho(); y = 32; }
+    // Cabeçalho da empresa
+    doc.setFillColor(...hexRgb(f.cor));
+    doc.roundedRect(margem, y, W - margem * 2, 8, 1.5, 1.5, 'F');
+    doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
+    doc.text(f.nome, margem + 3, y + 5.5);
+    doc.text(brl(f.valorTotal), W - margem - 3, y + 5.5, { align: 'right' });
+    y += 9;
+    autoTable(doc, {
+      startY: y,
+      head: [['Item', 'Descrição', 'Categoria', 'Qtd', 'Unit.', 'Total']],
+      body: (f.itens || []).map((r) => [
+        r[0], r[1], r[2], r[3], brl(Number(r[4]) || 0), brl(Number(r[5]) || 0),
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: [90, 90, 90], fontSize: 7.5 },
+      styles: { fontSize: 7, cellPadding: 1.2, overflow: 'linebreak' },
+      columnStyles: { 0: { cellWidth: 16 }, 1: { cellWidth: 70 }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+      margin: { left: margem, right: margem },
+    });
+    y = (doc as any).lastAutoTable.finalY + 6;
   });
 
   // ── Rodapé com numeração ──
