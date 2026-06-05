@@ -773,7 +773,9 @@ async function chamarGeminiComRetry(prompt, maxTentativas = 4) {
   throw ultimoErro;
 }
 
-// POST /api/orcamentos/analisar — Analisa Excel com Gemini, retorna JSON sem salvar
+// POST /api/orcamentos/analisar — Analisa Excel OU PDF com Gemini, retorna JSON sem salvar.
+// Detecta automaticamente UM ou VÁRIOS fornecedores (mapas de equalização) e
+// retorna sempre uma lista "orcamentos" (um objeto por fornecedor).
 app.post('/api/orcamentos/analisar', autenticar, async (req, res) => {
   const XLSX = require('xlsx');
   if (!GEMINI_API_KEY) return res.status(500).json({ erro: 'Gemini API não configurada' });
@@ -783,68 +785,99 @@ app.post('/api/orcamentos/analisar', autenticar, async (req, res) => {
     if (!arquivo) return res.status(400).json({ erro: 'arquivo é obrigatório' });
 
     const buffer = Buffer.from(arquivo, 'base64');
-    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    const ehPDF = buffer.slice(0, 5).toString('latin1') === '%PDF-';
 
-    let conteudoTexto = '';
-    for (const sheetName of workbook.SheetNames) {
-      const sheet = workbook.Sheets[sheetName];
-      const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false });
-      if (csv.trim().length > 0) conteudoTexto += `\n=== ABA: ${sheetName} ===\n${csv}\n`;
-    }
-    if (conteudoTexto.length > 30000) conteudoTexto = conteudoTexto.substring(0, 30000) + '\n...[truncado]';
-
-    const prompt = `Você é um especialista em orçamentos de construção civil. Analise esta planilha orçamentária e extraia os dados em JSON.
-
-PLANILHA:
-${conteudoTexto}
+    const instrucoes = `Você é um especialista em orçamentos de construção civil.
+O documento pode conter UM único fornecedor OU VÁRIOS fornecedores (mapa de
+equalização / comparação, com fornecedores em colunas ou seções distintas).
+Identifique CADA fornecedor distinto e gere um objeto de orçamento por fornecedor.
 
 Retorne APENAS um JSON válido com esta estrutura exata:
 {
-  "fornecedor": "nome da empresa fornecedora",
-  "cnpj": "CNPJ formatado ou null",
-  "numeroCotacao": "número da cotação ou null",
-  "dataEmissao": "YYYY-MM-DD ou null",
-  "prazoDias": número de dias de prazo ou null,
-  "valorTotal": valor total numérico (só o número, sem R$ ou pontos/vírgulas),
-  "linhas": [
+  "orcamentos": [
     {
-      "itemNumero": "1.1",
-      "descricao": "descrição do item",
-      "unidade": "un/m²/kg/etc",
-      "quantidade": número,
-      "valorUnitario": número,
-      "valorTotal": número,
-      "categoria": "uma de: Estrutura, Alvenaria, Cobertura, Instalações Elétricas, Instalações Hidráulicas, Acabamento, Pintura, Fundações, Terraplanagem, Serviços Gerais, Materiais, Mão de Obra"
+      "fornecedor": "nome da empresa fornecedora",
+      "cnpj": "CNPJ formatado ou null",
+      "numeroCotacao": "número da cotação ou null",
+      "dataEmissao": "YYYY-MM-DD ou null",
+      "prazoDias": número de dias de prazo ou null,
+      "valorTotal": número (sem R$, pontos ou vírgulas de milhar),
+      "linhas": [
+        {
+          "itemNumero": "1.1",
+          "descricao": "descrição do item",
+          "unidade": "un/m²/kg/etc",
+          "quantidade": número,
+          "valorUnitario": número,
+          "valorTotal": número,
+          "categoria": "uma de: Estrutura, Alvenaria, Cobertura, Instalações Elétricas, Instalações Hidráulicas, Acabamento, Pintura, Fundações, Terraplanagem, Serviços Gerais, Materiais, Mão de Obra"
+        }
+      ],
+      "avisos": ["inconsistências detectadas, se houver"]
     }
-  ],
-  "avisos": ["lista de inconsistências detectadas, se houver"]
+  ]
 }
 REGRAS:
-- Valores numéricos devem ser números (sem R$, pontos ou vírgulas de milhar)
-- Se o valor total não estiver explícito, some todos os itens
-- Ignore cabeçalhos, totalizadores duplicados e células vazias
-- Para categoria, infira pelo contexto do item`;
+- Se houver apenas um fornecedor, retorne o array com um único item.
+- Em mapas de equalização, cada coluna/seção de preços é um fornecedor; as descrições
+  dos itens costumam ser compartilhadas — replique a descrição em cada fornecedor com
+  os respectivos preços daquele fornecedor.
+- Valores numéricos devem ser números (sem R$, pontos ou vírgulas de milhar).
+- Se o valorTotal de um fornecedor não estiver explícito, some os itens dele.
+- Ignore cabeçalhos, totalizadores duplicados e células vazias.
+- Para categoria, infira pelo contexto do item.`;
 
-    const resposta = await chamarGeminiComRetry(prompt);
+    let content;
+    if (ehPDF) {
+      content = [
+        { text: instrucoes },
+        { inlineData: { mimeType: 'application/pdf', data: arquivo } },
+      ];
+    } else {
+      const workbook = XLSX.read(buffer, { type: 'buffer' });
+      let conteudoTexto = '';
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false });
+        if (csv.trim().length > 0) conteudoTexto += `\n=== ABA: ${sheetName} ===\n${csv}\n`;
+      }
+      if (conteudoTexto.length > 60000) conteudoTexto = conteudoTexto.substring(0, 60000) + '\n...[truncado]';
+      content = `${instrucoes}\n\nPLANILHA:\n${conteudoTexto}`;
+    }
 
-    let dados;
+    const resposta = await chamarGeminiComRetry(content);
+
+    let parsed;
     try {
       const jsonMatch = resposta.match(/```json\s*([\s\S]*?)\s*```/) ||
                         resposta.match(/```\s*([\s\S]*?)\s*```/) ||
                         [null, resposta];
-      dados = JSON.parse(jsonMatch[1].trim());
+      parsed = JSON.parse(jsonMatch[1].trim());
     } catch {
-      return res.status(500).json({ erro: 'Gemini não retornou JSON válido. Tente novamente.' });
+      return res.status(500).json({ erro: 'A IA não retornou JSON válido. Tente novamente.' });
     }
 
-    // Calcular valor total se não veio
-    let valorTotal = sanitizeNumero(dados.valorTotal);
-    if (!valorTotal && Array.isArray(dados.linhas)) {
-      valorTotal = dados.linhas.reduce((acc, l) => acc + (sanitizeNumero(l.valorTotal) || 0), 0);
-    }
-    dados.valorTotal = valorTotal;
+    // Aceita {orcamentos:[...]} ou, por robustez, um objeto único antigo.
+    let orcamentos = Array.isArray(parsed.orcamentos)
+      ? parsed.orcamentos
+      : (parsed.fornecedor || parsed.linhas) ? [parsed] : [];
 
-    res.json({ sucesso: true, dados });
+    orcamentos = orcamentos
+      .map((o) => {
+        let valorTotal = sanitizeNumero(o.valorTotal);
+        if (!valorTotal && Array.isArray(o.linhas)) {
+          valorTotal = o.linhas.reduce((acc, l) => acc + (sanitizeNumero(l.valorTotal) || 0), 0);
+        }
+        return { ...o, valorTotal, linhas: o.linhas || [], avisos: o.avisos || [] };
+      })
+      .filter((o) => o.fornecedor || (o.linhas && o.linhas.length));
+
+    if (orcamentos.length === 0) {
+      return res.status(422).json({ erro: 'Nenhum fornecedor/orçamento foi identificado no documento.' });
+    }
+
+    // "dados" mantido para compatibilidade; "orcamentos" é a lista completa.
+    res.json({ sucesso: true, orcamentos, dados: orcamentos[0] });
   } catch (error) {
     console.error('❌ Erro ao analisar orçamento:', error);
     res.status(500).json({ erro: 'Erro ao analisar: ' + error.message });

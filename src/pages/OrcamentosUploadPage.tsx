@@ -38,7 +38,7 @@ export function OrcamentosUploadPage() {
 
   const addArquivos = (files: FileList | null) => {
     if (!files) return;
-    const novos = Array.from(files).filter(f => f.name.match(/\.(xlsx|xls)$/i));
+    const novos = Array.from(files).filter(f => f.name.match(/\.(xlsx|xls|pdf)$/i));
     setArquivos(prev => [...prev, ...novos.filter(f => !prev.find(p => p.name === f.name))]);
   };
 
@@ -63,7 +63,16 @@ export function OrcamentosUploadPage() {
         });
 
         const resp = await apiClient.analisarOrcamento(base64);
-        novosResultados.push({ arquivo: arquivo.name, ...resp.dados, salvo: false });
+        const lista: any[] = (resp.orcamentos && resp.orcamentos.length)
+          ? resp.orcamentos
+          : (resp.dados ? [resp.dados] : []);
+        if (lista.length === 0) throw new Error('Nenhum fornecedor identificado no arquivo.');
+        lista.forEach((d, i) => {
+          const rotulo = lista.length > 1
+            ? `${arquivo.name} — ${d.fornecedor || `Fornecedor ${i + 1}`}`
+            : arquivo.name;
+          novosResultados.push({ arquivo: rotulo, ...d, salvo: false });
+        });
         setProgresso(prev => ({ ...prev, [arquivo.name]: 'pronto' }));
       } catch (err: any) {
         novosErros[arquivo.name] = err.message;
@@ -121,9 +130,9 @@ export function OrcamentosUploadPage() {
         onClick={() => fileInputRef.current?.click()}
       >
         <span className="material-symbols-outlined text-[48px] text-outline">upload_file</span>
-        <p className="text-label-lg text-on-surface font-medium">Arraste planilhas Excel ou clique para selecionar</p>
-        <p className="text-body-sm text-on-surface-variant">Aceita .xlsx e .xls — múltiplos arquivos</p>
-        <input ref={fileInputRef} type="file" multiple accept=".xlsx,.xls" onChange={e => addArquivos(e.target.files)} className="hidden" />
+        <p className="text-label-lg text-on-surface font-medium">Arraste planilhas ou PDFs, ou clique para selecionar</p>
+        <p className="text-body-sm text-on-surface-variant">Aceita .xlsx, .xls e .pdf — múltiplos arquivos. PDFs de equalização com vários fornecedores são separados automaticamente.</p>
+        <input ref={fileInputRef} type="file" multiple accept=".xlsx,.xls,.pdf" onChange={e => addArquivos(e.target.files)} className="hidden" />
       </div>
 
       {arquivos.length > 0 && (
