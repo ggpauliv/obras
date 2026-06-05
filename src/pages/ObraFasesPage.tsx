@@ -83,14 +83,18 @@ export default function ObraFasesPage() {
     setModalOpen(true);
   };
   const editarFase = (f: Fase) => { setForm({ ...f }); setModalOpen(true); };
-  const excluirFase = (id: string) => {
-    if (window.confirm('Excluir esta fase?')) { removerFase(id); recarregar(); }
+  const excluirFase = async (id: string) => {
+    if (!window.confirm('Excluir esta fase?')) return;
+    try { await removerFase(id); await recarregar(); }
+    catch (e) { window.alert('Erro ao excluir: ' + (e instanceof Error ? e.message : 'desconhecido')); }
   };
-  const salvar = () => {
+  const salvar = async () => {
     if (!form || !form.nome.trim()) { window.alert('Informe o nome da fase.'); return; }
-    salvarFase({ ...form, pct: Math.min(100, Math.max(0, Number(form.pct) || 0)) });
-    recarregar();
-    setModalOpen(false);
+    try {
+      await salvarFase({ ...form, pct: Math.min(100, Math.max(0, Number(form.pct) || 0)) });
+      await recarregar();
+      setModalOpen(false);
+    } catch (e) { window.alert('Erro ao salvar: ' + (e instanceof Error ? e.message : 'desconhecido')); }
   };
   const setCampo = (campo: keyof Fase, valor: string | number) => setForm((f) => (f ? { ...f, [campo]: valor } : f));
 

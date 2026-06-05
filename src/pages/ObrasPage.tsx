@@ -41,22 +41,29 @@ export default function ObrasPage() {
   const novaObra = () => { setForm(VAZIA); setModalOpen(true); };
   const editarObra = (o: Obra) => { setForm(o); setModalOpen(true); setMenuId(null); };
 
-  const excluirObra = (id: string) => {
-    if (window.confirm('Excluir esta obra? Esta ação não pode ser desfeita.')) {
-      removerObra(id);
-      recarregar();
-    }
+  const excluirObra = async (id: string) => {
     setMenuId(null);
+    if (!window.confirm('Excluir esta obra? Esta ação não pode ser desfeita.')) return;
+    try {
+      await removerObra(id);
+      await recarregar();
+    } catch (e) {
+      window.alert('Erro ao excluir a obra: ' + (e instanceof Error ? e.message : 'desconhecido'));
+    }
   };
 
-  const salvar = () => {
+  const salvar = async () => {
     if (!form.nome.trim() || !form.cliente.trim()) {
       window.alert('Preencha pelo menos Nome e Cliente.');
       return;
     }
-    salvarObra({ ...form, pct: Number(form.pct) || 0 });
-    recarregar();
-    setModalOpen(false);
+    try {
+      await salvarObra({ ...form, pct: Number(form.pct) || 0 });
+      await recarregar();
+      setModalOpen(false);
+    } catch (e) {
+      window.alert('Erro ao salvar a obra: ' + (e instanceof Error ? e.message : 'desconhecido'));
+    }
   };
 
   const filtradas = useMemo(() => {

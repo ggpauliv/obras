@@ -39,12 +39,18 @@ export default function ObraFinanceiroPage() {
   const vazia = (): Despesa => ({ id: '', obraId, faseId: null, descricao: '', categoria: '', valor: '', data: new Date().toLocaleDateString('pt-BR'), fornecedor: '', cnpj: '', numeroNota: '' });
   const nova = () => { setForm(vazia()); setModalOpen(true); };
   const editar = (d: Despesa) => { setForm({ ...d }); setModalOpen(true); };
-  const excluir = (id: string) => { if (window.confirm('Excluir esta despesa?')) { removerDespesa(id); recarregar(); } };
-  const salvar = () => {
+  const excluir = async (id: string) => {
+    if (!window.confirm('Excluir esta despesa?')) return;
+    try { await removerDespesa(id); await recarregar(); }
+    catch (e) { window.alert('Erro ao excluir: ' + (e instanceof Error ? e.message : 'desconhecido')); }
+  };
+  const salvar = async () => {
     if (!form || !form.descricao.trim()) { window.alert('Informe a descrição da despesa.'); return; }
-    salvarDespesa(form);
-    recarregar();
-    setModalOpen(false);
+    try {
+      await salvarDespesa(form);
+      await recarregar();
+      setModalOpen(false);
+    } catch (e) { window.alert('Erro ao salvar: ' + (e instanceof Error ? e.message : 'desconhecido')); }
   };
   const setCampo = (campo: keyof Despesa, valor: string) => setForm((f) => (f ? { ...f, [campo]: valor } : f));
 

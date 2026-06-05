@@ -29,12 +29,19 @@ export default function FornecedoresPage() {
   const recarregar = () => listarFornecedores().then(setFornecedores);
   const novo = () => { setForm(VAZIO); setModalOpen(true); };
   const editar = (f: Fornecedor) => { setForm(f); setModalOpen(true); setMenuId(null); };
-  const excluir = (id: string) => { if (window.confirm('Excluir este fornecedor?')) { removerFornecedor(id); recarregar(); } setMenuId(null); };
-  const salvar = () => {
+  const excluir = async (id: string) => {
+    setMenuId(null);
+    if (!window.confirm('Excluir este fornecedor?')) return;
+    try { await removerFornecedor(id); await recarregar(); }
+    catch (e) { window.alert('Erro ao excluir: ' + (e instanceof Error ? e.message : 'desconhecido')); }
+  };
+  const salvar = async () => {
     if (!form.nome.trim()) { window.alert('Informe o nome do fornecedor.'); return; }
-    salvarFornecedor({ ...form, obras: Number(form.obras) || 0 });
-    recarregar();
-    setModalOpen(false);
+    try {
+      await salvarFornecedor({ ...form, obras: Number(form.obras) || 0 });
+      await recarregar();
+      setModalOpen(false);
+    } catch (e) { window.alert('Erro ao salvar: ' + (e instanceof Error ? e.message : 'desconhecido')); }
   };
   const set = (campo: keyof Fornecedor, valor: string | number) => setForm((f) => ({ ...f, [campo]: valor }));
 
