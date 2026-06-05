@@ -141,7 +141,7 @@ export async function processarDocumento(
     for (let tentativa = 0; tentativa <= MAX_RETRIES; tentativa++) {
       try {
         response = await fetchComTimeout(
-          `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/process-document`,
+          `${process.env.REACT_APP_API_URL ?? 'http://localhost:3001'}/api/process-document`,
           { method: 'POST', headers: { 'content-type': 'application/json' }, body },
           TIMEOUT_MS
         );

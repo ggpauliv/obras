@@ -3,7 +3,10 @@
  * Gerencia token JWT, requisições e erros
  */
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+// Em produção o build define REACT_APP_API_URL="" (string vazia) para usar
+// o mesmo origin (nginx faz o proxy de /api). Usamos ?? para respeitar a
+// string vazia; só caímos no localhost quando a variável é indefinida (dev).
+const API_BASE_URL = process.env.REACT_APP_API_URL ?? 'http://localhost:3001';
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
