@@ -27,3 +27,4 @@ pg_hba.conf
 test-conn.js
 test-db.js
 test.js
+__pycache__/
