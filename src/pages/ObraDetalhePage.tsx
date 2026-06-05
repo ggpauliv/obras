@@ -1,19 +1,56 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ObraHeader from '../components/ObraHeader';
+import { getObraAtivaId, obterObra, listarFases, listarDespesas } from '../store';
+import type { Obra, Fase, Despesa, FaseStatus } from '../store';
 
-const FASES = [
-  { nome: 'Fundações', desc: 'Infraestrutura base e estacas', pct: 100, label: '100% Concluída', icon: 'check', iconWrap: 'bg-[#16A34A]/10 text-[#16A34A]', bar: 'bg-[#16A34A]', text: 'text-[#16A34A] font-bold', extra: '' },
-  { nome: 'Estrutura', desc: 'Pilares, vigas e lajes', pct: 100, label: '100% Concluída', icon: 'check', iconWrap: 'bg-[#16A34A]/10 text-[#16A34A]', bar: 'bg-[#16A34A]', text: 'text-[#16A34A] font-bold', extra: '' },
-  { nome: 'Alvenaria', desc: 'Fechamentos e paredes internas', pct: 68, label: '68% Em andamento', icon: 'progress_activity', iconWrap: 'bg-primary/10 text-primary', bar: 'bg-primary', text: 'text-primary font-bold', extra: 'bg-primary-container/5 border-l-4 border-l-primary' },
-  { nome: 'Instalações', desc: 'Elétrica, hidráulica e ar condicionado', pct: 0, label: '0% Não iniciada', icon: 'schedule', iconWrap: 'bg-surface-container-highest text-on-surface-variant', bar: 'bg-outline-variant', text: 'text-on-surface-variant', extra: 'opacity-60' },
-  { nome: 'Acabamento', desc: 'Pisos, pintura e metais', pct: 0, label: '0% Não iniciada', icon: 'schedule', iconWrap: 'bg-surface-container-highest text-on-surface-variant', bar: 'bg-outline-variant', text: 'text-on-surface-variant', extra: 'opacity-60' },
-];
+const STATUS_INFO: Record<FaseStatus, { label: string; bar: string; text: string; iconWrap: string; icon: string }> = {
+  concluida: { label: 'Concluída', bar: 'bg-[#16A34A]', text: 'text-[#16A34A] font-bold', iconWrap: 'bg-[#16A34A]/10 text-[#16A34A]', icon: 'check' },
+  andamento: { label: 'Em andamento', bar: 'bg-primary', text: 'text-primary font-bold', iconWrap: 'bg-primary/10 text-primary', icon: 'progress_activity' },
+  atrasada: { label: 'Atrasada', bar: 'bg-error', text: 'text-error font-bold', iconWrap: 'bg-error/10 text-error', icon: 'warning' },
+  nao_iniciada: { label: 'Não iniciada', bar: 'bg-outline-variant', text: 'text-on-surface-variant', iconWrap: 'bg-surface-container-highest text-on-surface-variant', icon: 'schedule' },
+};
+
+const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+function parseBR(s: string): number | null {
+  const m = /^(\d{2})\/(\d{2})\/(\d{2,4})$/.exec((s || '').trim());
+  if (!m) return null;
+  let ano = +m[3]; if (ano < 100) ano += 2000;
+  const d = new Date(ano, +m[2] - 1, +m[1]);
+  return Number.isNaN(d.getTime()) ? null : d.getTime();
+}
 
 function Kpi({ children }: { children: React.ReactNode }) {
   return <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md ambient-shadow flex flex-col gap-sm">{children}</div>;
 }
 
 export default function ObraDetalhePage() {
+  const navigate = useNavigate();
+  const obraId = getObraAtivaId();
+  const [obra, setObra] = useState<Obra | undefined>();
+  const [fases, setFases] = useState<Fase[]>([]);
+  const [despesas, setDespesas] = useState<Despesa[]>([]);
+
+  useEffect(() => {
+    obterObra(obraId).then(setObra);
+    listarFases(obraId).then(setFases);
+    listarDespesas(obraId).then(setDespesas);
+  }, [obraId]);
+
+  const totalDespesas = despesas.reduce((s, d) => s + (Number(d.valor) || 0), 0);
+  const concluidas = fases.filter((f) => f.status === 'concluida').length;
+  const atrasadas = fases.filter((f) => f.status === 'atrasada').length;
+
+  // Tempo decorrido (para o progresso esperado)
+  const ini = parseBR(obra?.inicio || '');
+  const fim = parseBR(obra?.termino || '');
+  const hoje = Date.now();
+  const totalDias = ini && fim ? Math.max(1, Math.round((fim - ini) / 86400000)) : null;
+  const diasCorridos = ini ? Math.max(0, Math.round((hoje - ini) / 86400000)) : null;
+  const pctTempo = totalDias && diasCorridos != null ? Math.min(100, (diasCorridos / totalDias) * 100) : null;
+  const pct = obra?.pct ?? 0;
+
   return (
     <div className="flex flex-col gap-lg">
       <ObraHeader />
@@ -26,14 +63,16 @@ export default function ObraDetalhePage() {
             <div className="p-1.5 bg-surface-container rounded-md text-primary"><span className="material-symbols-outlined text-[18px]">monitoring</span></div>
           </div>
           <div className="flex items-end gap-sm">
-            <span className="text-display-lg text-on-surface font-bold">52%</span>
-            <span className="text-label-sm text-error flex items-center mb-1"><span className="material-symbols-outlined text-[14px] mr-1">trending_down</span> Atraso 9%</span>
+            <span className="text-display-lg text-on-surface font-bold">{pct}%</span>
+            {pctTempo != null && pct < pctTempo - 5 && (
+              <span className="text-label-sm text-error flex items-center mb-1"><span className="material-symbols-outlined text-[14px] mr-1">trending_down</span> Atrás do tempo</span>
+            )}
           </div>
           <div className="w-full bg-surface-container-highest rounded-full h-1.5 mt-1 relative overflow-hidden">
-            <div className="bg-primary h-1.5 rounded-full absolute top-0 left-0" style={{ width: '52%' }} />
-            <div className="bg-outline h-1.5 w-1 absolute top-0" style={{ left: '61%' }} title="Esperado 61%" />
+            <div className="bg-primary h-1.5 rounded-full absolute top-0 left-0" style={{ width: `${pct}%` }} />
+            {pctTempo != null && <div className="bg-outline h-1.5 w-1 absolute top-0" style={{ left: `${pctTempo}%` }} title={`Tempo decorrido ${pctTempo.toFixed(0)}%`} />}
           </div>
-          <p className="text-body-sm text-on-surface-variant mt-1">Progresso esperado: 61%</p>
+          <p className="text-body-sm text-on-surface-variant mt-1">{pctTempo != null ? `Tempo decorrido: ${pctTempo.toFixed(0)}%` : 'Sem datas para comparar'}</p>
         </Kpi>
         <Kpi>
           <div className="flex justify-between items-start">
@@ -41,86 +80,57 @@ export default function ObraDetalhePage() {
             <div className="p-1.5 bg-surface-container rounded-md text-primary"><span className="material-symbols-outlined text-[18px]">calendar_today</span></div>
           </div>
           <div className="flex items-end gap-sm">
-            <span className="text-display-lg text-on-surface font-bold">127</span>
-            <span className="text-body-md text-on-surface-variant mb-1">de 261</span>
+            <span className="text-display-lg text-on-surface font-bold">{diasCorridos ?? '—'}</span>
+            {totalDias && <span className="text-body-md text-on-surface-variant mb-1">de {totalDias}</span>}
           </div>
           <div className="w-full bg-surface-container-highest rounded-full h-1.5 mt-1">
-            <div className="bg-tertiary h-1.5 rounded-full" style={{ width: '48.6%' }} />
+            <div className="bg-tertiary h-1.5 rounded-full" style={{ width: `${pctTempo ?? 0}%` }} />
           </div>
-          <p className="text-body-sm text-on-surface-variant mt-1">48.6% do tempo consumido</p>
+          <p className="text-body-sm text-on-surface-variant mt-1">{pctTempo != null ? `${pctTempo.toFixed(0)}% do prazo` : '—'}</p>
         </Kpi>
-        <div className="bg-surface-container-lowest rounded-xl border border-error/30 p-md ambient-shadow flex flex-col gap-sm relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-1 h-full bg-error" />
+        <Kpi>
           <div className="flex justify-between items-start">
-            <h3 className="text-label-md text-on-surface-variant uppercase tracking-wider">Desvio Orçamentário</h3>
-            <div className="p-1.5 bg-error-container rounded-md text-error"><span className="material-symbols-outlined text-[18px]">error</span></div>
+            <h3 className="text-label-md text-on-surface-variant uppercase tracking-wider">Despesas Lançadas</h3>
+            <div className="p-1.5 bg-surface-container rounded-md text-primary"><span className="material-symbols-outlined text-[18px]">payments</span></div>
           </div>
-          <div className="flex items-end gap-sm"><span className="text-display-lg text-error font-bold">+R$ 320k</span></div>
-          <div className="mt-2"><span className="inline-block bg-error-container text-on-error-container text-label-sm px-2 py-0.5 rounded font-bold">+3.7% acima</span></div>
-          <p className="text-body-sm text-on-surface-variant mt-1">Referente ao orçado até o momento</p>
-        </div>
+          <div className="flex items-end gap-sm"><span className="text-display-lg text-on-surface font-bold">{fmt(totalDespesas)}</span></div>
+          <p className="text-body-sm text-on-surface-variant mt-1">{despesas.length} lançamento(s) · veja em Financeiro</p>
+        </Kpi>
       </div>
 
-      {/* Grid 2/3 + 1/3 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-gutter items-start">
-        <div className="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-outline-variant ambient-shadow overflow-hidden">
-          <div className="p-md border-b border-outline-variant flex justify-between items-center bg-surface-bright">
-            <h2 className="text-headline-sm font-bold text-on-surface flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">account_tree</span> Resumo de Fases
-            </h2>
-            <button className="text-primary hover:text-primary-container text-label-sm transition-colors">Ver detalhamento completo</button>
-          </div>
-          <div className="flex flex-col">
-            {FASES.map((f) => (
-              <div key={f.nome} className={`p-md border-b border-outline-variant/50 flex flex-col sm:flex-row sm:items-center gap-md hover:bg-surface-container-low transition-colors ${f.extra}`}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${f.iconWrap}`}>
-                  <span className="material-symbols-outlined text-[20px]">{f.icon}</span>
+      {/* Resumo de fases */}
+      <div className="bg-surface-container-lowest rounded-xl border border-outline-variant ambient-shadow overflow-hidden">
+        <div className="p-md border-b border-outline-variant flex justify-between items-center bg-surface-bright">
+          <h2 className="text-headline-sm font-bold text-on-surface flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary">account_tree</span> Resumo de Fases
+            <span className="text-body-sm font-normal text-on-surface-variant">({concluidas} concluídas · {atrasadas} atrasadas)</span>
+          </h2>
+          <button onClick={() => navigate('/obra-fases')} className="text-primary hover:text-primary-container text-label-sm transition-colors">Ver detalhamento completo</button>
+        </div>
+        <div className="flex flex-col">
+          {fases.length === 0 && (
+            <div className="p-lg text-center text-on-surface-variant text-body-sm">Nenhuma fase cadastrada para esta obra.</div>
+          )}
+          {fases.map((f) => {
+            const s = STATUS_INFO[f.status];
+            return (
+              <div key={f.id} className="p-md border-b border-outline-variant/50 flex flex-col sm:flex-row sm:items-center gap-md hover:bg-surface-container-low transition-colors">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${s.iconWrap}`}>
+                  <span className="material-symbols-outlined text-[20px]">{s.icon}</span>
                 </div>
                 <div className="flex-1">
                   <h4 className="text-label-md text-on-surface font-bold">{f.nome}</h4>
-                  <p className="text-body-sm text-on-surface-variant">{f.desc}</p>
+                  <p className="text-body-sm text-on-surface-variant">{f.inicio || '—'} → {f.termino || '—'}</p>
                 </div>
                 <div className="sm:w-1/3 flex flex-col gap-1">
-                  <div className="flex justify-between text-label-sm"><span className={f.text}>{f.label}</span></div>
+                  <div className="flex justify-between text-label-sm"><span className={s.text}>{f.pct}% {s.label}</span></div>
                   <div className="w-full bg-surface-container-highest rounded-full h-2">
-                    <div className={`h-2 rounded-full ${f.bar}`} style={{ width: `${f.pct}%` }} />
+                    <div className={`h-2 rounded-full ${s.bar}`} style={{ width: `${f.pct}%` }} />
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-gutter">
-          <div className="bg-surface-container-lowest rounded-xl border border-outline-variant ambient-shadow overflow-hidden flex flex-col">
-            <div className="p-md border-b border-outline-variant bg-surface-bright">
-              <h2 className="text-headline-sm font-bold text-on-surface flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">location_on</span> Localização
-              </h2>
-            </div>
-            <div className="h-48 w-full bg-surface-container-high relative flex items-center justify-center overflow-hidden">
-              <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#185fa5 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
-              <span className="material-symbols-outlined text-error text-4xl" data-weight="fill">location_on</span>
-            </div>
-            <div className="p-md flex flex-col gap-md">
-              <p className="text-body-md text-on-surface">
-                Av. das Américas, 3500<br />
-                <span className="text-on-surface-variant text-body-sm">Barra da Tijuca, Rio de Janeiro - RJ</span>
-              </p>
-              <button className="w-full py-sm px-md rounded-lg border border-outline-variant text-on-surface text-label-md hover:bg-surface-container-low transition-colors flex items-center justify-center gap-2">
-                <span className="material-symbols-outlined text-[18px]">open_in_new</span> Abrir no Google Maps
-              </button>
-            </div>
-          </div>
-          <div className="bg-surface-container-lowest rounded-xl border border-outline-variant ambient-shadow p-md flex items-start gap-md">
-            <div className="w-10 h-10 rounded-full bg-tertiary-container/20 text-tertiary flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[20px]">partly_cloudy_day</span>
-            </div>
-            <div>
-              <h4 className="text-label-md font-bold text-on-surface">Condições Atuais</h4>
-              <p className="text-body-sm text-on-surface-variant mt-1">Dia ensolarado, 28°C. Ideal para concretagem programada.</p>
-            </div>
-          </div>
+            );
+          })}
         </div>
       </div>
     </div>

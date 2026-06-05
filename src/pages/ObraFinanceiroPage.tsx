@@ -5,25 +5,16 @@ import type { Despesa } from '../store';
 
 const FIELD = 'w-full rounded-lg border border-outline-variant text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary py-2 px-3';
 
-const BARS = [
-  { fase: 'Fundações', orcado: 80, realizado: 85 },
-  { fase: 'Estrutura', orcado: 60, realizado: 65 },
-  { fase: 'Alvenaria', orcado: 40, realizado: 35 },
-  { fase: 'Instalações', orcado: 70, realizado: 20 },
-  { fase: 'Acabamento', orcado: 90, realizado: 5 },
-];
+const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-interface Desp { cat: string; orcado: string; realizado: string; delta: string; tone: 'error' | 'green' | 'flat'; arrow: string; }
-const DESPESAS: Desp[] = [
-  { cat: 'Materiais', orcado: '3.5M', realizado: '3.8M', delta: '300k', tone: 'error', arrow: 'arrow_upward' },
-  { cat: 'Mão de Obra', orcado: '2.8M', realizado: '2.9M', delta: '100k', tone: 'error', arrow: 'arrow_upward' },
-  { cat: 'Equipamentos', orcado: '1.2M', realizado: '1.1M', delta: '100k', tone: 'green', arrow: 'arrow_downward' },
-  { cat: 'Serviços Terc.', orcado: '0.8M', realizado: '0.82M', delta: '20k', tone: 'error', arrow: 'arrow_upward' },
-  { cat: 'Impostos/Taxas', orcado: '0.2M', realizado: '0.2M', delta: '0', tone: 'flat', arrow: 'horizontal_rule' },
-];
-
-const TONE = { error: 'text-error', green: 'text-[#16A34A]', flat: 'text-on-surface' };
-const DELTA_TONE = { error: 'text-error', green: 'text-[#16A34A]', flat: 'text-outline' };
+/** Converte "R$ 1.234,56", "1234.56" ou número em number. */
+function parseValor(v: any): number {
+  if (typeof v === 'number') return v;
+  const s = String(v || '').replace(/[^\d,.-]/g, '');
+  // se tem vírgula como decimal (formato BR), normaliza
+  if (s.includes(',')) return Number(s.replace(/\./g, '').replace(',', '.')) || 0;
+  return Number(s) || 0;
+}
 
 export default function ObraFinanceiroPage() {
   const obraId = getObraAtivaId();
@@ -54,94 +45,71 @@ export default function ObraFinanceiroPage() {
   };
   const setCampo = (campo: keyof Despesa, valor: string) => setForm((f) => (f ? { ...f, [campo]: valor } : f));
 
+  // Agregados reais da obra ativa
+  const totalLancado = despesas.reduce((s, d) => s + parseValor(d.valor), 0);
+  const porCategoria = Object.values(
+    despesas.reduce((acc: Record<string, { cat: string; total: number; qtd: number }>, d) => {
+      const cat = d.categoria || 'Sem categoria';
+      acc[cat] = acc[cat] || { cat, total: 0, qtd: 0 };
+      acc[cat].total += parseValor(d.valor);
+      acc[cat].qtd += 1;
+      return acc;
+    }, {})
+  ).sort((a, b) => b.total - a.total);
+  const maiorCat = porCategoria[0];
+  const maxCat = Math.max(0, ...porCategoria.map((c) => c.total));
+
   return (
     <div className="flex flex-col gap-lg">
       <ObraHeader />
 
-      {/* KPIs */}
+      {/* KPIs reais da obra */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
-        <div className="bg-surface border border-outline-variant rounded-lg p-lg ambient-shadow flex flex-col justify-between hover:border-primary/30 transition-colors">
+        <div className="bg-surface border border-outline-variant rounded-lg p-lg ambient-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-sm">
-            <h3 className="text-label-md text-on-surface-variant uppercase tracking-wider">Orçamento Total</h3>
-            <span className="material-symbols-outlined text-outline">account_balance_wallet</span>
-          </div>
-          <div className="text-display-lg font-bold text-on-surface">R$ 8.5M</div>
-          <div className="mt-sm text-secondary"><span className="text-body-sm">Previsto para conclusão</span></div>
-        </div>
-        <div className="bg-surface border border-outline-variant rounded-lg p-lg ambient-shadow flex flex-col justify-between hover:border-primary/30 transition-colors">
-          <div className="flex items-center justify-between mb-sm">
-            <h3 className="text-label-md text-on-surface-variant uppercase tracking-wider">Realizado Total</h3>
+            <h3 className="text-label-md text-on-surface-variant uppercase tracking-wider">Total Lançado</h3>
             <span className="material-symbols-outlined text-outline">payments</span>
           </div>
-          <div className="text-display-lg font-bold text-on-surface">R$ 4.1M</div>
-          <div className="mt-sm"><span className="text-body-sm text-on-surface-variant">48% do orçamento</span></div>
+          <div className="text-display-lg font-bold text-on-surface">{fmt(totalLancado)}</div>
+          <div className="mt-sm text-secondary"><span className="text-body-sm">Soma das despesas desta obra</span></div>
         </div>
-        <div className="bg-error-container border border-error/20 rounded-lg p-lg ambient-shadow flex flex-col justify-between">
+        <div className="bg-surface border border-outline-variant rounded-lg p-lg ambient-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-sm">
-            <h3 className="text-label-md text-on-error-container uppercase tracking-wider">Desvio Atual</h3>
-            <span className="material-symbols-outlined text-error">trending_up</span>
+            <h3 className="text-label-md text-on-surface-variant uppercase tracking-wider">Lançamentos</h3>
+            <span className="material-symbols-outlined text-outline">receipt_long</span>
           </div>
-          <div className="text-display-lg font-bold text-error">+R$ 320k</div>
-          <div className="mt-sm flex items-center gap-xs text-error">
-            <span className="material-symbols-outlined text-[16px]">warning</span>
-            <span className="text-body-sm font-medium">Acima do orçado</span>
+          <div className="text-display-lg font-bold text-on-surface">{despesas.length}</div>
+          <div className="mt-sm"><span className="text-body-sm text-on-surface-variant">{porCategoria.length} categoria(s)</span></div>
+        </div>
+        <div className="bg-surface border border-outline-variant rounded-lg p-lg ambient-shadow flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-sm">
+            <h3 className="text-label-md text-on-surface-variant uppercase tracking-wider">Maior Categoria</h3>
+            <span className="material-symbols-outlined text-outline">leaderboard</span>
           </div>
+          <div className="text-headline-md font-bold text-on-surface">{maiorCat ? maiorCat.cat : '—'}</div>
+          <div className="mt-sm"><span className="text-body-sm text-on-surface-variant">{maiorCat ? fmt(maiorCat.total) : 'Sem despesas'}</span></div>
         </div>
       </div>
 
-      {/* Chart + tabela */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-lg mt-md">
-        <div className="lg:col-span-2 bg-surface border border-outline-variant rounded-lg p-lg ambient-shadow flex flex-col h-[400px]">
-          <div className="flex items-center justify-between mb-lg">
-            <h3 className="text-headline-sm font-bold text-on-surface">Orçado vs Realizado por Fase</h3>
-            <div className="flex gap-md">
-              <div className="flex items-center gap-sm"><div className="w-3 h-3 rounded-sm bg-primary-container" /><span className="text-label-sm text-on-surface-variant">Orçado</span></div>
-              <div className="flex items-center gap-sm"><div className="w-3 h-3 rounded-sm bg-tertiary" /><span className="text-label-sm text-on-surface-variant">Realizado</span></div>
-            </div>
-          </div>
-          <div className="flex-1 flex items-end justify-between gap-2">
-            {BARS.map((b) => (
-              <div key={b.fase} className="flex flex-col items-center justify-end h-full flex-1 group cursor-pointer">
-                <div className="flex gap-1 items-end h-full pt-8 w-full justify-center">
-                  <div className="w-6 bg-primary-container rounded-t-sm" style={{ height: `${b.orcado}%` }} />
-                  <div className="w-6 bg-tertiary rounded-t-sm" style={{ height: `${b.realizado}%` }} />
-                </div>
-                <span className="text-label-sm text-on-surface-variant mt-3 text-center">{b.fase}</span>
-              </div>
-            ))}
-          </div>
+      {/* Despesas por categoria (dados reais) */}
+      <div className="bg-surface border border-outline-variant rounded-lg ambient-shadow overflow-hidden">
+        <div className="p-lg border-b border-outline-variant bg-surface-bright">
+          <h3 className="text-headline-sm font-bold text-on-surface">Despesas por Categoria</h3>
         </div>
-
-        <div className="lg:col-span-1 bg-surface border border-outline-variant rounded-lg ambient-shadow flex flex-col h-[400px] overflow-hidden">
-          <div className="p-lg border-b border-outline-variant flex justify-between items-center bg-surface-bright">
-            <h3 className="text-headline-sm font-bold text-on-surface">Despesas por Categoria</h3>
-            <button className="text-primary hover:bg-primary-fixed-dim/20 rounded-full p-1 transition-colors"><span className="material-symbols-outlined">more_vert</span></button>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-surface-container-low sticky top-0 z-10">
-                <tr>
-                  <th className="py-sm px-md text-label-sm text-on-surface-variant font-medium border-b border-outline-variant">Categoria</th>
-                  <th className="py-sm px-md text-label-sm text-on-surface-variant font-medium border-b border-outline-variant text-right">Orçado</th>
-                  <th className="py-sm px-md text-label-sm text-on-surface-variant font-medium border-b border-outline-variant text-right">Realizado</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-outline-variant/50">
-                {DESPESAS.map((d, i) => (
-                  <tr key={d.cat} className={`hover:bg-surface-container-lowest transition-colors ${i % 2 === 1 ? 'bg-surface-bright' : ''}`}>
-                    <td className="py-md px-md text-body-sm text-on-surface">{d.cat}</td>
-                    <td className="py-md px-md text-body-sm text-on-surface text-right">{d.orcado}</td>
-                    <td className={`py-md px-md text-body-sm font-medium text-right ${TONE[d.tone]}`}>
-                      <div className="flex flex-col items-end">
-                        {d.realizado}
-                        <span className={`text-[10px] flex items-center ${DELTA_TONE[d.tone]}`}><span className="material-symbols-outlined text-[12px]">{d.arrow}</span>{d.delta}</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="p-lg flex flex-col gap-sm">
+          {porCategoria.length === 0 && (
+            <p className="text-body-sm text-on-surface-variant text-center py-md">Nenhuma despesa lançada ainda.</p>
+          )}
+          {porCategoria.map((c) => (
+            <div key={c.cat} className="flex items-center gap-md">
+              <div className="w-40 shrink-0 text-body-sm text-on-surface truncate">{c.cat}</div>
+              <div className="flex-1 h-6 bg-surface-container-highest rounded-lg overflow-hidden">
+                <div className="h-full rounded-lg bg-primary" style={{ width: `${maxCat > 0 ? (c.total / maxCat) * 100 : 0}%` }} />
+              </div>
+              <div className="w-32 text-right shrink-0 text-body-sm font-medium text-on-surface">{fmt(c.total)}</div>
+              <div className="w-10 text-right shrink-0 text-label-sm text-on-surface-variant">{c.qtd}</div>
+            </div>
+          ))}
         </div>
       </div>
 
