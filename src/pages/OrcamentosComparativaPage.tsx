@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { listarObras } from '../store';
 import type { Obra } from '../store';
 import { apiClient } from '../api/client';
-import { exportarElementoPDF } from '../utils/exportar';
+import { exportarComparativoPDF } from '../utils/exportar';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Constantes
@@ -108,10 +108,30 @@ export function OrcamentosComparativaPage() {
 
   const exportarPDF = async () => {
     setMenuExport(false);
-    if (!exportRef.current) return;
     setExportando(true);
     try {
-      await exportarElementoPDF(exportRef.current, `comparativo_${slug}`);
+      // Garante que as linhas (itens) estejam carregadas
+      const faltando = lista.filter(o => !linhasPorOrc[o.id]);
+      const carregadas: Record<string, any[]> = { ...linhasPorOrc };
+      if (faltando.length) {
+        const res = await Promise.all(faltando.map(o =>
+          apiClient.obterOrcamento(o.id).then(dd => ({ id: o.id, linhas: dd.linhas || [] })).catch(() => ({ id: o.id, linhas: [] }))
+        ));
+        res.forEach(r => { carregadas[r.id] = r.linhas; });
+        setLinhasPorOrc(carregadas);
+      }
+      const fornecedores = lista.map(o => ({
+        nome: nomeDe(o), valorTotal: Number(o.valorTotal) || 0, prazoDias: o.prazoDias || null, cor: coresPorId[o.id],
+      }));
+      const categorias = matrizCategorias.map(row => ({
+        categoria: row.categoria,
+        valores: lista.map(o => (row[o.id]?.presente ? (row[o.id].total || 0) : null)),
+      }));
+      const itens: (string | number)[][] = [];
+      lista.forEach(o => (carregadas[o.id] || []).forEach((l: any) =>
+        itens.push([nomeDe(o), l.itemNumero || '', l.descricao || '', l.categoria || '', Number(l.quantidade) || 0, Number(l.valorUnitario) || 0, Number(l.valorTotal) || 0])
+      ));
+      exportarComparativoPDF({ arquivo: `comparativo_${slug}`, obra: nomeObra, economia, fornecedores, categorias, itens });
     } catch (e: any) {
       alert('Erro ao gerar PDF: ' + e.message);
     }
