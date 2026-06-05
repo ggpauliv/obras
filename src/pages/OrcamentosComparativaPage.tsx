@@ -1,8 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell,
-} from 'recharts';
 import { listarObras } from '../store';
 import type { Obra } from '../store';
 import { apiClient } from '../api/client';
@@ -372,22 +369,63 @@ export function OrcamentosComparativaPage() {
 
               {!carregandoLinhas && dadosCategorias.length > 0 && (
                 <>
-                  {/* Gráfico de barras agrupadas por categoria */}
+                  {/* Comparativo por categoria — small multiples (um painel por categoria) */}
                   <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg">
-                    <h3 className="text-label-lg font-semibold text-on-surface mb-lg">Valores por Categoria</h3>
-                    <ResponsiveContainer width="100%" height={360}>
-                      <BarChart data={dadosCategorias} margin={{ top: 10, right: 20, left: 20, bottom: 80 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis dataKey="categoria" angle={-35} textAnchor="end" tick={{ fontSize: 11 }} />
-                        <YAxis tickFormatter={fmtK} tick={{ fontSize: 11 }} width={80} />
-                        <Tooltip formatter={(v: any) => fmt(v)} labelStyle={{ fontWeight: 600 }} />
-                        <Legend />
-                        {lista.map((o, i) => {
-                          const nome = nomeDe(o) || `F${i + 1}`;
-                          return <Bar key={o.id} dataKey={nome} fill={coresPorId[o.id]} radius={[3, 3, 0, 0]} />;
-                        })}
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <div className="flex items-center justify-between flex-wrap gap-sm mb-md">
+                      <h3 className="text-label-lg font-semibold text-on-surface">Comparativo por Categoria</h3>
+                      {/* Legenda horizontal: cor — fornecedor */}
+                      <div className="flex flex-wrap items-center gap-x-md gap-y-xs">
+                        {lista.map((o, i) => (
+                          <span key={o.id} className="flex items-center gap-xs text-body-sm text-on-surface-variant">
+                            <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: coresPorId[o.id] }} />
+                            {nomeDe(o) || `F${i + 1}`}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-md">
+                      {matrizCategorias.map(row => {
+                        const presentes = lista.map(o => row[o.id]).filter((c: any) => c?.presente && c.total > 0);
+                        const maxCat = Math.max(0, ...presentes.map((c: any) => c.total));
+                        const minCat = presentes.length ? Math.min(...presentes.map((c: any) => c.total)) : 0;
+                        return (
+                          <div key={row.categoria} className="border border-outline-variant rounded-lg p-md bg-surface">
+                            <p className="text-label-md font-semibold text-on-surface mb-sm">{row.categoria}</p>
+                            <div className="flex flex-col gap-xs">
+                              {lista.map((o, i) => {
+                                const cel = row[o.id];
+                                const cor = coresPorId[o.id];
+                                if (!cel?.presente || !cel.total) {
+                                  return (
+                                    <div key={o.id} className="flex items-center gap-sm text-body-sm">
+                                      <span className="w-2.5 h-2.5 rounded-sm shrink-0 opacity-30" style={{ background: cor }} />
+                                      <span className="flex-1 h-5 rounded bg-surface-container-highest/30" />
+                                      <span className="w-28 text-right shrink-0 text-error text-label-sm">Ausente</span>
+                                    </div>
+                                  );
+                                }
+                                const pct = maxCat > 0 ? (cel.total / maxCat) * 100 : 0;
+                                const ehMelhor = cel.total === minCat;
+                                const difPct = minCat > 0 ? ((cel.total - minCat) / minCat) * 100 : 0;
+                                return (
+                                  <div key={o.id} className="flex items-center gap-sm text-body-sm" title={`${nomeDe(o) || `F${i + 1}`}: ${fmt(cel.total)}`}>
+                                    <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: cor }} />
+                                    <div className="flex-1 h-5 bg-surface-container-highest rounded overflow-hidden">
+                                      <div className="h-full rounded" style={{ width: `${pct}%`, background: cor }} />
+                                    </div>
+                                    <span className="w-24 text-right shrink-0 text-on-surface font-medium">{fmtK(cel.total)}</span>
+                                    <span className={`w-14 text-right shrink-0 text-label-sm font-semibold ${ehMelhor ? 'text-emerald-600' : 'text-error'}`}>
+                                      {ehMelhor ? 'menor' : `+${difPct.toFixed(0)}%`}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* Matriz de cobertura */}
