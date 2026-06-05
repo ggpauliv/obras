@@ -83,7 +83,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     console.log(`📧 Procurando usuário: ${email}`);
-    const result = await db.query('SELECT * FROM usuarios WHERE email = $1', [email]);
+    const result = await db.query('SELECT * FROM usuarios WHERE LOWER(email) = LOWER($1)', [String(email).trim()]);
     console.log(`✅ Query executada, ${result.rows.length} usuários encontrados`);
 
     if (result.rows.length === 0) {
@@ -183,11 +183,12 @@ app.get('/api/usuarios', autenticar, async (req, res) => {
 // POST /api/usuarios
 app.post('/api/usuarios', autenticar, async (req, res) => {
   try {
-    const { nome, email, senha, papel, ativo } = req.body;
+    const { nome, senha, papel, ativo } = req.body;
+    const email = String(req.body.email || '').trim();
     if (!nome || !email || !senha) {
       return res.status(400).json({ erro: 'Nome, login (e-mail) e senha são obrigatórios' });
     }
-    const existing = await db.query('SELECT id FROM usuarios WHERE email = $1', [email]);
+    const existing = await db.query('SELECT id FROM usuarios WHERE LOWER(email) = LOWER($1)', [email]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ erro: 'Já existe um usuário com esse login/e-mail' });
     }
@@ -231,7 +232,13 @@ app.put('/api/usuarios/:id', autenticar, async (req, res) => {
 // DELETE /api/usuarios/:id
 app.delete('/api/usuarios/:id', autenticar, async (req, res) => {
   try {
-    await db.query('DELETE FROM usuarios WHERE id = $1', [req.params.id]);
+    if (req.params.id === req.usuario.id) {
+      return res.status(400).json({ erro: 'Você não pode excluir o próprio usuário logado' });
+    }
+    // Solta as referências de auditoria (FK sem ON DELETE) antes de remover.
+    await db.query('UPDATE auditoria SET usuario_id = NULL WHERE usuario_id = $1', [req.params.id]);
+    const r = await db.query('DELETE FROM usuarios WHERE id = $1', [req.params.id]);
+    if (r.rowCount === 0) return res.status(404).json({ erro: 'Usuário não encontrado' });
     res.json({ sucesso: true });
   } catch (error) {
     console.error('❌ Erro ao excluir usuário:', error);

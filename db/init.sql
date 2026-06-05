@@ -81,7 +81,7 @@ CREATE TABLE auditoria (
   tipo VARCHAR(50) NOT NULL,
   titulo VARCHAR(255) NOT NULL,
   descricao TEXT,
-  usuario_id UUID REFERENCES usuarios(id),
+  usuario_id UUID REFERENCES usuarios(id) ON DELETE SET NULL,
   data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
