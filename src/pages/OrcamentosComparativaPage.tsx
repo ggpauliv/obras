@@ -8,7 +8,10 @@ import { exportarElementoPDF, exportarExcel, type AbaExcel } from '../utils/expo
 // ────────────────────────────────────────────────────────────────────────────
 // Constantes
 // ────────────────────────────────────────────────────────────────────────────
-const CORES = ['#2563EB', '#7C3AED', '#16A34A', '#EA580C', '#0891B2', '#DC2626'];
+const CORES = [
+  '#2563EB', '#DC2626', '#16A34A', '#EA580C', '#7C3AED', '#0891B2',
+  '#CA8A04', '#DB2777', '#4F46E5', '#65A30D', '#0D9488', '#9333EA',
+];
 const ABAS = ['Visão Geral', 'Por Categorias', 'Itens Detalhados'] as const;
 type Aba = typeof ABAS[number];
 
@@ -345,7 +348,7 @@ export function OrcamentosComparativaPage() {
                 <span className="material-symbols-outlined text-[20px] opacity-70">emoji_events</span>
               </div>
               <p className="text-headline-sm font-bold mt-xs">{fmt(melhor)}</p>
-              <p className="text-body-sm opacity-80 mt-xs truncate">{nomeDe(lista[0])}</p>
+              <p className="text-body-sm opacity-90 mt-xs leading-snug break-words pb-1">{nomeDe(lista[0])}</p>
             </div>
             <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg">
               <p className="text-label-sm text-on-surface-variant">Diferença</p>
