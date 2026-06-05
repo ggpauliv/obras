@@ -751,7 +751,7 @@ app.delete('/api/orcamentos/:id', autenticar, async (req, res) => {
 
 // Chama Gemini com retry automático em caso de 503
 async function chamarGeminiComRetry(prompt, maxTentativas = 4) {
-  const modelos = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+  const modelos = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-pro'];
   let ultimoErro;
 
   for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
