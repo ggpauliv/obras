@@ -1084,8 +1084,6 @@ app.post('/api/orcamentos/exportar-excel', autenticar, async (req, res) => {
   try {
     const payload = {
       fornecedores: req.body.fornecedores || [],
-      categorias: req.body.categorias || [],
-      itens: req.body.itens || [],
     };
     const nomeArquivo = (req.body.nomeArquivo || 'comparativo').replace(/[^\w.-]/g, '_');
     const destino = path.join(os.tmpdir(), `orc_${Date.now()}.xlsx`);

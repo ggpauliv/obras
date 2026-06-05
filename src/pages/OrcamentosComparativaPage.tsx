@@ -153,26 +153,19 @@ export function OrcamentosComparativaPage() {
         setLinhasPorOrc(carregadas);
       }
 
-      // Monta o payload para o gerador Python (gráficos nativos no Excel)
+      // Cada fornecedor com seus itens → uma aba por empresa (vinculada às fórmulas)
       const fornecedores = lista.map(o => ({
         nome: nomeDe(o),
-        valorTotal: Number(o.valorTotal) || 0,
         prazoDias: o.prazoDias || null,
+        itens: (carregadas[o.id] || []).map((l: any) => [
+          l.itemNumero || '', l.descricao || '', l.categoria || '',
+          Number(l.quantidade) || 0, Number(l.valorUnitario) || 0, Number(l.valorTotal) || 0,
+        ]),
       }));
-      const categorias = matrizCategorias.map(row => ({
-        categoria: row.categoria,
-        valores: lista.map(o => (row[o.id]?.presente ? (row[o.id].total || 0) : null)),
-      }));
-      const itens: any[][] = [];
-      lista.forEach(o => {
-        (carregadas[o.id] || []).forEach((l: any) => {
-          itens.push([nomeDe(o), l.itemNumero || '', l.descricao || '', l.categoria || '', Number(l.quantidade) || 0, Number(l.valorUnitario) || 0, Number(l.valorTotal) || 0]);
-        });
-      });
 
       const blob = await apiClient.exportarOrcamentosExcel({
         nomeArquivo: `comparativo_${slug}`,
-        fornecedores, categorias, itens,
+        fornecedores,
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
