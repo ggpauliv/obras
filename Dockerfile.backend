@@ -1,10 +1,14 @@
 FROM node:20-alpine
 WORKDIR /app
 
+# Python + XlsxWriter para gerar Excel com gráficos nativos
+RUN apk add --no-cache python3 py3-pip \
+ && pip3 install --no-cache-dir --break-system-packages XlsxWriter
+
 COPY package*.json ./
 RUN npm install --omit=dev
 
-COPY server-api.js auth-middleware.js db-client.js orcamento-extrator.js ./
+COPY server-api.js auth-middleware.js db-client.js orcamento-extrator.js excel_orcamentos.py ./
 
 EXPOSE 3001
 CMD ["node", "server-api.js"]

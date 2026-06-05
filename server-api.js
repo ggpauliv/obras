@@ -1078,6 +1078,45 @@ REGRAS CRÍTICAS:
   }
 });
 
+// POST /api/orcamentos/exportar-excel — Gera .xlsx com gráficos nativos (via Python/XlsxWriter)
+app.post('/api/orcamentos/exportar-excel', autenticar, async (req, res) => {
+  const { spawn } = require('child_process');
+  try {
+    const payload = {
+      fornecedores: req.body.fornecedores || [],
+      categorias: req.body.categorias || [],
+      itens: req.body.itens || [],
+    };
+    const nomeArquivo = (req.body.nomeArquivo || 'comparativo').replace(/[^\w.-]/g, '_');
+    const destino = path.join(os.tmpdir(), `orc_${Date.now()}.xlsx`);
+    const script = path.join(__dirname, 'excel_orcamentos.py');
+
+    const py = spawn('python3', [script, destino]);
+    let stderr = '';
+    py.stderr.on('data', (d) => { stderr += d.toString(); });
+    py.on('error', (e) => {
+      console.error('❌ Falha ao iniciar Python:', e.message);
+      if (!res.headersSent) res.status(500).json({ erro: 'Gerador de Excel indisponível' });
+    });
+    py.on('close', (code) => {
+      if (code !== 0) {
+        console.error('❌ Python saiu com código', code, stderr);
+        if (!res.headersSent) res.status(500).json({ erro: 'Falha ao gerar Excel' });
+        return;
+      }
+      res.download(destino, `${nomeArquivo}.xlsx`, (err) => {
+        fs.unlink(destino, () => {});
+        if (err && !res.headersSent) console.error('❌ Erro ao enviar Excel:', err.message);
+      });
+    });
+    py.stdin.write(JSON.stringify(payload));
+    py.stdin.end();
+  } catch (error) {
+    console.error('❌ Erro ao exportar Excel:', error);
+    if (!res.headersSent) res.status(500).json({ erro: 'Erro ao exportar Excel' });
+  }
+});
+
 // POST /api/orcamentos/salvar — Salva orçamento já analisado no banco
 app.post('/api/orcamentos/salvar', autenticar, async (req, res) => {
   try {

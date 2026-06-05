@@ -230,6 +230,20 @@ class APIClient {
     return this.request(`/api/orcamentos/${id}`, { method: 'PUT', body: { nome } });
   }
 
+  /** Gera o Excel (com gráficos nativos) no backend e retorna o arquivo como Blob. */
+  async exportarOrcamentosExcel(payload: any): Promise<Blob> {
+    const resp = await fetch(`${API_BASE_URL}/api/orcamentos/exportar-excel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) throw new Error('Falha ao gerar o Excel no servidor');
+    return resp.blob();
+  }
+
   async atualizarCategoriaItem(obraId: string, itemNumero: string, categoria: string): Promise<any> {
     return this.request('/api/orcamentos/categoria', { method: 'PUT', body: { obraId, itemNumero, categoria } });
   }

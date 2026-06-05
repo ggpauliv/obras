@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { listarObras } from '../store';
 import type { Obra } from '../store';
 import { apiClient } from '../api/client';
-import { exportarElementoPDF, exportarExcel, type AbaExcel } from '../utils/exportar';
+import { exportarElementoPDF } from '../utils/exportar';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Constantes
@@ -133,40 +133,35 @@ export function OrcamentosComparativaPage() {
         setLinhasPorOrc(carregadas);
       }
 
-      // Aba 1 — Resumo por fornecedor
-      const resumo: AbaExcel = {
-        nome: 'Resumo',
-        dados: [
-          ['Fornecedor', 'Valor Total', 'Prazo (dias)', 'Diferença vs melhor', '% acima'],
-          ...lista.map(o => {
-            const v = Number(o.valorTotal) || 0;
-            return [nomeDe(o), v, o.prazoDias || '', v - melhor, melhor > 0 ? `${(((v - melhor) / melhor) * 100).toFixed(1)}%` : '0%'];
-          }),
-        ],
-      };
-
-      // Aba 2 — Comparativo por categoria
-      const catHeader = ['Categoria', ...lista.map(o => nomeDe(o))];
-      const porCategoria: AbaExcel = {
-        nome: 'Por Categoria',
-        dados: [
-          catHeader,
-          ...matrizCategorias.map(row => [
-            row.categoria,
-            ...lista.map(o => (row[o.id]?.presente ? (row[o.id].total || 0) : '—')),
-          ]),
-        ],
-      };
-
-      // Aba 3 — Itens detalhados (todos os fornecedores)
-      const itensRows: (string | number)[][] = [['Fornecedor', 'Item', 'Descrição', 'Categoria', 'Qtd', 'Valor Unit.', 'Total']];
+      // Monta o payload para o gerador Python (gráficos nativos no Excel)
+      const fornecedores = lista.map(o => ({
+        nome: nomeDe(o),
+        valorTotal: Number(o.valorTotal) || 0,
+        prazoDias: o.prazoDias || null,
+      }));
+      const categorias = matrizCategorias.map(row => ({
+        categoria: row.categoria,
+        valores: lista.map(o => (row[o.id]?.presente ? (row[o.id].total || 0) : null)),
+      }));
+      const itens: any[][] = [];
       lista.forEach(o => {
         (carregadas[o.id] || []).forEach((l: any) => {
-          itensRows.push([nomeDe(o), l.itemNumero || '', l.descricao || '', l.categoria || '', Number(l.quantidade) || 0, Number(l.valorUnitario) || 0, Number(l.valorTotal) || 0]);
+          itens.push([nomeDe(o), l.itemNumero || '', l.descricao || '', l.categoria || '', Number(l.quantidade) || 0, Number(l.valorUnitario) || 0, Number(l.valorTotal) || 0]);
         });
       });
 
-      exportarExcel(`comparativo_${slug}`, [resumo, porCategoria, { nome: 'Itens', dados: itensRows }]);
+      const blob = await apiClient.exportarOrcamentosExcel({
+        nomeArquivo: `comparativo_${slug}`,
+        fornecedores, categorias, itens,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `comparativo_${slug}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     } catch (e: any) {
       alert('Erro ao gerar Excel: ' + e.message);
     }
