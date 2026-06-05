@@ -749,9 +749,9 @@ app.delete('/api/orcamentos/:id', autenticar, async (req, res) => {
   }
 });
 
-// Chama Gemini com retry automático em caso de 503
+// Chama Gemini com retry automático em caso de 503 (sobrecarga) ou 429 (cota/rate-limit)
 async function chamarGeminiComRetry(prompt, maxTentativas = 4) {
-  const modelos = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-pro'];
+  const modelos = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-flash'];
   let ultimoErro;
 
   for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
@@ -770,10 +770,16 @@ async function chamarGeminiComRetry(prompt, maxTentativas = 4) {
       return result.response.text();
     } catch (err) {
       ultimoErro = err;
-      const is503 = err.message && (err.message.includes('503') || err.message.includes('overloaded') || err.message.includes('high demand'));
-      if (!is503) throw err; // erro não-transitório, não tentar de novo
-      const espera = tentativa * 8000; // 8s, 16s, 24s, 32s
-      console.log(`⏳ Gemini 503 — tentativa ${tentativa}/${maxTentativas} com ${modelo}, aguardando ${espera/1000}s...`);
+      const msg = err.message || '';
+      const is503 = msg.includes('503') || msg.includes('overloaded') || msg.includes('high demand');
+      const is429 = msg.includes('429') || msg.includes('Too Many Requests') || msg.includes('quota');
+      if (!is503 && !is429) throw err; // erro não-transitório, não tentar de novo
+
+      // Respeita o retryDelay sugerido pela API (se houver), com teto de 40s.
+      let espera = tentativa * 8000;
+      const m = msg.match(/retry in ([\d.]+)s/i) || msg.match(/"retryDelay":\s*"(\d+)s"/);
+      if (m) espera = Math.min(Math.ceil(parseFloat(m[1])) * 1000 + 1000, 40000);
+      console.log(`⏳ Gemini ${is429 ? '429' : '503'} — tentativa ${tentativa}/${maxTentativas} (${modelo}), aguardando ${Math.round(espera/1000)}s...`);
       await new Promise(r => setTimeout(r, espera));
     }
   }
