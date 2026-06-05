@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         username: resp.usuario.email,
         nome: resp.usuario.nome,
         email: resp.usuario.email,
-        papel: 'Admin',
+        papel: resp.usuario.papel || 'Admin',
       };
       setUsuario(sessao);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(sessao));

@@ -117,6 +117,7 @@ app.post('/api/auth/login', async (req, res) => {
           id: usuario.id,
           nome: usuario.nome,
           email: usuario.email,
+          papel: usuario.papel || 'Admin',
         },
       });
     });
@@ -161,6 +162,80 @@ app.post('/api/auth/register', async (req, res) => {
   } catch (error) {
     console.error('❌ Erro no registro:', error);
     res.status(500).json({ erro: 'Erro no servidor' });
+  }
+});
+
+// ============================================
+// USUÁRIOS (gestão)
+// ============================================
+
+// GET /api/usuarios
+app.get('/api/usuarios', autenticar, async (req, res) => {
+  try {
+    const r = await db.query('SELECT id, nome, email, papel, ativo FROM usuarios ORDER BY criado_em');
+    res.json(r.rows);
+  } catch (error) {
+    console.error('❌ Erro ao listar usuários:', error);
+    res.status(500).json({ erro: 'Erro ao listar usuários' });
+  }
+});
+
+// POST /api/usuarios
+app.post('/api/usuarios', autenticar, async (req, res) => {
+  try {
+    const { nome, email, senha, papel, ativo } = req.body;
+    if (!nome || !email || !senha) {
+      return res.status(400).json({ erro: 'Nome, login (e-mail) e senha são obrigatórios' });
+    }
+    const existing = await db.query('SELECT id FROM usuarios WHERE email = $1', [email]);
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ erro: 'Já existe um usuário com esse login/e-mail' });
+    }
+    const senhaHash = await bcryptjs.hash(senha, 10);
+    const r = await db.query(
+      'INSERT INTO usuarios (nome, email, senha_hash, papel, ativo) VALUES ($1, $2, $3, $4, $5) RETURNING id, nome, email, papel, ativo',
+      [nome, email, senhaHash, papel || 'Engenheiro', ativo !== false]
+    );
+    res.status(201).json(r.rows[0]);
+  } catch (error) {
+    console.error('❌ Erro ao criar usuário:', error);
+    res.status(500).json({ erro: 'Erro ao criar usuário' });
+  }
+});
+
+// PUT /api/usuarios/:id  (senha opcional — só atualiza se enviada)
+app.put('/api/usuarios/:id', autenticar, async (req, res) => {
+  try {
+    const { nome, email, senha, papel, ativo } = req.body;
+    let r;
+    if (senha && senha.trim()) {
+      const senhaHash = await bcryptjs.hash(senha, 10);
+      r = await db.query(
+        'UPDATE usuarios SET nome=$1, email=$2, papel=$3, ativo=$4, senha_hash=$5, atualizado_em=NOW() WHERE id=$6 RETURNING id, nome, email, papel, ativo',
+        [nome, email, papel, ativo, senhaHash, req.params.id]
+      );
+    } else {
+      r = await db.query(
+        'UPDATE usuarios SET nome=$1, email=$2, papel=$3, ativo=$4, atualizado_em=NOW() WHERE id=$5 RETURNING id, nome, email, papel, ativo',
+        [nome, email, papel, ativo, req.params.id]
+      );
+    }
+    if (r.rows.length === 0) return res.status(404).json({ erro: 'Usuário não encontrado' });
+    res.json(r.rows[0]);
+  } catch (error) {
+    console.error('❌ Erro ao atualizar usuário:', error);
+    res.status(500).json({ erro: 'Erro ao atualizar usuário' });
+  }
+});
+
+// DELETE /api/usuarios/:id
+app.delete('/api/usuarios/:id', autenticar, async (req, res) => {
+  try {
+    await db.query('DELETE FROM usuarios WHERE id = $1', [req.params.id]);
+    res.json({ sucesso: true });
+  } catch (error) {
+    console.error('❌ Erro ao excluir usuário:', error);
+    res.status(500).json({ erro: 'Erro ao excluir usuário' });
   }
 });
 
@@ -1180,7 +1255,19 @@ Retorne APENAS um JSON VÁLIDO com a seguinte estrutura:
 // INICIAR SERVIDOR
 // ============================================
 
+// Garante o schema necessário que não existia em bancos já criados (migração leve).
+async function garantirSchema() {
+  try {
+    await db.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS papel VARCHAR(50) DEFAULT 'Engenheiro'");
+    await db.query("UPDATE usuarios SET papel = 'Admin' WHERE email = 'ggpauliv' AND (papel IS NULL OR papel = 'Engenheiro')");
+    console.log('✅ Schema verificado (coluna usuarios.papel ok)');
+  } catch (e) {
+    console.error('⚠️ Falha ao garantir schema:', e.message);
+  }
+}
+
 app.listen(PORT, () => {
   console.log(`\n🚀 API REST rodando em http://localhost:${PORT}`);
   console.log(`📝 Documentação: consulte README ou Postman collection\n`);
+  garantirSchema();
 });

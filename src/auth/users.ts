@@ -1,5 +1,5 @@
-// O cadastro de usuários vive em src/store/usuarios.ts (fonte de verdade).
-import { listarUsuarios, type Usuario } from '../store/usuarios';
+// O cadastro de usuários vive em src/store/usuarios.ts (persistido via API).
+import type { Usuario } from '../store/usuarios';
 
 export type Papel = 'Admin' | 'Diretor' | 'Gestor' | 'Engenheiro' | 'Cliente';
 
@@ -25,14 +25,6 @@ export const PERMISSOES_POR_PAPEL: Record<Papel, Permissao[] | 'all'> = {
 };
 
 export type { Usuario };
-
-export function autenticar(username: string, senha: string): Usuario | null {
-  const u = listarUsuarios().find(
-    (x) => x.username.toLowerCase() === username.trim().toLowerCase() && x.senha === senha
-  );
-  if (!u || u.ativo === false) return null;
-  return u;
-}
 
 export function temPermissao(papel: Papel, permissao: Permissao): boolean {
   const perms = PERMISSOES_POR_PAPEL[papel];

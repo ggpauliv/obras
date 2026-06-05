@@ -180,6 +180,20 @@ class APIClient {
     return this.request(`/api/fornecedores/${id}`, { method: 'DELETE' });
   }
 
+  // Usuários
+  async listarUsuarios(): Promise<any[]> {
+    return this.request('/api/usuarios');
+  }
+  async criarUsuario(dados: any): Promise<any> {
+    return this.request('/api/usuarios', { method: 'POST', body: dados });
+  }
+  async atualizarUsuario(id: string, dados: any): Promise<any> {
+    return this.request(`/api/usuarios/${id}`, { method: 'PUT', body: dados });
+  }
+  async deletarUsuario(id: string): Promise<any> {
+    return this.request(`/api/usuarios/${id}`, { method: 'DELETE' });
+  }
+
   // Auditoria
   async listarAuditoria(obraId?: string): Promise<any[]> {
     const url = obraId ? `/api/auditoria?obraId=${obraId}` : '/api/auditoria';

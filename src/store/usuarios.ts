@@ -1,37 +1,33 @@
-// Repositório de Usuários (provisório, até existir banco com hash de senha).
-// É a fonte de verdade da autenticação — `autenticar()` lê daqui.
-import { read, write } from './db';
+// Repositório de Usuários — agora via API REST (persistido no PostgreSQL).
+// O "login" do usuário é o campo `email`.
+import { apiClient } from '../api/client';
 import type { Papel } from '../auth/users';
 
 export interface Usuario {
-  username: string;
-  senha: string;
+  id?: string;
   nome: string;
-  email: string;
+  email: string;       // usado como login
   papel: Papel;
   ativo: boolean;
+  senha?: string;      // só no cadastro/edição; nunca volta do servidor
 }
 
-const KEY = 'usuarios';
-
-const SEED: Usuario[] = [
-  { username: 'ggpauliv', senha: '110989', nome: 'Guilherme Pauliv', email: 'ggpauliv@pawliv.com.br', papel: 'Admin', ativo: true },
-];
-
-export function listarUsuarios(): Usuario[] {
-  return read<Usuario[]>(KEY, SEED);
+export async function listarUsuarios(): Promise<Usuario[]> {
+  try {
+    return await apiClient.listarUsuarios();
+  } catch {
+    return [];
+  }
 }
 
-/** Cria ou atualiza um usuário (upsert pelo `username`). */
-export function salvarUsuario(u: Usuario): Usuario {
-  const lista = listarUsuarios();
-  const idx = lista.findIndex((x) => x.username.toLowerCase() === u.username.toLowerCase());
-  if (idx >= 0) lista[idx] = u;
-  else lista.push(u);
-  write(KEY, lista);
-  return u;
+/** Cria ou atualiza um usuário (pelo `id`). */
+export async function salvarUsuario(u: Usuario): Promise<Usuario> {
+  if (u.id) {
+    return apiClient.atualizarUsuario(u.id, u);
+  }
+  return apiClient.criarUsuario(u);
 }
 
-export function removerUsuario(username: string): void {
-  write(KEY, listarUsuarios().filter((u) => u.username.toLowerCase() !== username.toLowerCase()));
+export async function removerUsuario(id: string): Promise<void> {
+  await apiClient.deletarUsuario(id);
 }

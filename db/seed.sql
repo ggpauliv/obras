@@ -2,10 +2,10 @@
 
 -- Usuários (com senhas bcrypt para desenvolvimento)
 -- Senha "110989" encodada com bcryptjs (10 rounds)
-INSERT INTO usuarios (nome, email, senha_hash, ativo) VALUES
-('Admin Pawliv', 'ggpauliv', '$2b$10$d1T.0ytkYzfEMf.QEcYAI.k7aGq0qCcUKfGBZ7.ZhCVfNOgDVFNua', TRUE),
-('Gerente Obras', 'gerente@pawliv.local', '$2b$10$0yNGz7CrbZN4NViTrcLeU.sKiCKn4O6PbCcwLM3RPx0Q/OnxvNYCK', TRUE),
-('Supervisor Campo', 'supervisor@pawliv.local', '$2b$10$0yNGz7CrbZN4NViTrcLeU.sKiCKn4O6PbCcwLM3RPx0Q/OnxvNYCK', TRUE);
+INSERT INTO usuarios (nome, email, senha_hash, papel, ativo) VALUES
+('Admin Pawliv', 'ggpauliv', '$2b$10$d1T.0ytkYzfEMf.QEcYAI.k7aGq0qCcUKfGBZ7.ZhCVfNOgDVFNua', 'Admin', TRUE),
+('Gerente Obras', 'gerente@pawliv.local', '$2b$10$0yNGz7CrbZN4NViTrcLeU.sKiCKn4O6PbCcwLM3RPx0Q/OnxvNYCK', 'Gestor', TRUE),
+('Supervisor Campo', 'supervisor@pawliv.local', '$2b$10$0yNGz7CrbZN4NViTrcLeU.sKiCKn4O6PbCcwLM3RPx0Q/OnxvNYCK', 'Engenheiro', TRUE);
 
 -- Obras (seed básico)
 INSERT INTO obras (nome, cliente, tipo, inicio, termino, pct, status) VALUES

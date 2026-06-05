@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { listarUsuarios, salvarUsuario, removerUsuario } from '../store';
 import type { Usuario } from '../store';
 import type { Papel } from '../auth/users';
@@ -27,11 +27,11 @@ function iniciais(nome: string): string {
   return nome.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('') || '?';
 }
 
-const VAZIO: Usuario = { username: '', senha: '', nome: '', email: '', papel: 'Engenheiro', ativo: true };
+const VAZIO: Usuario = { nome: '', email: '', senha: '', papel: 'Engenheiro', ativo: true };
 
 export default function UsuariosPage() {
   const { usuario: logado } = useAuth();
-  const [usuarios, setUsuarios] = useState<Usuario[]>(() => listarUsuarios());
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [busca, setBusca] = useState('');
   const [filtroPapel, setFiltroPapel] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
@@ -40,28 +40,35 @@ export default function UsuariosPage() {
   const [form, setForm] = useState<Usuario>(VAZIO);
   const [menuKey, setMenuKey] = useState<string | null>(null);
 
-  const recarregar = () => setUsuarios(listarUsuarios());
+  const recarregar = () => listarUsuarios().then(setUsuarios);
+  useEffect(() => { recarregar(); }, []);
+
   const novo = () => { setForm(VAZIO); setEditando(false); setModalOpen(true); };
-  const editar = (u: Usuario) => { setForm(u); setEditando(true); setModalOpen(true); setMenuKey(null); };
-  const excluir = (u: Usuario) => {
-    if (u.username === logado?.username) { window.alert('Você não pode excluir o usuário com o qual está logado.'); return; }
-    if (window.confirm(`Excluir o usuário "${u.nome}"?`)) { removerUsuario(u.username); recarregar(); }
+  const editar = (u: Usuario) => { setForm({ ...u, senha: '' }); setEditando(true); setModalOpen(true); setMenuKey(null); };
+  const excluir = async (u: Usuario) => {
     setMenuKey(null);
+    if (u.email === logado?.email) { window.alert('Você não pode excluir o usuário com o qual está logado.'); return; }
+    if (!window.confirm(`Excluir o usuário "${u.nome}"?`)) return;
+    try { await removerUsuario(u.id!); await recarregar(); }
+    catch (e) { window.alert('Erro ao excluir: ' + (e instanceof Error ? e.message : 'desconhecido')); }
   };
-  const salvar = () => {
-    if (!form.nome.trim() || !form.username.trim()) { window.alert('Informe nome e usuário (login).'); return; }
-    if (!editando && !form.senha.trim()) { window.alert('Defina uma senha para o novo usuário.'); return; }
-    const senhaFinal = form.senha.trim() || usuarios.find((u) => u.username === form.username)?.senha || '';
-    salvarUsuario({ ...form, senha: senhaFinal });
-    recarregar();
-    setModalOpen(false);
+  const salvar = async () => {
+    if (!form.nome.trim() || !form.email.trim()) { window.alert('Informe nome e login (e-mail).'); return; }
+    if (!editando && !form.senha?.trim()) { window.alert('Defina uma senha para o novo usuário.'); return; }
+    try {
+      await salvarUsuario(form);
+      await recarregar();
+      setModalOpen(false);
+    } catch (e) {
+      window.alert('Erro ao salvar: ' + (e instanceof Error ? e.message : 'desconhecido'));
+    }
   };
   const set = (campo: keyof Usuario, valor: string | boolean) => setForm((f) => ({ ...f, [campo]: valor }));
 
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase();
     return usuarios.filter((u) => {
-      const okBusca = !q || u.nome.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.username.toLowerCase().includes(q);
+      const okBusca = !q || u.nome.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
       const okPapel = !filtroPapel || u.papel === filtroPapel;
       const okStatus = !filtroStatus || (filtroStatus === 'ativo' ? u.ativo : !u.ativo);
       return okBusca && okPapel && okStatus;
@@ -98,24 +105,23 @@ export default function UsuariosPage() {
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead className="bg-surface-container-low">
               <tr className="border-b border-outline-variant">
-                {['Nome', 'Login', 'E-mail', 'Papel', 'Status', 'Ações'].map((h) => (
+                {['Nome', 'Login (e-mail)', 'Papel', 'Status', 'Ações'].map((h) => (
                   <th key={h} className="px-lg py-md text-label-sm text-on-surface-variant uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant">
               {filtrados.length === 0 && (
-                <tr><td colSpan={6} className="py-xl px-lg text-center text-on-surface-variant">Nenhum usuário encontrado.</td></tr>
+                <tr><td colSpan={5} className="py-xl px-lg text-center text-on-surface-variant">Nenhum usuário encontrado.</td></tr>
               )}
               {filtrados.map((u) => (
-                <tr key={u.username} className="group">
+                <tr key={u.id} className="group">
                   <td className="px-lg py-md">
                     <div className="flex items-center gap-sm">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs bg-surface-container-highest text-primary">{iniciais(u.nome)}</div>
                       <span className="text-label-md text-on-surface">{u.nome}</span>
                     </div>
                   </td>
-                  <td className="px-lg py-md text-body-sm text-on-surface-variant">{u.username}</td>
                   <td className="px-lg py-md text-body-sm text-on-surface-variant">{u.email}</td>
                   <td className="px-lg py-md"><span className={`px-sm py-xs rounded text-[11px] font-bold uppercase ${ROLE_CHIP[u.papel]}`}>{u.papel}</span></td>
                   <td className="px-lg py-md">
@@ -126,8 +132,8 @@ export default function UsuariosPage() {
                     )}
                   </td>
                   <td className="px-lg py-md relative">
-                    <button onClick={() => setMenuKey(menuKey === u.username ? null : u.username)} className="text-outline hover:text-primary transition-colors"><span className="material-symbols-outlined">more_vert</span></button>
-                    {menuKey === u.username && (
+                    <button onClick={() => setMenuKey(menuKey === u.id ? null : u.id!)} className="text-outline hover:text-primary transition-colors"><span className="material-symbols-outlined">more_vert</span></button>
+                    {menuKey === u.id && (
                       <div className="absolute right-8 top-2 z-20 bg-surface border border-outline-variant rounded-lg shadow-lg py-1 w-36 text-left">
                         <button onClick={() => editar(u)} className="w-full px-md py-2 text-body-sm text-on-surface hover:bg-surface-container-low flex items-center gap-sm"><span className="material-symbols-outlined text-[18px]">edit</span> Editar</button>
                         <button onClick={() => excluir(u)} className="w-full px-md py-2 text-body-sm text-error hover:bg-error-container/30 flex items-center gap-sm"><span className="material-symbols-outlined text-[18px]">delete</span> Excluir</button>
@@ -160,17 +166,13 @@ export default function UsuariosPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
                 <div className="space-y-base">
-                  <label className="text-label-md text-on-surface-variant">Usuário (login) *</label>
-                  <input className={FIELD} value={form.username} onChange={(e) => set('username', e.target.value)} disabled={editando} placeholder="ex: ralmeida" type="text" />
+                  <label className="text-label-md text-on-surface-variant">Login (e-mail) *</label>
+                  <input className={FIELD} value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="nome@empresa.com.br" type="text" />
                 </div>
                 <div className="space-y-base">
-                  <label className="text-label-md text-on-surface-variant">{editando ? 'Senha (deixe em branco p/ manter)' : 'Senha *'}</label>
-                  <input className={FIELD} value={form.senha} onChange={(e) => set('senha', e.target.value)} type="password" placeholder="••••••" />
+                  <label className="text-label-md text-on-surface-variant">{editando ? 'Senha (em branco = manter)' : 'Senha *'}</label>
+                  <input className={FIELD} value={form.senha || ''} onChange={(e) => set('senha', e.target.value)} type="password" placeholder="••••••" />
                 </div>
-              </div>
-              <div className="space-y-base">
-                <label className="text-label-md text-on-surface-variant">E-mail</label>
-                <input className={FIELD} value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="nome@empresa.com.br" type="email" />
               </div>
               <div className="space-y-base">
                 <label className="text-label-md text-on-surface-variant">Papel</label>
