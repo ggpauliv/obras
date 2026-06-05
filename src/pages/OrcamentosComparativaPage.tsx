@@ -14,6 +14,14 @@ const CORES = ['#2563EB', '#7C3AED', '#16A34A', '#EA580C', '#0891B2', '#DC2626']
 const ABAS = ['Visão Geral', 'Por Categorias', 'Itens Detalhados'] as const;
 type Aba = typeof ABAS[number];
 
+const CATEGORIAS = [
+  'Estrutura', 'Alvenaria', 'Cobertura', 'Instalações Elétricas', 'Instalações Hidráulicas',
+  'Acabamento', 'Pintura', 'Fundações', 'Terraplanagem', 'Serviços Gerais', 'Materiais', 'Mão de Obra',
+];
+
+// Nome exibido do orçamento (prefere o nome editável do próprio orçamento).
+const nomeDe = (o: any) => (o?.nome && String(o.nome).trim()) || o?.fornecedorNome || 'Fornecedor';
+
 const fmt = (v: any) =>
   Number(v)?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) ?? '—';
 const fmtK = (v: number) =>
@@ -90,6 +98,35 @@ export function OrcamentosComparativaPage() {
   const maior = Number(lista[lista.length - 1]?.valorTotal) || 0;
   const economia = maior > 0 ? ((maior - melhor) / maior * 100).toFixed(1) : '0';
 
+  // Renomeia um orçamento já salvo.
+  const renomear = async (o: any) => {
+    const atual = nomeDe(o);
+    const novo = window.prompt('Novo nome do orçamento:', atual);
+    if (novo == null || !novo.trim() || novo.trim() === atual) return;
+    try {
+      await apiClient.renomearOrcamento(o.id, novo.trim());
+      setTodos(prev => prev.map(x => x.id === o.id ? { ...x, nome: novo.trim() } : x));
+    } catch (err: any) {
+      alert('Erro ao renomear: ' + err.message);
+    }
+  };
+
+  // Altera a categoria de um item em TODOS os orçamentos (itens compartilhados).
+  const mudarCategoriaItem = async (itemNumero: string, categoria: string) => {
+    try {
+      await apiClient.atualizarCategoriaItem(obraId, itemNumero, categoria);
+      setLinhasPorOrc(prev => {
+        const novo: Record<string, any[]> = {};
+        for (const [id, linhas] of Object.entries(prev)) {
+          novo[id] = linhas.map((l: any) => l.itemNumero === itemNumero ? { ...l, categoria } : l);
+        }
+        return novo;
+      });
+    } catch (err: any) {
+      alert('Erro ao atualizar categoria: ' + err.message);
+    }
+  };
+
   // ── Dados para gráfico por categoria ──
   const dadosCategorias = useMemo(() => {
     if (lista.length === 0) return [];
@@ -98,7 +135,7 @@ export function OrcamentosComparativaPage() {
     return Array.from(cats).sort().map(cat => {
       const entry: any = { categoria: cat };
       lista.forEach(o => {
-        const nome = o.fornecedorNome || o.nome?.split(' - ')[0] || o.id.slice(0, 6);
+        const nome = nomeDe(o) || o.id.slice(0, 6);
         const total = (linhasPorOrc[o.id] || [])
           .filter((l: any) => (l.categoria || 'Outros') === cat)
           .reduce((s: number, l: any) => s + (Number(l.valorTotal) || 0), 0);
@@ -116,7 +153,7 @@ export function OrcamentosComparativaPage() {
     return Array.from(cats).sort().map(cat => {
       const row: any = { categoria: cat };
       lista.forEach(o => {
-        const nome = o.fornecedorNome || o.nome?.split(' - ')[0] || o.id.slice(0, 6);
+        const nome = nomeDe(o) || o.id.slice(0, 6);
         const itens = (linhasPorOrc[o.id] || []).filter((l: any) => (l.categoria || 'Outros') === cat);
         row[o.id] = {
           presente: itens.length > 0,
@@ -158,7 +195,7 @@ export function OrcamentosComparativaPage() {
         {todos.length > 0 && (
           <div className="flex flex-wrap gap-sm">
             {todos.map((o, i) => {
-              const nome = o.fornecedorNome || o.nome?.split(' - ')[0] || `Orc. ${i + 1}`;
+              const nome = nomeDe(o) || `Orc. ${i + 1}`;
               const sel = selecionados.has(o.id);
               const cor = CORES[i % CORES.length];
               return (
@@ -214,7 +251,7 @@ export function OrcamentosComparativaPage() {
                 <span className="material-symbols-outlined text-[20px] opacity-70">emoji_events</span>
               </div>
               <p className="text-headline-sm font-bold mt-xs">{fmt(melhor)}</p>
-              <p className="text-body-sm opacity-80 mt-xs truncate">{lista[0]?.fornecedorNome || lista[0]?.nome?.split(' - ')[0]}</p>
+              <p className="text-body-sm opacity-80 mt-xs truncate">{nomeDe(lista[0])}</p>
             </div>
             <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg">
               <p className="text-label-sm text-on-surface-variant">Diferença</p>
@@ -244,7 +281,7 @@ export function OrcamentosComparativaPage() {
               {/* Cards de fornecedores */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-md">
                 {lista.map((o, idx) => {
-                  const nome = o.fornecedorNome || o.nome?.split(' - ')[0] || `Fornecedor ${idx + 1}`;
+                  const nome = nomeDe(o) || `Fornecedor ${idx + 1}`;
                   const diff = Number(o.valorTotal) - melhor;
                   const pctDiff = melhor > 0 ? ((diff / melhor) * 100).toFixed(1) : '0';
                   const cor = coresPorId[o.id];
@@ -254,11 +291,15 @@ export function OrcamentosComparativaPage() {
                       <div className="h-1.5" style={{ background: cor }} />
                       <div className="p-lg flex flex-col gap-sm">
                         <div className="flex items-start justify-between gap-sm">
-                          <div className="flex items-center gap-sm">
+                          <div className="flex items-center gap-sm min-w-0">
                             <div className="w-8 h-8 rounded-full flex items-center justify-center text-label-sm font-bold text-white shrink-0" style={{ background: cor }}>
                               {idx === 0 ? '🏆' : idx + 1}
                             </div>
-                            <p className="text-label-md font-semibold text-on-surface leading-snug">{nome}</p>
+                            <p className="text-label-md font-semibold text-on-surface leading-snug truncate">{nome}</p>
+                            <button onClick={() => renomear(o)} title="Renomear orçamento"
+                              className="shrink-0 text-outline hover:text-primary transition-colors">
+                              <span className="material-symbols-outlined text-[16px]">edit</span>
+                            </button>
                           </div>
                           {idx === 0 && <span className="shrink-0 px-xs py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-label-sm border border-emerald-200">Melhor</span>}
                         </div>
@@ -281,7 +322,7 @@ export function OrcamentosComparativaPage() {
                             <span>Ver itens</span>
                           </button>
                           <button
-                            onClick={() => remover(o.id, o.fornecedorNome || o.nome?.split(' - ')[0] || 'orçamento')}
+                            onClick={() => remover(o.id, nomeDe(o) || 'orçamento')}
                             disabled={removendo === o.id}
                             className="flex items-center gap-xs text-body-sm text-error hover:text-error/80 transition-colors disabled:opacity-50"
                             title="Remover orçamento">
@@ -301,7 +342,7 @@ export function OrcamentosComparativaPage() {
                 <h3 className="text-label-lg font-semibold text-on-surface mb-lg">Valores por Fornecedor</h3>
                 <div className="flex flex-col gap-md">
                   {lista.map((o, idx) => {
-                    const nome = o.fornecedorNome || o.nome?.split(' - ')[0] || `F${idx + 1}`;
+                    const nome = nomeDe(o) || `F${idx + 1}`;
                     const pct = maior > 0 ? (Number(o.valorTotal) / maior) * 100 : 0;
                     const cor = coresPorId[o.id];
                     return (
@@ -342,7 +383,7 @@ export function OrcamentosComparativaPage() {
                         <Tooltip formatter={(v: any) => fmt(v)} labelStyle={{ fontWeight: 600 }} />
                         <Legend />
                         {lista.map((o, i) => {
-                          const nome = o.fornecedorNome || o.nome?.split(' - ')[0] || `F${i + 1}`;
+                          const nome = nomeDe(o) || `F${i + 1}`;
                           return <Bar key={o.id} dataKey={nome} fill={coresPorId[o.id]} radius={[3, 3, 0, 0]} />;
                         })}
                       </BarChart>
@@ -361,7 +402,7 @@ export function OrcamentosComparativaPage() {
                           <tr>
                             <th className="py-sm px-md text-label-sm text-on-surface-variant font-semibold text-left w-48">Categoria</th>
                             {lista.map((o, i) => {
-                              const nome = o.fornecedorNome || o.nome?.split(' - ')[0] || `F${i + 1}`;
+                              const nome = nomeDe(o) || `F${i + 1}`;
                               return (
                                 <th key={o.id} className="py-sm px-md text-label-sm font-semibold text-center whitespace-nowrap">
                                   <span style={{ color: coresPorId[o.id] }}>{nome}</span>
@@ -425,7 +466,7 @@ export function OrcamentosComparativaPage() {
               )}
               <div className="divide-y divide-outline-variant">
                 {lista.map((o, idx) => {
-                  const nome = o.fornecedorNome || o.nome?.split(' - ')[0] || `Fornecedor ${idx + 1}`;
+                  const nome = nomeDe(o) || `Fornecedor ${idx + 1}`;
                   const diff = Number(o.valorTotal) - melhor;
                   const pctDiff = melhor > 0 ? ((diff / melhor) * 100).toFixed(1) : '0';
                   const cor = coresPorId[o.id];
@@ -492,7 +533,15 @@ export function OrcamentosComparativaPage() {
                                           <td className="py-xs px-md text-on-surface-variant whitespace-nowrap">{l.itemNumero}</td>
                                           <td className="py-xs px-md text-on-surface max-w-xs">{l.descricao}</td>
                                           <td className="py-xs px-md">
-                                            <span className="px-xs py-0.5 rounded text-label-sm" style={{ background: cor + '20', color: cor }}>{l.categoria}</span>
+                                            <select
+                                              value={l.categoria || ''}
+                                              onChange={e => mudarCategoriaItem(l.itemNumero, e.target.value)}
+                                              title="Alterar categoria (aplica a todos os fornecedores)"
+                                              className="px-xs py-0.5 rounded text-label-sm border border-transparent hover:border-outline-variant focus:border-primary outline-none cursor-pointer"
+                                              style={{ background: cor + '20', color: cor }}
+                                            >
+                                              {CATEGORIAS.map(c => <option key={c} value={c} style={{ color: '#111' }}>{c}</option>)}
+                                            </select>
                                           </td>
                                           <td className="py-xs px-md text-on-surface-variant text-right whitespace-nowrap">{l.quantidade}</td>
                                           <td className="py-xs px-md text-on-surface-variant text-right whitespace-nowrap">{fmt(l.valorUnitario)}</td>

@@ -226,6 +226,14 @@ class APIClient {
     return this.request('/api/orcamentos/salvar', { method: 'POST', body: { obraId, dados } });
   }
 
+  async renomearOrcamento(id: string, nome: string): Promise<any> {
+    return this.request(`/api/orcamentos/${id}`, { method: 'PUT', body: { nome } });
+  }
+
+  async atualizarCategoriaItem(obraId: string, itemNumero: string, categoria: string): Promise<any> {
+    return this.request('/api/orcamentos/categoria', { method: 'PUT', body: { obraId, itemNumero, categoria } });
+  }
+
   async compararOrcamentos(obraId: string): Promise<any> {
     return this.request(`/api/orcamentos/comparar?obraId=${obraId}`);
   }

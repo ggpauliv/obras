@@ -728,6 +728,44 @@ app.get('/api/orcamentos', autenticar, async (req, res) => {
   }
 });
 
+// PUT /api/orcamentos/categoria — altera a categoria de um item em TODOS os
+// orçamentos de uma obra (itens são compartilhados na equalização).
+// IMPORTANTE: declarada antes de "/:id" para não ser capturada pela rota /:id.
+app.put('/api/orcamentos/categoria', autenticar, async (req, res) => {
+  try {
+    const { obraId, itemNumero, categoria } = req.body;
+    if (!obraId || !itemNumero || !categoria) {
+      return res.status(400).json({ erro: 'obraId, itemNumero e categoria são obrigatórios' });
+    }
+    const r = await db.query(
+      `UPDATE linhas_orcamento SET categoria = $1
+       WHERE item_numero = $2 AND orcamento_id IN (SELECT id FROM orcamentos WHERE obra_id = $3)`,
+      [categoria, String(itemNumero), obraId]
+    );
+    res.json({ sucesso: true, atualizados: r.rowCount });
+  } catch (error) {
+    console.error('❌ Erro ao atualizar categoria:', error);
+    res.status(500).json({ erro: 'Erro ao atualizar categoria' });
+  }
+});
+
+// PUT /api/orcamentos/:id — renomeia (e opcionalmente atualiza prazo) o orçamento.
+app.put('/api/orcamentos/:id', autenticar, async (req, res) => {
+  try {
+    const { nome } = req.body;
+    if (!nome || !nome.trim()) return res.status(400).json({ erro: 'nome é obrigatório' });
+    const r = await db.query(
+      'UPDATE orcamentos SET nome = $1, atualizado_em = NOW() WHERE id = $2 RETURNING *',
+      [nome.trim(), req.params.id]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ erro: 'Orçamento não encontrado' });
+    res.json(r.rows[0]);
+  } catch (error) {
+    console.error('❌ Erro ao renomear orçamento:', error);
+    res.status(500).json({ erro: 'Erro ao renomear orçamento' });
+  }
+});
+
 // GET /api/orcamentos/:id
 app.get('/api/orcamentos/:id', autenticar, async (req, res) => {
   try {
@@ -1066,7 +1104,7 @@ app.post('/api/orcamentos/salvar', autenticar, async (req, res) => {
     const valorTotal = sanitizeNumero(dados.valorTotal) ||
       (dados.linhas || []).reduce((acc, l) => acc + (sanitizeNumero(l.valorTotal) || 0), 0);
 
-    const nomeOrca = `${nomeFornecedor} - ${dados.numeroCotacao || new Date().toLocaleDateString('pt-BR')}`;
+    const nomeOrca = (dados.nome && dados.nome.trim()) || nomeFornecedor;
     const orcResult = await db.query(
       `INSERT INTO orcamentos (obra_id, fornecedor_id, nome, valor_total, prazo_dias, data_emissao, numero_cotacao, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
