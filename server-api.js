@@ -807,44 +807,47 @@ app.post('/api/orcamentos/analisar', autenticar, async (req, res) => {
     const ehPDF = buffer.slice(0, 5).toString('latin1') === '%PDF-';
 
     const instrucoes = `Você é um especialista em orçamentos de construção civil.
-O documento pode conter UM único fornecedor OU VÁRIOS fornecedores (mapa de
-equalização / comparação, com fornecedores em colunas ou seções distintas).
-Identifique CADA fornecedor distinto e gere um objeto de orçamento por fornecedor.
+Este documento é um MAPA DE EQUALIZAÇÃO: existe UMA lista de itens (com descrições
+COMPARTILHADAS entre todos os fornecedores) e VÁRIOS fornecedores que cotaram
+preços para os MESMOS itens. Também pode ser o orçamento de um único fornecedor.
 
-Retorne APENAS um JSON válido com esta estrutura exata:
+Extraia em JSON com DUAS partes:
+1) "itens": a lista ÚNICA de itens (as descrições são as mesmas para todos os
+   fornecedores). A categoria de cada item é definida UMA só vez aqui.
+2) "fornecedores": um objeto por fornecedor, contendo apenas os PREÇOS daquele
+   fornecedor por itemNumero.
+
+Estrutura exata:
 {
-  "orcamentos": [
+  "itens": [
     {
-      "fornecedor": "nome da empresa fornecedora",
-      "cnpj": "CNPJ formatado ou null",
-      "numeroCotacao": "número da cotação ou null",
+      "itemNumero": "1.1.1",
+      "descricao": "descrição do item",
+      "unidade": "un/m²/kg/etc ou null",
+      "quantidade": número ou null,
+      "categoria": "uma de: Estrutura, Alvenaria, Cobertura, Instalações Elétricas, Instalações Hidráulicas, Acabamento, Pintura, Fundações, Terraplanagem, Serviços Gerais, Materiais, Mão de Obra"
+    }
+  ],
+  "fornecedores": [
+    {
+      "fornecedor": "nome da empresa",
+      "cnpj": "CNPJ ou null",
+      "numeroCotacao": "número ou null",
       "dataEmissao": "YYYY-MM-DD ou null",
-      "prazoDias": número de dias de prazo ou null,
-      "valorTotal": número (sem R$, pontos ou vírgulas de milhar),
-      "linhas": [
-        {
-          "itemNumero": "1.1",
-          "descricao": "descrição do item",
-          "unidade": "un/m²/kg/etc",
-          "quantidade": número,
-          "valorUnitario": número,
-          "valorTotal": número,
-          "categoria": "uma de: Estrutura, Alvenaria, Cobertura, Instalações Elétricas, Instalações Hidráulicas, Acabamento, Pintura, Fundações, Terraplanagem, Serviços Gerais, Materiais, Mão de Obra"
-        }
-      ],
-      "avisos": ["inconsistências detectadas, se houver"]
+      "prazoDias": número ou null,
+      "precos": {
+        "1.1.1": { "valorUnitario": número, "valorTotal": número }
+      }
     }
   ]
 }
-REGRAS:
-- Se houver apenas um fornecedor, retorne o array com um único item.
-- Em mapas de equalização, cada coluna/seção de preços é um fornecedor; as descrições
-  dos itens costumam ser compartilhadas — replique a descrição em cada fornecedor com
-  os respectivos preços daquele fornecedor.
-- Valores numéricos devem ser números (sem R$, pontos ou vírgulas de milhar).
-- Se o valorTotal de um fornecedor não estiver explícito, some os itens dele.
-- Ignore cabeçalhos, totalizadores duplicados e células vazias.
-- Para categoria, infira pelo contexto do item.`;
+REGRAS CRÍTICAS:
+- A categoria de cada item é ÚNICA e vale para TODOS os fornecedores (defina em "itens", nunca por fornecedor).
+- Use EXATAMENTE os mesmos "itemNumero" em "itens" e nas chaves de "precos".
+- Se um fornecedor NÃO cotou um item, omita aquele itemNumero do "precos" dele (ou use 0).
+- Números sem "R$", sem pontos de milhar e sem vírgulas (use ponto decimal).
+- Ignore cabeçalhos, linhas de subtotal/total e células vazias.
+- Se o documento tiver um único fornecedor, retorne "fornecedores" com um item só.`;
 
     let content;
     if (ehPDF) {
@@ -882,20 +885,55 @@ REGRAS:
       });
     }
 
-    // Aceita {orcamentos:[...]} ou, por robustez, um objeto único antigo.
-    let orcamentos = Array.isArray(parsed.orcamentos)
-      ? parsed.orcamentos
-      : (parsed.fornecedor || parsed.linhas) ? [parsed] : [];
+    let orcamentos;
 
-    orcamentos = orcamentos
-      .map((o) => {
+    if (Array.isArray(parsed.itens) && Array.isArray(parsed.fornecedores)) {
+      // Formato equalização: itens compartilhados + preços por fornecedor.
+      // Garante que TODOS os fornecedores tenham os MESMOS itens/categorias.
+      const itens = parsed.itens.map((it) => ({
+        itemNumero: String(it.itemNumero ?? ''),
+        descricao: it.descricao || '',
+        unidade: it.unidade || null,
+        quantidade: sanitizeNumero(it.quantidade) || null,
+        categoria: it.categoria || 'Serviços Gerais',
+      }));
+
+      orcamentos = parsed.fornecedores.map((f) => {
+        const precos = f.precos || {};
+        const linhas = itens.map((it) => {
+          const p = precos[it.itemNumero] || precos[String(it.itemNumero)] || {};
+          const valorUnitario = sanitizeNumero(p.valorUnitario) || 0;
+          let valorTotal = sanitizeNumero(p.valorTotal);
+          if (!valorTotal && valorUnitario && it.quantidade) valorTotal = valorUnitario * it.quantidade;
+          return { ...it, valorUnitario, valorTotal: valorTotal || 0 };
+        });
+        const valorTotal = linhas.reduce((acc, l) => acc + (l.valorTotal || 0), 0);
+        return {
+          fornecedor: f.fornecedor || 'Fornecedor',
+          cnpj: f.cnpj || null,
+          numeroCotacao: f.numeroCotacao || null,
+          dataEmissao: f.dataEmissao || null,
+          prazoDias: sanitizeNumero(f.prazoDias) || null,
+          valorTotal,
+          linhas,
+          avisos: f.avisos || [],
+        };
+      });
+    } else {
+      // Fallback: formato antigo {orcamentos:[...]} ou objeto único.
+      orcamentos = Array.isArray(parsed.orcamentos)
+        ? parsed.orcamentos
+        : (parsed.fornecedor || parsed.linhas) ? [parsed] : [];
+      orcamentos = orcamentos.map((o) => {
         let valorTotal = sanitizeNumero(o.valorTotal);
         if (!valorTotal && Array.isArray(o.linhas)) {
           valorTotal = o.linhas.reduce((acc, l) => acc + (sanitizeNumero(l.valorTotal) || 0), 0);
         }
         return { ...o, valorTotal, linhas: o.linhas || [], avisos: o.avisos || [] };
-      })
-      .filter((o) => o.fornecedor || (o.linhas && o.linhas.length));
+      });
+    }
+
+    orcamentos = orcamentos.filter((o) => o.fornecedor || (o.linhas && o.linhas.length));
 
     if (orcamentos.length === 0) {
       return res.status(422).json({ erro: 'Nenhum fornecedor/orçamento foi identificado no documento.' });
