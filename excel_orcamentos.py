@@ -149,6 +149,16 @@ def main():
         ch2.set_size({"width": 920, "height": 470})
         wc.insert_chart(1, n + 2, ch2)
 
+    # Aba oculta com metadados para reimportação (id de cada orçamento)
+    meta = wb.add_worksheet("_meta")
+    meta.write_row(0, 0, ["aba", "orcamentoId", "obraId", "nome"])
+    for i, (aba, f, _t) in enumerate(abas):
+        meta.write(i + 1, 0, aba)
+        meta.write(i + 1, 1, str(f.get("id") or ""))
+        meta.write(i + 1, 2, str(f.get("obraId") or ""))
+        meta.write(i + 1, 3, f.get("nome") or "")
+    meta.hide()
+
     # Coloca Resumo como primeira aba ativa
     wr.activate()
     wb.worksheets_objs.sort(key=lambda w: 0 if w.name == "Resumo" else (1 if w.name == "Por Categoria" else 2))

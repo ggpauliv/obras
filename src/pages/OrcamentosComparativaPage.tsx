@@ -101,8 +101,10 @@ export function OrcamentosComparativaPage() {
 
   // ── Exportação ──
   const exportRef = useRef<HTMLDivElement>(null);
+  const reimportRef = useRef<HTMLInputElement>(null);
   const [menuExport, setMenuExport] = useState(false);
   const [exportando, setExportando] = useState(false);
+  const [reimportando, setReimportando] = useState(false);
   const nomeObra = obras.find(o => o.id === obraId)?.nome || 'orcamentos';
   const slug = nomeObra.normalize('NFD').replace(/[^\w]+/g, '_').replace(/_+/g, '_').toLowerCase();
 
@@ -155,6 +157,8 @@ export function OrcamentosComparativaPage() {
 
       // Cada fornecedor com seus itens → uma aba por empresa (vinculada às fórmulas)
       const fornecedores = lista.map(o => ({
+        id: o.id,
+        obraId,
         nome: nomeDe(o),
         prazoDias: o.prazoDias || null,
         itens: (carregadas[o.id] || []).map((l: any) => [
@@ -179,6 +183,29 @@ export function OrcamentosComparativaPage() {
       alert('Erro ao gerar Excel: ' + e.message);
     }
     setExportando(false);
+  };
+
+  // Reimporta um Excel editado (atualiza os orçamentos no banco)
+  const reimportarExcel = async (file?: File) => {
+    if (!file) return;
+    setReimportando(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = e => resolve((e.target?.result as string).split(',')[1]);
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+      const res = await apiClient.reimportarOrcamentosExcel(base64);
+      const data = await apiClient.listarOrcamentos(obraId);
+      setTodos(data);
+      setLinhasPorOrc({});
+      alert(`${res.atualizados} orçamento(s) atualizado(s) a partir do Excel.`);
+    } catch (e: any) {
+      alert('Erro ao reimportar: ' + e.message);
+    }
+    setReimportando(false);
+    if (reimportRef.current) reimportRef.current.value = '';
   };
 
   // Renomeia um orçamento já salvo.
@@ -280,6 +307,18 @@ export function OrcamentosComparativaPage() {
                 </div>
               )}
             </div>
+          )}
+          {lista.length > 0 && (
+            <>
+              <input ref={reimportRef} type="file" accept=".xlsx" className="hidden"
+                onChange={e => reimportarExcel(e.target.files?.[0])} />
+              <button onClick={() => reimportRef.current?.click()} disabled={reimportando}
+                className="flex items-center gap-xs px-lg py-2 border border-outline-variant text-on-surface rounded-lg hover:bg-surface-container-low text-label-md transition-colors disabled:opacity-50"
+                title="Atualizar os orçamentos a partir de um Excel exportado e editado">
+                <span className="material-symbols-outlined text-[18px]">{reimportando ? 'progress_activity' : 'sync'}</span>
+                {reimportando ? 'Atualizando…' : 'Reimportar Excel'}
+              </button>
+            </>
           )}
           <button onClick={() => navigate('/orcamentos/upload')}
             className="flex items-center gap-xs px-lg py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 text-label-md transition-colors">

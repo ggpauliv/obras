@@ -244,6 +244,11 @@ class APIClient {
     return resp.blob();
   }
 
+  /** Reimporta um .xlsx editado (com aba _meta) e atualiza os orçamentos. */
+  async reimportarOrcamentosExcel(arquivoBase64: string): Promise<{ sucesso: boolean; atualizados: number }> {
+    return this.request('/api/orcamentos/reimportar', { method: 'POST', body: { arquivo: arquivoBase64 } });
+  }
+
   async atualizarCategoriaItem(obraId: string, itemNumero: string, categoria: string): Promise<any> {
     return this.request('/api/orcamentos/categoria', { method: 'PUT', body: { obraId, itemNumero, categoria } });
   }

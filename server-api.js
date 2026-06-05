@@ -1115,6 +1115,77 @@ app.post('/api/orcamentos/exportar-excel', autenticar, async (req, res) => {
   }
 });
 
+// POST /api/orcamentos/reimportar — Lê o .xlsx editado (com aba _meta) e atualiza os orçamentos
+app.post('/api/orcamentos/reimportar', autenticar, async (req, res) => {
+  const XLSX = require('xlsx');
+  try {
+    const { arquivo } = req.body;
+    if (!arquivo) return res.status(400).json({ erro: 'arquivo é obrigatório' });
+
+    const wb = XLSX.read(Buffer.from(arquivo, 'base64'), { type: 'buffer' });
+    const metaSheet = wb.Sheets['_meta'];
+    if (!metaSheet) {
+      return res.status(422).json({ erro: 'Este Excel não foi gerado pelo sistema (aba _meta ausente). Exporte pela Comparativa, edite e reimporte o mesmo arquivo.' });
+    }
+    const meta = XLSX.utils.sheet_to_json(metaSheet, { header: 1 });
+
+    let atualizados = 0;
+    let obraIdAud = null;
+    for (let i = 1; i < meta.length; i++) {
+      const aba = meta[i] && meta[i][0];
+      const orcamentoId = meta[i] && meta[i][1];
+      const obraId = meta[i] && meta[i][2];
+      if (!aba || !orcamentoId) continue;
+      obraIdAud = obraId || obraIdAud;
+      const sh = wb.Sheets[aba];
+      if (!sh) continue;
+
+      const rows = XLSX.utils.sheet_to_json(sh, { header: 1 });
+      const linhas = [];
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r];
+        if (!row || row.length === 0) continue;
+        const item = row[0]; const desc = row[1]; const cat = row[2];
+        const qtd = Number(row[3]) || 0;
+        const unit = Number(row[4]) || 0;
+        let total = Number(row[5]);
+        if (!Number.isFinite(total)) total = qtd * unit;
+        // ignora linhas totalmente vazias
+        if ((item === undefined || item === '') && (desc === undefined || desc === '') && !total) continue;
+        linhas.push({ item: String(item ?? ''), desc: String(desc ?? ''), cat: String(cat ?? '') || 'Serviços Gerais', qtd, unit, total });
+      }
+
+      const valorTotal = linhas.reduce((s, l) => s + (l.total || 0), 0);
+      await db.query('UPDATE orcamentos SET valor_total = $1, atualizado_em = NOW() WHERE id = $2', [valorTotal, orcamentoId]);
+      await db.query('DELETE FROM linhas_orcamento WHERE orcamento_id = $1', [orcamentoId]);
+      for (const l of linhas) {
+        await db.query(
+          `INSERT INTO linhas_orcamento (orcamento_id, item_numero, descricao, quantidade, valor_unitario, valor_total, categoria)
+           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+          [orcamentoId, l.item, l.desc, l.qtd, l.unit, l.total, l.cat]
+        );
+      }
+      atualizados++;
+    }
+
+    if (atualizados === 0) {
+      return res.status(422).json({ erro: 'Nenhum orçamento reconhecido no arquivo.' });
+    }
+
+    if (obraIdAud) {
+      await db.query(
+        'INSERT INTO auditoria (obra_id, tipo, titulo, descricao, usuario_id) VALUES ($1,$2,$3,$4,$5)',
+        [obraIdAud, 'UPDATE', 'Orçamentos reimportados (Excel)', `${atualizados} orçamento(s) atualizados a partir do Excel`, req.usuario.id]
+      );
+    }
+
+    res.json({ sucesso: true, atualizados });
+  } catch (error) {
+    console.error('❌ Erro ao reimportar Excel:', error);
+    res.status(500).json({ erro: 'Erro ao reimportar: ' + error.message });
+  }
+});
+
 // POST /api/orcamentos/salvar — Salva orçamento já analisado no banco
 app.post('/api/orcamentos/salvar', autenticar, async (req, res) => {
   try {
