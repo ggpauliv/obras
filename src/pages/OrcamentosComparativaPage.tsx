@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listarObras } from '../store';
 import type { Obra } from '../store';
 import { apiClient } from '../api/client';
+import { exportarElementoPDF, exportarExcel, type AbaExcel } from '../utils/exportar';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Constantes
@@ -95,6 +96,80 @@ export function OrcamentosComparativaPage() {
   const maior = Number(lista[lista.length - 1]?.valorTotal) || 0;
   const economia = maior > 0 ? ((maior - melhor) / maior * 100).toFixed(1) : '0';
 
+  // ── Exportação ──
+  const exportRef = useRef<HTMLDivElement>(null);
+  const [menuExport, setMenuExport] = useState(false);
+  const [exportando, setExportando] = useState(false);
+  const nomeObra = obras.find(o => o.id === obraId)?.nome || 'orcamentos';
+  const slug = nomeObra.normalize('NFD').replace(/[^\w]+/g, '_').replace(/_+/g, '_').toLowerCase();
+
+  const exportarPDF = async () => {
+    setMenuExport(false);
+    if (!exportRef.current) return;
+    setExportando(true);
+    try {
+      await exportarElementoPDF(exportRef.current, `comparativo_${slug}`);
+    } catch (e: any) {
+      alert('Erro ao gerar PDF: ' + e.message);
+    }
+    setExportando(false);
+  };
+
+  const exportarXLSX = async () => {
+    setMenuExport(false);
+    setExportando(true);
+    try {
+      // Garante que as linhas de todos os selecionados estejam carregadas
+      const faltando = lista.filter(o => !linhasPorOrc[o.id]);
+      const carregadas: Record<string, any[]> = { ...linhasPorOrc };
+      if (faltando.length) {
+        const res = await Promise.all(faltando.map(o =>
+          apiClient.obterOrcamento(o.id).then(d => ({ id: o.id, linhas: d.linhas || [] })).catch(() => ({ id: o.id, linhas: [] }))
+        ));
+        res.forEach(r => { carregadas[r.id] = r.linhas; });
+        setLinhasPorOrc(carregadas);
+      }
+
+      // Aba 1 — Resumo por fornecedor
+      const resumo: AbaExcel = {
+        nome: 'Resumo',
+        dados: [
+          ['Fornecedor', 'Valor Total', 'Prazo (dias)', 'Diferença vs melhor', '% acima'],
+          ...lista.map(o => {
+            const v = Number(o.valorTotal) || 0;
+            return [nomeDe(o), v, o.prazoDias || '', v - melhor, melhor > 0 ? `${(((v - melhor) / melhor) * 100).toFixed(1)}%` : '0%'];
+          }),
+        ],
+      };
+
+      // Aba 2 — Comparativo por categoria
+      const catHeader = ['Categoria', ...lista.map(o => nomeDe(o))];
+      const porCategoria: AbaExcel = {
+        nome: 'Por Categoria',
+        dados: [
+          catHeader,
+          ...matrizCategorias.map(row => [
+            row.categoria,
+            ...lista.map(o => (row[o.id]?.presente ? (row[o.id].total || 0) : '—')),
+          ]),
+        ],
+      };
+
+      // Aba 3 — Itens detalhados (todos os fornecedores)
+      const itensRows: (string | number)[][] = [['Fornecedor', 'Item', 'Descrição', 'Categoria', 'Qtd', 'Valor Unit.', 'Total']];
+      lista.forEach(o => {
+        (carregadas[o.id] || []).forEach((l: any) => {
+          itensRows.push([nomeDe(o), l.itemNumero || '', l.descricao || '', l.categoria || '', Number(l.quantidade) || 0, Number(l.valorUnitario) || 0, Number(l.valorTotal) || 0]);
+        });
+      });
+
+      exportarExcel(`comparativo_${slug}`, [resumo, porCategoria, { nome: 'Itens', dados: itensRows }]);
+    } catch (e: any) {
+      alert('Erro ao gerar Excel: ' + e.message);
+    }
+    setExportando(false);
+  };
+
   // Renomeia um orçamento já salvo.
   const renomear = async (o: any) => {
     const atual = nomeDe(o);
@@ -174,10 +249,32 @@ export function OrcamentosComparativaPage() {
           <h2 className="text-headline-md font-bold text-on-surface">Comparativo de Orçamentos</h2>
           <p className="text-body-sm text-on-surface-variant mt-1">Analise e compare propostas de fornecedores</p>
         </div>
-        <button onClick={() => navigate('/orcamentos/upload')}
-          className="flex items-center gap-xs px-lg py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 text-label-md transition-colors">
-          <span className="material-symbols-outlined text-[18px]">upload_file</span> Importar
-        </button>
+        <div className="flex items-center gap-sm">
+          {lista.length > 0 && (
+            <div className="relative">
+              <button onClick={() => setMenuExport(v => !v)} disabled={exportando}
+                className="flex items-center gap-xs px-lg py-2 bg-primary text-on-primary rounded-lg hover:bg-primary/90 text-label-md transition-colors disabled:opacity-50">
+                <span className="material-symbols-outlined text-[18px]">{exportando ? 'progress_activity' : 'download'}</span>
+                {exportando ? 'Gerando…' : 'Exportar'}
+                {!exportando && <span className="material-symbols-outlined text-[18px]">expand_more</span>}
+              </button>
+              {menuExport && (
+                <div className="absolute right-0 top-full mt-1 z-30 bg-surface border border-outline-variant rounded-lg shadow-lg py-1 w-48">
+                  <button onClick={exportarPDF} className="w-full px-md py-2 text-left text-body-sm text-on-surface hover:bg-surface-container-low flex items-center gap-sm">
+                    <span className="material-symbols-outlined text-[18px] text-error">picture_as_pdf</span> PDF (apresentação)
+                  </button>
+                  <button onClick={exportarXLSX} className="w-full px-md py-2 text-left text-body-sm text-on-surface hover:bg-surface-container-low flex items-center gap-sm">
+                    <span className="material-symbols-outlined text-[18px] text-emerald-600">table_view</span> Excel (dados)
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          <button onClick={() => navigate('/orcamentos/upload')}
+            className="flex items-center gap-xs px-lg py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 text-label-md transition-colors">
+            <span className="material-symbols-outlined text-[18px]">upload_file</span> Importar
+          </button>
+        </div>
       </div>
 
       {/* Filtros: obra + chips fornecedores */}
@@ -234,7 +331,7 @@ export function OrcamentosComparativaPage() {
       )}
 
       {lista.length > 0 && (
-        <>
+        <div ref={exportRef} className="flex flex-col gap-lg bg-surface-container-lowest">
           {/* KPIs sempre visíveis */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-md">
             <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg">
@@ -605,7 +702,7 @@ export function OrcamentosComparativaPage() {
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );
