@@ -16,6 +16,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Importar (IA)', route: '/importar', icon: 'auto_awesome' },
   { label: 'Orçamentos', route: '/orcamentos/upload', icon: 'request_quote' },
   { label: 'Comparar Orçamentos', route: '/orcamentos/comparativa', icon: 'compare_arrows' },
+  { label: 'Aprovar Orçamentos', route: '/orcamentos/aprovacao', icon: 'approval' },
   { label: 'Usuários', route: '/usuarios', icon: 'group' },
 ];
 
@@ -44,6 +45,7 @@ export const ROUTE_META: Record<string, RouteMeta> = {
   '/importar': { title: 'Importar Documento', breadcrumb: ['Início', 'Importar Documento'] },
   '/orcamentos/upload': { title: 'Importar Orçamentos', breadcrumb: ['Início', 'Orçamentos', 'Importar'] },
   '/orcamentos/comparativa': { title: 'Comparar Orçamentos', breadcrumb: ['Início', 'Orçamentos', 'Comparativa'] },
+  '/orcamentos/aprovacao': { title: 'Aprovar Orçamentos', breadcrumb: ['Início', 'Orçamentos', 'Aprovação'] },
   '/usuarios': { title: 'Usuários', breadcrumb: ['Início', 'Usuários'] },
   '/configuracoes': { title: 'Configurações', breadcrumb: ['Início', 'Configurações'] },
 };

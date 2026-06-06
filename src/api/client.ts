@@ -264,6 +264,14 @@ class APIClient {
       body: { content },
     });
   }
+
+  // Aprovação de orçamentos
+  async aprovarOrcamento(id: string, tipoOrcamento: string): Promise<any> {
+    return this.request(`/api/orcamentos/${id}/aprovar`, {
+      method: 'POST',
+      body: { tipoOrcamento },
+    });
+  }
 }
 
 // Exportar instância singleton

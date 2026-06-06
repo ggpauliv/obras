@@ -137,6 +137,7 @@ CREATE TABLE orcamentos (
   descricao TEXT,
   valor_total NUMERIC(12, 2),
   prazo_dias INTEGER,
+  tipo_orcamento VARCHAR(100),
   status VARCHAR(50) DEFAULT 'ativo' CHECK (status IN ('ativo', 'vencido', 'aceito', 'descartado')),
   data_envio DATE,
   data_emissao DATE,
