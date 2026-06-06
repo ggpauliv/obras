@@ -136,10 +136,10 @@ export function OrcamentosAprovacaoPage() {
   // Encontra o menor valor entre todos os orçamentos
   const menorValor = useMemo(() => {
     if (orcamentos.length === 0) return 0;
-    return Math.min(...orcamentos.map(o => Number(o.valor_total) || 0));
+    return Math.min(...orcamentos.map(o => parseFloat(String(o.valorTotal || '0')) || 0));
   }, [orcamentos]);
 
-  const ehMelhorPreco = orcAtivo && Number(orcAtivo.valor_total) === menorValor && menorValor > 0;
+  const ehMelhorPreco = orcAtivo && parseFloat(String(orcAtivo.valorTotal || '0')) === menorValor && menorValor > 0;
 
   return (
     <div className="flex flex-col gap-lg">
@@ -193,7 +193,7 @@ export function OrcamentosAprovacaoPage() {
           {/* Headers das abas */}
           <div className="flex gap-0 border-b border-outline-variant overflow-x-auto">
             {orcamentos.map(orc => {
-              const ehMelhor = Number(orc.valor_total) === menorValor && menorValor > 0;
+              const ehMelhor = parseFloat(String(orc.valorTotal || '0')) === menorValor && menorValor > 0;
               return (
                 <button
                   key={orc.id}
@@ -236,7 +236,7 @@ export function OrcamentosAprovacaoPage() {
                     {ehMelhorPreco && <span className="material-symbols-outlined text-emerald-600">emoji_events</span>}
                   </div>
                   <p className={`text-label-md font-semibold mt-xs ${ehMelhorPreco ? 'text-emerald-700' : 'text-on-surface'}`}>
-                    {fmt(orcAtivo.valor_total)}
+                    {fmt(orcAtivo.valorTotal)}
                   </p>
                 </div>
                 <div className="bg-surface border border-outline-variant rounded-lg p-md">
@@ -285,7 +285,7 @@ export function OrcamentosAprovacaoPage() {
                     </thead>
                     <tbody className="divide-y divide-outline-variant/30">
                       {linhasAtivas.map((linha, idx) => {
-                        const valorTotal = Number(linha.valor_total) || 0;
+                        const valorTotal = parseFloat(String(linha.valorTotal || '0')) || 0;
                         return (
                           <tr key={idx} className="hover:bg-surface-container-low/50">
                             <td className="py-xs px-md text-on-surface">{linha.descricao}</td>
@@ -302,7 +302,7 @@ export function OrcamentosAprovacaoPage() {
                       <tr>
                         <td colSpan={3} className="py-sm px-md text-label-sm font-semibold text-on-surface">Total ({linhasAtivas.length} itens)</td>
                         <td className="py-sm px-md text-right text-label-md font-bold text-on-surface">
-                          {Number(orcAtivo.valor_total) > 0 ? fmt(orcAtivo.valor_total) : '—'}
+                          {parseFloat(String(orcAtivo.valorTotal || '0')) > 0 ? fmt(parseFloat(String(orcAtivo.valorTotal))) : '—'}
                         </td>
                       </tr>
                     </tfoot>
