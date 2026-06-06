@@ -284,19 +284,21 @@ export function OrcamentosAprovacaoPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-variant/30">
-                      {linhasAtivas.map((linha, idx) => {
-                        const valorTotal = parseFloat(String(linha.valorTotal || '0')) || 0;
-                        return (
-                          <tr key={idx} className="hover:bg-surface-container-low/50">
-                            <td className="py-xs px-md text-on-surface">{linha.descricao}</td>
-                            <td className="py-xs px-md text-on-surface-variant">{linha.categoria || '—'}</td>
-                            <td className="py-xs px-md text-on-surface-variant text-center">{Number(linha.quantidade) || 0}</td>
-                            <td className="py-xs px-md text-on-surface font-medium text-right">
-                              {valorTotal > 0 ? fmt(valorTotal) : '—'}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {linhasAtivas
+                        .filter(linha => !tipoSelecionado[orcAtivo.id] || linha.categoria === tipoSelecionado[orcAtivo.id])
+                        .map((linha, idx) => {
+                          const valorTotal = parseFloat(String(linha.valorTotal || '0')) || 0;
+                          return (
+                            <tr key={idx} className="hover:bg-surface-container-low/50">
+                              <td className="py-xs px-md text-on-surface">{linha.descricao}</td>
+                              <td className="py-xs px-md text-on-surface-variant">{linha.categoria || '—'}</td>
+                              <td className="py-xs px-md text-on-surface-variant text-center">{Number(linha.quantidade) || 0}</td>
+                              <td className="py-xs px-md text-on-surface font-medium text-right">
+                                {valorTotal > 0 ? fmt(valorTotal) : '—'}
+                              </td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                     <tfoot className="bg-surface-container-low border-t border-outline-variant">
                       <tr>
