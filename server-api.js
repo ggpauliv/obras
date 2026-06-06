@@ -1293,10 +1293,11 @@ app.get('/api/orcamentos/comparar', autenticar, async (req, res) => {
 });
 
 // POST /api/orcamentos/:id/aprovar — aprova orçamento e gera despesas, fornecedor, fases
+// Pode aprovar apenas linhas específicas (categorias) se passadas no body
 app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
   try {
     const orcamentoId = req.params.id;
-    const { tipoOrcamento } = req.body;
+    const { tipoOrcamento, linhas: linhasAprovar } = req.body;
 
     // 1. Buscar orçamento e suas linhas
     const orcResult = await db.query(
@@ -1314,12 +1315,17 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
     const orcamento = orcResult.rows[0];
     const obra_id = orcamento.obra_id;
 
-    // Buscar linhas do orçamento
-    const linhasResult = await db.query(
-      'SELECT * FROM linhas_orcamento WHERE orcamento_id = $1 ORDER BY item_numero',
-      [orcamentoId]
-    );
-    const linhas = linhasResult.rows;
+    // Se linhas específicas foram passadas, usar apenas aquelas; senão, buscar todas
+    let linhas;
+    if (linhasAprovar && Array.isArray(linhasAprovar) && linhasAprovar.length > 0) {
+      linhas = linhasAprovar;
+    } else {
+      const linhasResult = await db.query(
+        'SELECT * FROM linhas_orcamento WHERE orcamento_id = $1 ORDER BY item_numero',
+        [orcamentoId]
+      );
+      linhas = linhasResult.rows;
+    }
 
     // 2. Criar ou atualizar fornecedor
     let fornecedorId = orcamento.fornecedor_id;

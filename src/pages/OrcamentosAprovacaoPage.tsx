@@ -82,18 +82,45 @@ export function OrcamentosAprovacaoPage() {
       return;
     }
 
+    // Itens a aprovar (apenas os filtrados)
+    const linhasAprovar = linhasPorOrc[orcamentoId] || [];
+    if (linhasAprovar.length === 0) {
+      setToastMsg('Nenhum item para aprovar');
+      setTimeout(() => setToastMsg(''), 4000);
+      return;
+    }
+
     try {
-      const res = await apiClient.aprovarOrcamento(orcamentoId, tipo);
-      setToastMsg(res.mensagem || 'Orçamento aprovado com sucesso!');
+      const res = await apiClient.aprovarOrcamento(orcamentoId, tipo, linhasAprovar);
+      setToastMsg(res.mensagem || 'Itens aprovados com sucesso!');
       setTimeout(() => setToastMsg(''), 4000);
 
-      setOrcamentos(prev => prev.filter(o => o.id !== orcamentoId));
-      setLinhasPorOrc(prev => { const n = { ...prev }; delete n[orcamentoId]; return n; });
+      // Remove linhas aprovadas do estado
+      setLinhasPorOrc(prev => {
+        const nova = { ...prev };
+        if (nova[orcamentoId]) {
+          nova[orcamentoId] = nova[orcamentoId].filter(
+            linha => !linhasAprovar.find(l => l.id === linha.id)
+          );
+        }
+        return nova;
+      });
 
-      if (orcamentos.length > 1) {
-        setAbaAtiva(orcamentos.find(o => o.id !== orcamentoId)?.id || '');
+      // Se não há mais linhas, remove o orçamento
+      if (linhasPorOrc[orcamentoId]?.length === linhasAprovar.length) {
+        setOrcamentos(prev => prev.filter(o => o.id !== orcamentoId));
+        if (orcamentos.length > 1) {
+          setAbaAtiva(orcamentos.find(o => o.id !== orcamentoId)?.id || '');
+        } else {
+          setAbaAtiva('');
+        }
       } else {
-        setAbaAtiva('');
+        // Limpa filtro para ver itens restantes
+        setTipoSelecionado(prev => {
+          const novo = { ...prev };
+          delete novo[orcamentoId];
+          return novo;
+        });
       }
     } catch (err: any) {
       setToastMsg(`Erro: ${err.message}`);
