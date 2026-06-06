@@ -1,30 +1,19 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiClient } from '../api/client';
+import type { Obra } from '../store';
 
-interface Row {
-  nome: string;
-  cliente: string;
-  pct: number;
+interface Row extends Obra {
   barColor: string;
   status: string;
   statusClass: string;
-  termino: string;
 }
 
-const ROWS: Row[] = [
-  { nome: 'Edifício Horizonte', cliente: 'Construtora Apex', pct: 75, barColor: 'bg-primary-container', status: 'No Prazo', statusClass: 'bg-[#16A34A]/10 text-[#16A34A]', termino: '15 Nov 2024' },
-  { nome: 'Residencial Alpha', cliente: 'Investimentos S.A.', pct: 92, barColor: 'bg-[#16A34A]', status: 'No Prazo', statusClass: 'bg-[#16A34A]/10 text-[#16A34A]', termino: '30 Ago 2024' },
-  { nome: 'Edifício Torres', cliente: 'Torres Empreendimentos', pct: 35, barColor: 'bg-error', status: 'Com Atraso', statusClass: 'bg-error/10 text-error', termino: '10 Mar 2025' },
-  { nome: 'Galpão Logístico Sul', cliente: 'LogisCorp', pct: 50, barColor: 'bg-[#F59E0B]', status: 'Em Risco', statusClass: 'bg-[#F59E0B]/10 text-[#F59E0B]', termino: '05 Dez 2024' },
-  { nome: 'Hospital Municipal', cliente: 'Prefeitura Local', pct: 15, barColor: 'bg-primary-container', status: 'No Prazo', statusClass: 'bg-[#16A34A]/10 text-[#16A34A]', termino: '20 Jul 2026' },
-];
-
-const ALERTS = [
-  { dot: 'bg-error', title: 'Edifício Torres', desc: 'Atraso de 23% no cronograma de fundação.' },
-  { dot: 'bg-[#16A34A]', title: 'Obra Central', desc: 'Fase de alvenaria concluída com sucesso.' },
-  { dot: 'bg-[#F59E0B]', title: 'Pagamento Fornecedor X', desc: 'Vencimento próximo (amanhã).' },
-  { dot: 'bg-primary-container', title: 'Residencial Alpha', desc: 'Nova vistoria agendada.' },
-];
+interface Alert {
+  dot: string;
+  title: string;
+  desc: string;
+}
 
 function KpiCard({ icon, iconClass, badge, badgeClass, label, value, sub }: {
   icon: string; iconClass: string; badge?: string; badgeClass?: string; label: string; value: string; sub: string;
@@ -54,6 +43,60 @@ const SELECT = 'w-full rounded-md border-outline-variant text-body-sm focus:bord
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const [obras, setObras] = useState<Row[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    const carregarDados = async () => {
+      try {
+        const obrasData = await apiClient.listarObras();
+        const obrasComStatus: Row[] = obrasData.map((o: Obra) => ({
+          ...o,
+          pct: o.pct || 0,
+          barColor: (o.pct || 0) >= 75 ? 'bg-[#16A34A]' : (o.pct || 0) >= 50 ? 'bg-[#F59E0B]' : 'bg-error',
+          status: getStatusObra(o.pct || 0),
+          statusClass: getStatusClass(o.pct || 0),
+          termino: o.data_termino ? new Date(o.data_termino).toLocaleDateString('pt-BR') : '—',
+        }));
+        setObras(obrasComStatus);
+
+        // Gerar alertas a partir das obras
+        const alertsGeradas: Alert[] = obrasComStatus
+          .filter(o => (o.pct || 0) < 50)
+          .slice(0, 4)
+          .map(o => ({
+            dot: o.barColor.replace('bg-', 'bg-').split(' ')[0],
+            title: o.nome,
+            desc: `Progresso em ${o.pct}%. Estimado para ${o.termino}`,
+          }));
+        setAlerts(alertsGeradas);
+      } catch (err) {
+        console.error('Erro ao carregar obras:', err);
+      } finally {
+        setCarregando(false);
+      }
+    };
+
+    carregarDados();
+  }, []);
+
+  const getStatusObra = (pct: number): string => {
+    if (pct >= 80) return 'No Prazo';
+    if (pct >= 50) return 'Em Risco';
+    return 'Com Atraso';
+  };
+
+  const getStatusClass = (pct: number): string => {
+    if (pct >= 80) return 'bg-[#16A34A]/10 text-[#16A34A]';
+    if (pct >= 50) return 'bg-[#F59E0B]/10 text-[#F59E0B]';
+    return 'bg-error/10 text-error';
+  };
+
+  const statsObrasAtivas = obras.length;
+  const statsComAtraso = obras.filter(o => (o.pct || 0) < 50).length;
+  const statsNoPrazo = obras.filter(o => (o.pct || 0) >= 80).length;
+  const statsMediaConclusao = obras.length > 0 ? Math.round(obras.reduce((sum, o) => sum + (o.pct || 0), 0) / obras.length) : 0;
 
   return (
     <div className="space-y-xl">
@@ -94,10 +137,10 @@ export default function DashboardPage() {
 
       {/* KPIs */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
-        <KpiCard icon="apartment" iconClass="bg-primary-container/10 text-primary-container" badge="2" badgeClass="text-[#16A34A] bg-[#16A34A]/10" label="Obras Ativas" value="12" sub="este mês" />
-        <KpiCard icon="warning" iconClass="bg-error/10 text-error" badge="1" badgeClass="text-error bg-error/10" label="Com Atraso" value="3" sub="vs mês anterior" />
-        <KpiCard icon="check_circle" iconClass="bg-[#16A34A]/10 text-[#16A34A]" label="No Prazo" value="8" sub="operações saudáveis" />
-        <KpiCard icon="pie_chart" iconClass="bg-primary-container/10 text-primary-container" badge="8%" badgeClass="text-[#16A34A] bg-[#16A34A]/10" label="% Médio de Conclusão" value="64%" sub="vs mês anterior" />
+        <KpiCard icon="apartment" iconClass="bg-primary-container/10 text-primary-container" badge={statsObrasAtivas > 0 ? '↑' : '—'} badgeClass="text-[#16A34A] bg-[#16A34A]/10" label="Obras Ativas" value={String(statsObrasAtivas)} sub="no total" />
+        <KpiCard icon="warning" iconClass="bg-error/10 text-error" badge={statsComAtraso > 0 ? '⚠' : '—'} badgeClass="text-error bg-error/10" label="Com Atraso" value={String(statsComAtraso)} sub="requerem atenção" />
+        <KpiCard icon="check_circle" iconClass="bg-[#16A34A]/10 text-[#16A34A]" label="No Prazo" value={String(statsNoPrazo)} sub="operações saudáveis" />
+        <KpiCard icon="pie_chart" iconClass="bg-primary-container/10 text-primary-container" badge={statsMediaConclusao > 50 ? '↑' : '↓'} badgeClass={statsMediaConclusao > 50 ? "text-[#16A34A] bg-[#16A34A]/10" : "text-error bg-error/10"} label="% Médio de Conclusão" value={`${statsMediaConclusao}%`} sub="em média" />
       </section>
 
       {/* Gráfico + Alertas */}
@@ -155,15 +198,19 @@ export default function DashboardPage() {
           </div>
           <div className="p-sm flex-1 overflow-y-auto">
             <ul className="space-y-2">
-              {ALERTS.map((a) => (
-                <li key={a.title} className="flex items-start gap-3 p-3 rounded-md hover:bg-surface-container-low transition-colors">
-                  <div className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${a.dot}`} />
-                  <div>
-                    <p className="text-label-md text-on-surface">{a.title}</p>
-                    <p className="text-body-sm text-outline mt-0.5">{a.desc}</p>
-                  </div>
-                </li>
-              ))}
+              {alerts.length === 0 ? (
+                <li className="p-3 text-center text-on-surface-variant">Nenhum alerta no momento</li>
+              ) : (
+                alerts.map((a) => (
+                  <li key={a.title} className="flex items-start gap-3 p-3 rounded-md hover:bg-surface-container-low transition-colors">
+                    <div className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${a.dot}`} />
+                    <div>
+                      <p className="text-label-md text-on-surface">{a.title}</p>
+                      <p className="text-body-sm text-outline mt-0.5">{a.desc}</p>
+                    </div>
+                  </li>
+                ))
+              )}
             </ul>
           </div>
         </div>
@@ -185,29 +232,41 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/30">
-              {ROWS.map((r) => (
-                <tr key={r.nome} className="hover:bg-surface-container-low transition-colors">
-                  <td className="py-3 px-md text-label-md text-on-surface">{r.nome}</td>
-                  <td className="py-3 px-md text-body-sm text-on-surface-variant">{r.cliente}</td>
-                  <td className="py-3 px-md">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-2 bg-surface-container-high rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${r.barColor}`} style={{ width: `${r.pct}%` }} />
-                      </div>
-                      <span className="text-label-sm text-on-surface w-8">{r.pct}%</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-md">
-                    <span className={`inline-flex px-2 py-1 rounded text-label-sm ${r.statusClass}`}>{r.status}</span>
-                  </td>
-                  <td className="py-3 px-md text-body-sm text-on-surface-variant">{r.termino}</td>
-                  <td className="py-3 px-md text-center">
-                    <button onClick={() => navigate('/obra-detalhe')} className="text-outline hover:text-primary-container p-1 rounded transition-colors">
-                      <span className="material-symbols-outlined">visibility</span>
-                    </button>
+              {carregando ? (
+                <tr>
+                  <td colSpan={6} className="py-6 px-md text-center text-on-surface-variant">
+                    <span className="material-symbols-outlined animate-spin">progress_activity</span> Carregando...
                   </td>
                 </tr>
-              ))}
+              ) : obras.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-6 px-md text-center text-on-surface-variant">Nenhuma obra encontrada</td>
+                </tr>
+              ) : (
+                obras.slice(0, 5).map((r) => (
+                  <tr key={r.id} className="hover:bg-surface-container-low transition-colors">
+                    <td className="py-3 px-md text-label-md text-on-surface">{r.nome}</td>
+                    <td className="py-3 px-md text-body-sm text-on-surface-variant">{r.cliente || '—'}</td>
+                    <td className="py-3 px-md">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 bg-surface-container-high rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${r.barColor}`} style={{ width: `${r.pct}%` }} />
+                        </div>
+                        <span className="text-label-sm text-on-surface w-8">{r.pct}%</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-md">
+                      <span className={`inline-flex px-2 py-1 rounded text-label-sm ${r.statusClass}`}>{r.status}</span>
+                    </td>
+                    <td className="py-3 px-md text-body-sm text-on-surface-variant">{r.termino}</td>
+                    <td className="py-3 px-md text-center">
+                      <button onClick={() => navigate('/obra-detalhe')} className="text-outline hover:text-primary-container p-1 rounded transition-colors">
+                        <span className="material-symbols-outlined">visibility</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
