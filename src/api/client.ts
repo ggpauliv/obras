@@ -86,7 +86,9 @@ class APIClient {
       const data = await response.json();
       return convertKeys(data);
     } catch (error) {
-      console.error(`❌ Erro na requisição ${method} ${url}:`, error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error(`❌ Erro na requisição ${method} ${url}:`, error);
+      }
       throw error;
     }
   }

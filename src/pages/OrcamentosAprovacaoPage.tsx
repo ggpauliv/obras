@@ -95,8 +95,10 @@ export function OrcamentosAprovacaoPage() {
 
     try {
       const res = await apiClient.aprovarOrcamento(orcamentoId, tipo, linhasAprovar);
-      setToastMsg(res.mensagem || 'Itens aprovados com sucesso!');
-      setTimeout(() => setToastMsg(''), 4000);
+      setToastMsg(`✅ ${linhasAprovar.length} item(ns) de ${tipo} aprovado(s)!`);
+      // Manter toast visível por mais tempo
+      const timeout = setTimeout(() => setToastMsg(''), 6000);
+      return () => clearTimeout(timeout);
 
       // Remove linhas aprovadas do estado
       setLinhasPorOrc(prev => {

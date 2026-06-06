@@ -31,11 +31,27 @@ export default function ObraDetalhePage() {
   const [obra, setObra] = useState<Obra | undefined>();
   const [fases, setFases] = useState<Fase[]>([]);
   const [despesas, setDespesas] = useState<Despesa[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
-    obterObra(obraId).then(setObra);
-    listarFases(obraId).then(setFases);
-    listarDespesas(obraId).then(setDespesas);
+    setCarregando(true);
+    setErro(null);
+    Promise.all([
+      obterObra(obraId).then(setObra).catch(err => {
+        console.error('Erro ao carregar obra:', err);
+        setErro('Erro ao carregar dados da obra');
+        setObra(undefined);
+      }),
+      listarFases(obraId).then(setFases).catch(err => {
+        console.error('Erro ao carregar fases:', err);
+        setFases([]);
+      }),
+      listarDespesas(obraId).then(setDespesas).catch(err => {
+        console.error('Erro ao carregar despesas:', err);
+        setDespesas([]);
+      }),
+    ]).finally(() => setCarregando(false));
   }, [obraId]);
 
   const totalDespesas = despesas.reduce((s, d) => s + (Number(d.valor) || 0), 0);
@@ -50,6 +66,31 @@ export default function ObraDetalhePage() {
   const diasCorridos = ini ? Math.max(0, Math.round((hoje - ini) / 86400000)) : null;
   const pctTempo = totalDias && diasCorridos != null ? Math.min(100, (diasCorridos / totalDias) * 100) : null;
   const pct = obra?.pct ?? 0;
+
+  if (carregando) {
+    return (
+      <div className="flex items-center justify-center py-xl">
+        <span className="material-symbols-outlined animate-spin text-primary text-3xl">progress_activity</span>
+      </div>
+    );
+  }
+
+  if (erro) {
+    return (
+      <div className="bg-error-container text-on-error-container rounded-lg p-lg">
+        <h3 className="text-headline-sm mb-2">Erro ao Carregar</h3>
+        <p className="text-body-md">{erro}</p>
+      </div>
+    );
+  }
+
+  if (!obra) {
+    return (
+      <div className="bg-surface-container-lowest rounded-lg p-lg text-center">
+        <p className="text-on-surface-variant">Nenhuma obra selecionada</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-lg">

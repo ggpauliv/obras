@@ -58,8 +58,12 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'API REST rodando' });
 });
 
-// DEBUG: Listar usuários
-app.get('/api/debug/usuarios', async (req, res) => {
+// DEBUG: Listar usuários (apenas para admin, remove em produção)
+app.get('/api/debug/usuarios', autenticar, async (req, res) => {
+  // Verificar se é admin
+  if (req.usuario.papel !== 'admin') {
+    return res.status(403).json({ erro: 'Acesso negado' });
+  }
   try {
     const result = await db.query('SELECT id, email, nome FROM usuarios LIMIT 5');
     res.json(result.rows);
@@ -694,7 +698,7 @@ app.get('/api/auditoria', autenticar, async (req, res) => {
       params.push(obraId);
     }
 
-    query += ' ORDER BY a.data DESC LIMIT 100';
+    query += ' ORDER BY a.data DESC';
 
     const result = await db.query(query, params);
     res.json(result.rows);
@@ -1475,7 +1479,7 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
 // PROCESSAMENTO DE DOCUMENTOS (GEMINI)
 // ============================================
 
-app.post('/api/process-document', async (req, res) => {
+app.post('/api/process-document', autenticar, async (req, res) => {
   if (!GEMINI_API_KEY) {
     return res.status(500).json({ erro: 'Gemini API não configurada' });
   }
