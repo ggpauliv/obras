@@ -1348,9 +1348,9 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
          VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
         [
           obra_id,
-          `${linha.descricao || 'Item'} (Item ${linha.item_numero})`,
+          `${linha.descricao || 'Item'} (Item ${linha.itemNumero || linha.item_numero})`,
           linha.categoria || 'Serviços Gerais',
-          sanitizeNumero(linha.valor_total),
+          sanitizeNumero(linha.valorTotal || linha.valor_total),
           hoje,
           orcamento.fornecedor_nome || orcamento.nome
         ]
@@ -1377,7 +1377,7 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
     const fasesIds = [];
 
     for (const [categoria, itemsCategoria] of categoriasMapa) {
-      const valorCategoria = itemsCategoria.reduce((sum, item) => sum + sanitizeNumero(item.valor_total), 0);
+      const valorCategoria = itemsCategoria.reduce((sum, item) => sum + sanitizeNumero(item.valorTotal || item.valor_total), 0);
 
       const faseResult = await db.query(
         `INSERT INTO fases (obra_id, ordem, nome, inicio, termino, status, categoria, descricao)
