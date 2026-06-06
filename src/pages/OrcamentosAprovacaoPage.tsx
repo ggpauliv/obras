@@ -46,10 +46,11 @@ export function OrcamentosAprovacaoPage() {
     setCarregando(true);
     apiClient.listarOrcamentos(obraId)
       .then(data => {
-        const pendentes = data.filter((o: any) => o.status === 'ativo');
-        setOrcamentos(pendentes);
-        if (pendentes.length > 0) {
-          setAbaAtiva(pendentes[0].id);
+        // Mostra todos os orçamentos (não filtra por status)
+        // Usuário pode ver aprovados anteriormente também
+        setOrcamentos(data || []);
+        if (data && data.length > 0) {
+          setAbaAtiva(data[0].id);
         }
       })
       .catch(() => setOrcamentos([]))
