@@ -1,20 +1,71 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { apiClient } from '../api/client';
+import { listarObras } from '../store';
+import type { Obra } from '../store';
 
-const FOTOS = [
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuCneablm0Jq3nkdDAcR7mq8FLTAmfA4-eUeI31mpKVw18YPVPTewfQQlSUbkPSVIUP4iS4vzgDdwKG1MitDCpdxAoerAR9lpwiygKKsJbSzwLRA5388OzQ4vB46szFt-hYAzsxjg-nlClsBNDFE3lNpZd5WgD6FqKuJ7LqGVAujGBen_S002n4UPH6CXQr4lhy_Xs4RSFPBMbYdu2z48Iv6BZYKEWW1XEOwvUAmBz8PbKRjQ1kF8GOkBOevkMrQLV0w1Xwr868mq0Y',
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuDmNuB_-4dp1tZZVXtr40BXp1l4grxLIrifkV3Ps7ParY6q9Hq4-QXmpoOW7P6aEHhUICJJDBGfU1aAa0pNXXMMNZqoy2lN7VRVxKqRGbBp9vpfqm0E8Iy2tgERWVOfT8T0UM6c-IjB6TRoXxXCWaqGgh9RSsUnjHXG2exlThJWT3nf_doXwJ2nDJi9DH8MhLfDhwMnWYn4dQjB4MJEIG8CibqtPaY_ZfgcoKG0f1aNi17S0Ltkgli-Oq5fXAUI7otGtsGjAP7WJ8I',
-];
+interface Fase {
+  id: string;
+  nome: string;
+  pct?: number;
+}
 
-const HISTORICO = [
-  { dot: 'bg-primary-container', meta: 'Hoje, 10:45 • Por João Silva', titulo: 'Avanço para 68%', desc: 'Finalização da parede norte do 3º andar.' },
-  { dot: 'bg-surface-variant', meta: '12 Out, 16:20 • Por Maria Souza', titulo: 'Avanço para 55%', desc: 'Conclusão do setor leste. Atraso devido à chuva.' },
-  { dot: 'bg-surface-variant', meta: '05 Out, 09:10 • Por João Silva', titulo: 'Avanço para 40%', desc: 'Início das alvenarias de vedação.' },
-];
+interface HistoricoItem {
+  dot: string;
+  meta: string;
+  titulo: string;
+  desc: string;
+}
 
 const READONLY = 'px-sm py-sm bg-surface-container-low border border-outline-variant rounded text-on-surface text-body-md flex items-center gap-sm';
 
 export default function ProgressoPage() {
-  const [pct, setPct] = useState(75);
+  const [obras, setObras] = useState<Obra[]>([]);
+  const [fases, setFases] = useState<Fase[]>([]);
+  const [obraId, setObraId] = useState('');
+  const [faseId, setFaseId] = useState('');
+  const [pct, setPct] = useState(0);
+  const [historico, setHistorico] = useState<HistoricoItem[]>([]);
+  const [carregando, setCarregando] = useState(false);
+
+  useEffect(() => {
+    listarObras().then(setObras);
+  }, []);
+
+  useEffect(() => {
+    if (!obraId) {
+      setFases([]);
+      setFaseId('');
+      return;
+    }
+    setCarregando(true);
+    apiClient.listarFases(obraId)
+      .then(f => {
+        setFases(f || []);
+        if (f && f.length > 0) setFaseId(f[0].id);
+      })
+      .catch(err => {
+        console.error('Erro ao carregar fases:', err);
+        setFases([]);
+      })
+      .finally(() => setCarregando(false));
+  }, [obraId]);
+
+  useEffect(() => {
+    if (!faseId) {
+      setHistorico([]);
+      return;
+    }
+    const faseAtual = fases.find(f => f.id === faseId);
+    if (faseAtual) {
+      setPct(faseAtual.pct || 0);
+      setHistorico([
+        { dot: 'bg-primary-container', meta: 'Última atualização', titulo: `Avanço para ${faseAtual.pct || 0}%`, desc: faseAtual.nome },
+      ]);
+    }
+  }, [faseId, fases]);
+
+  const obraAtual = obras.find(o => o.id === obraId);
+  const faseAtual = fases.find(f => f.id === faseId);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
@@ -30,11 +81,17 @@ export default function ProgressoPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
               <div>
                 <label className="block text-label-sm text-on-surface-variant mb-xs">Obra</label>
-                <div className={READONLY}><span className="material-symbols-outlined text-secondary text-[18px]">domain</span>Edifício Horizonte</div>
+                <select value={obraId} onChange={(e) => setObraId(e.target.value)} className="w-full px-sm py-2 border border-outline-variant rounded text-on-surface text-body-md bg-surface-container-lowest focus:border-primary">
+                  <option value="">Selecione uma obra…</option>
+                  {obras.map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
+                </select>
               </div>
               <div>
                 <label className="block text-label-sm text-on-surface-variant mb-xs">Fase Atual</label>
-                <div className={READONLY}><span className="material-symbols-outlined text-secondary text-[18px]">account_tree</span>Alvenaria</div>
+                <select value={faseId} onChange={(e) => setFaseId(e.target.value)} disabled={!obraId} className="w-full px-sm py-2 border border-outline-variant rounded text-on-surface text-body-md bg-surface-container-lowest focus:border-primary disabled:opacity-50">
+                  <option value="">Selecione uma fase…</option>
+                  {fases.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                </select>
               </div>
             </div>
             <hr className="border-outline-variant" />
@@ -87,14 +144,8 @@ export default function ProgressoPage() {
                 <p className="text-label-md text-on-surface">Arraste e solte arquivos aqui</p>
                 <p className="text-body-sm text-secondary mt-xs">ou clique para procurar (JPG, PNG, máx 5MB)</p>
               </div>
-              <div className="flex gap-md overflow-x-auto pb-sm">
-                {FOTOS.map((src) => (
-                  <div key={src} className="relative w-24 h-24 rounded border border-outline-variant overflow-hidden group shrink-0">
-                    <div className="w-full h-full bg-surface-container-high bg-cover bg-center" style={{ backgroundImage: `url('${src}')` }} />
-                    <button className="absolute top-1 right-1 bg-white text-gray-600 rounded-full p-1 opacity-0 group-hover:opacity-100 shadow-sm"><span className="material-symbols-outlined text-[16px]">close</span></button>
-                  </div>
-                ))}
-              </div>
+              <div className="flex gap-md overflow-x-auto pb-sm" id="fotos-container" />
+              <p className="text-body-sm text-on-surface-variant">Nenhuma foto anexada ainda</p>
             </div>
           </div>
           <div className="px-lg py-md border-t border-outline-variant bg-surface flex justify-end gap-md">
@@ -108,43 +159,75 @@ export default function ProgressoPage() {
 
       {/* Coluna direita — impacto + histórico */}
       <div className="lg:col-span-5 flex flex-col gap-gutter">
-        <div className="bg-error-container text-on-error-container rounded-lg border border-[#ffb4ab] p-md shadow-sm flex items-start gap-md">
-          <span className="material-symbols-outlined text-error text-2xl mt-1">warning</span>
-          <div>
-            <h4 className="text-headline-sm mb-xs">Atenção ao Cronograma</h4>
-            <p className="text-body-md opacity-90">A fase está <strong>9% abaixo do esperado</strong> para a data atual. Recomenda-se revisão de recursos.</p>
+        {!faseAtual ? (
+          <div className="bg-surface-container-lowest rounded-lg border border-outline-variant p-md shadow-sm text-center text-on-surface-variant">
+            Selecione uma fase para visualizar análise
           </div>
-        </div>
+        ) : (faseAtual.pct || 0) < 50 ? (
+          <div className="bg-error-container text-on-error-container rounded-lg border border-[#ffb4ab] p-md shadow-sm flex items-start gap-md">
+            <span className="material-symbols-outlined text-error text-2xl mt-1">warning</span>
+            <div>
+              <h4 className="text-headline-sm mb-xs">Atenção ao Cronograma</h4>
+              <p className="text-body-md opacity-90">A fase está <strong>{50 - (faseAtual.pct || 0)}% abaixo do esperado</strong>. Recomenda-se revisão urgente de recursos.</p>
+            </div>
+          </div>
+        ) : (faseAtual.pct || 0) < 80 ? (
+          <div className="bg-[#FEF3C7] text-[#92400E] rounded-lg border border-[#FCD34D] p-md shadow-sm flex items-start gap-md">
+            <span className="material-symbols-outlined text-[#F59E0B] text-2xl mt-1">info</span>
+            <div>
+              <h4 className="text-headline-sm mb-xs">Fase em Risco</h4>
+              <p className="text-body-md opacity-90">A fase está com progresso de <strong>{faseAtual.pct}%</strong>. Acompanhamento continuo é recomendado.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-[#DCFCE7] text-[#166534] rounded-lg border border-[#86EFAC] p-md shadow-sm flex items-start gap-md">
+            <span className="material-symbols-outlined text-[#16A34A] text-2xl mt-1">check_circle</span>
+            <div>
+              <h4 className="text-headline-sm mb-xs">No Prazo</h4>
+              <p className="text-body-md opacity-90">A fase está <strong>no prazo</strong> com {faseAtual.pct}% de progresso. Excelente desempenho!</p>
+            </div>
+          </div>
+        )}
         <div className="bg-surface-container-lowest rounded-lg border border-outline-variant shadow-sm p-lg">
           <h3 className="text-headline-sm text-on-surface mb-md flex items-center gap-sm">
-            <span className="material-symbols-outlined text-primary">event_available</span>Impacto no Cronograma
+            <span className="material-symbols-outlined text-primary">event_available</span>Status da Fase
           </h3>
-          <div className="grid grid-cols-2 gap-md text-center">
-            <div className="p-md rounded-lg bg-surface-container border border-outline-variant">
-              <p className="text-label-sm text-secondary mb-xs">Sem este registro</p>
-              <p className="text-headline-md text-on-surface">15 Nov</p>
-              <p className="text-body-sm text-secondary mt-1">Projeção Anterior</p>
+          {!faseAtual ? (
+            <p className="text-body-sm text-on-surface-variant text-center py-4">Selecione uma fase para visualizar detalhes</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-md text-center">
+              <div className="p-md rounded-lg bg-surface-container border border-outline-variant">
+                <p className="text-label-sm text-secondary mb-xs">Progresso Atual</p>
+                <p className="text-headline-md text-on-surface">{faseAtual.pct || 0}%</p>
+                <p className="text-body-sm text-secondary mt-1">{faseAtual.nome}</p>
+              </div>
+              <div className={`p-md rounded-lg ${(faseAtual.pct || 0) >= 80 ? 'bg-[#16A34A]/10 border border-[#16A34A]' : (faseAtual.pct || 0) >= 50 ? 'bg-[#F59E0B]/10 border border-[#F59E0B]' : 'bg-error/10 border border-error'}`}>
+                <p className="text-label-sm text-secondary mb-xs">Status</p>
+                <p className={`text-headline-md font-bold ${(faseAtual.pct || 0) >= 80 ? 'text-[#16A34A]' : (faseAtual.pct || 0) >= 50 ? 'text-[#F59E0B]' : 'text-error'}`}>
+                  {(faseAtual.pct || 0) >= 80 ? 'No Prazo' : (faseAtual.pct || 0) >= 50 ? 'Em Risco' : 'Com Atraso'}
+                </p>
+                <p className="text-body-sm text-secondary mt-1">da fase</p>
+              </div>
             </div>
-            <div className="p-md rounded-lg bg-primary-fixed border border-primary-fixed-dim">
-              <p className="text-label-sm text-primary mb-xs">Com este registro</p>
-              <p className="text-headline-md text-primary font-bold">18 Nov</p>
-              <p className="text-body-sm text-primary mt-1">+3 dias de impacto</p>
-            </div>
-          </div>
+          )}
         </div>
         <div className="bg-surface-container-lowest rounded-lg border border-outline-variant shadow-sm p-lg flex-1">
           <h3 className="text-headline-sm text-on-surface mb-md flex items-center gap-sm">
             <span className="material-symbols-outlined text-primary">history</span>Histórico desta Fase
           </h3>
           <div className="relative border-l-2 border-surface-container-highest ml-sm mt-md">
-            {HISTORICO.map((h, i) => (
-              <div key={h.meta} className={`pl-lg relative ${i < HISTORICO.length - 1 ? 'mb-lg' : ''}`}>
-                <div className={`absolute w-4 h-4 rounded-full -left-[9px] top-1 border-2 border-surface-container-lowest ${h.dot}`} />
-                <p className="text-label-sm text-secondary mb-xs">{h.meta}</p>
-                <p className="text-body-md text-on-surface font-medium">{h.titulo}</p>
-                <p className="text-body-sm text-on-surface-variant mt-xs">{h.desc}</p>
-              </div>
-            ))}
+            {historico.length === 0 ? (
+              <p className="text-body-sm text-on-surface-variant">Selecione uma fase para ver o histórico</p>
+            ) : (
+              historico.map((h, i) => (
+                <div key={h.meta} className={`pl-lg relative ${i < historico.length - 1 ? 'mb-lg' : ''}`}>
+                  <div className={`absolute w-4 h-4 rounded-full -left-[9px] top-1 border-2 border-surface-container-lowest ${h.dot}`} />
+                  <p className="text-label-sm text-secondary mb-xs">{h.meta}</p>
+                  <p className="text-body-md text-on-surface font-medium">{h.titulo}</p>
+                  <p className="text-body-sm text-on-surface-variant mt-xs">{h.desc}</p>
+                </div>
+              ))
+            )}
           </div>
           <button className="w-full mt-lg py-sm text-label-md text-primary hover:bg-surface-container rounded transition-colors">Ver histórico completo</button>
         </div>
