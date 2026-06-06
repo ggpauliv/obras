@@ -85,11 +85,14 @@ export function OrcamentosAprovacaoPage() {
       return;
     }
 
-    // Itens a aprovar: apenas os filtrados por categoria (se houver filtro)
+    // Itens a aprovar: apenas os filtrados por categoria (se houver filtro) e com preço
     let linhasAprovar = linhasPorOrc[orcamentoId] || [];
-    if (categoriaFiltro) {
-      linhasAprovar = linhasAprovar.filter(l => l.categoria === categoriaFiltro);
-    }
+    linhasAprovar = linhasAprovar.filter(l => {
+      // Filtrar por categoria se selecionada
+      if (categoriaFiltro && l.categoria !== categoriaFiltro) return false;
+      // Filtrar itens sem preço
+      return parseFloat(String(l.valorTotal || '0')) || 0 > 0;
+    });
     if (linhasAprovar.length === 0) {
       setToastMsg('Nenhum item para aprovar');
       setTimeout(() => setToastMsg(''), 4000);
@@ -284,27 +287,10 @@ export function OrcamentosAprovacaoPage() {
                 </div>
               </div>
 
-              {/* Seletor de tipo */}
-              <div>
-                <label className="block text-label-sm text-on-surface-variant mb-2">
-                  Tipo de Orçamento <span className="text-error">*</span>
-                </label>
-                <select
-                  value={tipoSelecionado[orcAtivo.id] || ''}
-                  onChange={e => setTipoSelecionado(prev => ({ ...prev, [orcAtivo.id]: e.target.value }))}
-                  className={FIELD}
-                >
-                  <option value="">Selecione o tipo…</option>
-                  {TIPOS_ORCAMENTO.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-
               {/* Seletor de categoria (filtro) */}
               <div>
                 <label className="block text-label-sm text-on-surface-variant mb-2">
-                  Filtrar por Categoria (opcional)
+                  Filtrar por Categoria
                 </label>
                 <select
                   value={categoriaFiltro}
@@ -339,7 +325,13 @@ export function OrcamentosAprovacaoPage() {
                     </thead>
                     <tbody className="divide-y divide-outline-variant/30">
                       {linhasAtivas
-                        .filter(linha => !categoriaFiltro || linha.categoria === categoriaFiltro)
+                        .filter(linha => {
+                          // Filtrar por categoria se selecionada
+                          if (categoriaFiltro && linha.categoria !== categoriaFiltro) return false;
+                          // Filtrar itens sem preço
+                          const valorTotal = parseFloat(String(linha.valorTotal || '0')) || 0;
+                          return valorTotal > 0;
+                        })
                         .map((linha, idx) => {
                           const valorTotal = parseFloat(String(linha.valorTotal || '0')) || 0;
                           return (
@@ -348,7 +340,7 @@ export function OrcamentosAprovacaoPage() {
                               <td className="py-xs px-md text-on-surface-variant">{linha.categoria || '—'}</td>
                               <td className="py-xs px-md text-on-surface-variant text-center">{Number(linha.quantidade) || 0}</td>
                               <td className="py-xs px-md text-on-surface font-medium text-right">
-                                {valorTotal > 0 ? fmt(valorTotal) : '—'}
+                                {fmt(valorTotal)}
                               </td>
                             </tr>
                           );
@@ -357,14 +349,20 @@ export function OrcamentosAprovacaoPage() {
                     <tfoot className="bg-surface-container-low border-t border-outline-variant">
                       <tr>
                         <td colSpan={3} className="py-sm px-md text-label-sm font-semibold text-on-surface">
-                          Total ({linhasAtivas.filter(l => !categoriaFiltro || l.categoria === categoriaFiltro).length} itens {categoriaFiltro && `de ${categoriaFiltro}`})
+                          Total ({linhasAtivas
+                            .filter(l => {
+                              if (categoriaFiltro && l.categoria !== categoriaFiltro) return false;
+                              return parseFloat(String(l.valorTotal || '0')) || 0 > 0;
+                            })
+                            .length} itens {categoriaFiltro && `de ${categoriaFiltro}`})
                         </td>
                         <td className="py-sm px-md text-right text-label-md font-bold text-on-surface">
-                          {categoriaFiltro
-                            ? fmt(linhasAtivas
-                                .filter(l => l.categoria === categoriaFiltro)
-                                .reduce((sum, l) => sum + (parseFloat(String(l.valorTotal || '0')) || 0), 0))
-                            : (parseFloat(String(orcAtivo.valorTotal || '0')) > 0 ? fmt(parseFloat(String(orcAtivo.valorTotal))) : '—')}
+                          {fmt(linhasAtivas
+                            .filter(l => {
+                              if (categoriaFiltro && l.categoria !== categoriaFiltro) return false;
+                              return parseFloat(String(l.valorTotal || '0')) || 0 > 0;
+                            })
+                            .reduce((sum, l) => sum + (parseFloat(String(l.valorTotal || '0')) || 0), 0))}
                         </td>
                       </tr>
                     </tfoot>
@@ -374,24 +372,41 @@ export function OrcamentosAprovacaoPage() {
                 <p className="text-body-sm text-on-surface-variant text-center py-lg">Nenhum item neste orçamento</p>
               )}
 
-              {/* Botões de ação */}
-              <div className="flex gap-md pt-lg border-t border-outline-variant">
-                <button
-                  onClick={() => handleAprovar(orcAtivo.id)}
-                  disabled={!tipoSelecionado[orcAtivo.id]}
-                  className="flex-1 px-lg py-2 bg-primary text-on-primary rounded-lg hover:bg-primary/90 text-label-md font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-sm"
-                >
-                  <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                  Aprovar
-                </button>
-                <button
-                  onClick={() => handleRemover(orcAtivo.id)}
-                  disabled={removendo}
-                  className="px-lg py-2 bg-error/10 text-error rounded-lg hover:bg-error/20 text-label-md font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-sm"
-                >
-                  <span className="material-symbols-outlined text-[18px]">{removendo ? 'progress_activity' : 'delete'}</span>
-                  {removendo ? 'Removendo…' : 'Remover'}
-                </button>
+              {/* Tipo de Orçamento + Botões de ação */}
+              <div className="space-y-md">
+                <div>
+                  <label className="block text-label-sm text-on-surface-variant mb-2">
+                    Tipo de Orçamento <span className="text-error">*</span>
+                  </label>
+                  <select
+                    value={tipoSelecionado[orcAtivo.id] || ''}
+                    onChange={e => setTipoSelecionado(prev => ({ ...prev, [orcAtivo.id]: e.target.value }))}
+                    className={FIELD}
+                  >
+                    <option value="">Selecione o tipo…</option>
+                    {TIPOS_ORCAMENTO.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex gap-md pt-lg border-t border-outline-variant">
+                  <button
+                    onClick={() => handleAprovar(orcAtivo.id)}
+                    disabled={!tipoSelecionado[orcAtivo.id]}
+                    className="flex-1 px-lg py-2 bg-primary text-on-primary rounded-lg hover:bg-primary/90 text-label-md font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-sm"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                    Aprovar
+                  </button>
+                  <button
+                    onClick={() => handleRemover(orcAtivo.id)}
+                    disabled={removendo}
+                    className="px-lg py-2 bg-error/10 text-error rounded-lg hover:bg-error/20 text-label-md font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-sm"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">{removendo ? 'progress_activity' : 'delete'}</span>
+                    {removendo ? 'Removendo…' : 'Remover'}
+                  </button>
+                </div>
               </div>
             </div>
           )}
