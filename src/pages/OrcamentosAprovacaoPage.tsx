@@ -85,7 +85,8 @@ export function OrcamentosAprovacaoPage() {
     // Itens a aprovar (apenas os filtrados por categoria)
     let linhasAprovar = linhasPorOrc[orcamentoId] || [];
     if (tipo) {
-      linhasAprovar = linhasAprovar.filter(l => l.categoria === tipo);
+      // Se tipo está selecionado, filtra por aquele tipo OU linhas sem categoria
+      linhasAprovar = linhasAprovar.filter(l => l.categoria === tipo || !l.categoria);
     }
     if (linhasAprovar.length === 0) {
       setToastMsg('Nenhum item para aprovar');
@@ -317,7 +318,13 @@ export function OrcamentosAprovacaoPage() {
                     </thead>
                     <tbody className="divide-y divide-outline-variant/30">
                       {linhasAtivas
-                        .filter(linha => !tipoSelecionado[orcAtivo.id] || linha.categoria === tipoSelecionado[orcAtivo.id])
+                        .filter(linha => {
+                          // Se tipo não está selecionado, mostra todas
+                          if (!tipoSelecionado[orcAtivo.id]) return true;
+                          // Se tipo está selecionado, mostra apenas aquelas com categoria que corresponde
+                          // Aceita null/vazio como válido também
+                          return linha.categoria === tipoSelecionado[orcAtivo.id] || !linha.categoria;
+                        })
                         .map((linha, idx) => {
                           const valorTotal = parseFloat(String(linha.valorTotal || '0')) || 0;
                           return (
@@ -334,7 +341,7 @@ export function OrcamentosAprovacaoPage() {
                     </tbody>
                     <tfoot className="bg-surface-container-low border-t border-outline-variant">
                       <tr>
-                        <td colSpan={3} className="py-sm px-md text-label-sm font-semibold text-on-surface">Total ({linhasAtivas.length} itens)</td>
+                        <td colSpan={3} className="py-sm px-md text-label-sm font-semibold text-on-surface">Total ({linhasAtivas.filter(l => !tipoSelecionado[orcAtivo.id] || l.categoria === tipoSelecionado[orcAtivo.id] || !l.categoria).length} itens)</td>
                         <td className="py-sm px-md text-right text-label-md font-bold text-on-surface">
                           {parseFloat(String(orcAtivo.valorTotal || '0')) > 0 ? fmt(parseFloat(String(orcAtivo.valorTotal))) : '—'}
                         </td>
