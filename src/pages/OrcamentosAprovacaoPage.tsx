@@ -83,12 +83,8 @@ export function OrcamentosAprovacaoPage() {
       return;
     }
 
-    // Itens a aprovar (apenas os filtrados por categoria)
-    let linhasAprovar = linhasPorOrc[orcamentoId] || [];
-    if (tipo) {
-      // Se tipo está selecionado, filtra por aquele tipo OU linhas sem categoria
-      linhasAprovar = linhasAprovar.filter(l => l.categoria === tipo || !l.categoria);
-    }
+    // Itens a aprovar: todos os itens do orçamento
+    const linhasAprovar = linhasPorOrc[orcamentoId] || [];
     if (linhasAprovar.length === 0) {
       setToastMsg('Nenhum item para aprovar');
       setTimeout(() => setToastMsg(''), 4000);
@@ -318,31 +314,23 @@ export function OrcamentosAprovacaoPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-variant/30">
-                      {linhasAtivas
-                        .filter(linha => {
-                          // Se tipo não está selecionado, mostra todas
-                          if (!tipoSelecionado[orcAtivo.id]) return true;
-                          // Se tipo está selecionado, mostra apenas aquelas com categoria que corresponde
-                          // Aceita null/vazio como válido também
-                          return linha.categoria === tipoSelecionado[orcAtivo.id] || !linha.categoria;
-                        })
-                        .map((linha, idx) => {
-                          const valorTotal = parseFloat(String(linha.valorTotal || '0')) || 0;
-                          return (
-                            <tr key={idx} className="hover:bg-surface-container-low/50">
-                              <td className="py-xs px-md text-on-surface">{linha.descricao}</td>
-                              <td className="py-xs px-md text-on-surface-variant">{linha.categoria || '—'}</td>
-                              <td className="py-xs px-md text-on-surface-variant text-center">{Number(linha.quantidade) || 0}</td>
-                              <td className="py-xs px-md text-on-surface font-medium text-right">
-                                {valorTotal > 0 ? fmt(valorTotal) : '—'}
-                              </td>
-                            </tr>
-                          );
-                        })}
+                      {linhasAtivas.map((linha, idx) => {
+                        const valorTotal = parseFloat(String(linha.valorTotal || '0')) || 0;
+                        return (
+                          <tr key={idx} className="hover:bg-surface-container-low/50">
+                            <td className="py-xs px-md text-on-surface">{linha.descricao}</td>
+                            <td className="py-xs px-md text-on-surface-variant">{linha.categoria || '—'}</td>
+                            <td className="py-xs px-md text-on-surface-variant text-center">{Number(linha.quantidade) || 0}</td>
+                            <td className="py-xs px-md text-on-surface font-medium text-right">
+                              {valorTotal > 0 ? fmt(valorTotal) : '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                     <tfoot className="bg-surface-container-low border-t border-outline-variant">
                       <tr>
-                        <td colSpan={3} className="py-sm px-md text-label-sm font-semibold text-on-surface">Total ({linhasAtivas.filter(l => !tipoSelecionado[orcAtivo.id] || l.categoria === tipoSelecionado[orcAtivo.id] || !l.categoria).length} itens)</td>
+                        <td colSpan={3} className="py-sm px-md text-label-sm font-semibold text-on-surface">Total ({linhasAtivas.length} itens)</td>
                         <td className="py-sm px-md text-right text-label-md font-bold text-on-surface">
                           {parseFloat(String(orcAtivo.valorTotal || '0')) > 0 ? fmt(parseFloat(String(orcAtivo.valorTotal))) : '—'}
                         </td>
