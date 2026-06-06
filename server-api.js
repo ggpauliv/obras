@@ -1299,6 +1299,13 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
     const orcamentoId = req.params.id;
     const { tipoOrcamento, linhas: linhasAprovar } = req.body;
 
+    console.log(`🔵 [APROVAR] Iniciando aprovação do orçamento ${orcamentoId}`);
+    console.log(`🔵 [APROVAR] tipoOrcamento: ${tipoOrcamento}`);
+    console.log(`🔵 [APROVAR] linhasAprovar recebidas: ${linhasAprovar?.length || 0} linhas`);
+    if (linhasAprovar && linhasAprovar.length > 0) {
+      console.log(`🔵 [APROVAR] Primeira linha:`, linhasAprovar[0]);
+    }
+
     // 1. Buscar orçamento e suas linhas
     const orcResult = await db.query(
       `SELECT o.id, o.obra_id, o.nome, o.valor_total, o.prazo_dias, o.fornecedor_id, f.nome as fornecedor_nome
@@ -1342,6 +1349,8 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
     const hoje = new Date().toISOString().split('T')[0];
     const despesasIds = [];
 
+    console.log(`🔵 [APROVAR] Criando ${linhas.length} despesas...`);
+
     for (const linha of linhas) {
       const valorSanitizado = sanitizeNumero(linha.valorTotal || linha.valor_total);
       console.log(`📋 Linha ${linha.itemNumero || linha.item_numero}: valorTotal=${linha.valorTotal}, valor_total=${linha.valor_total}, sanitizado=${valorSanitizado}`);
@@ -1363,7 +1372,9 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
           orcamento.fornecedor_nome || orcamento.nome
         ]
       );
-      despesasIds.push(despResult.rows[0].id);
+      const despId = despResult.rows[0]?.id;
+      console.log(`✅ [APROVAR] Despesa criada: ${despId}`);
+      despesasIds.push(despId);
     }
 
     // 4. Criar fases/etapas agrupando por categoria
@@ -1384,6 +1395,8 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
     let ordemFase = 1;
     const fasesIds = [];
 
+    console.log(`🔵 [APROVAR] Criando fases para ${categoriasMapa.size} categorias...`);
+
     for (const [categoria, itemsCategoria] of categoriasMapa) {
       const valorCategoria = itemsCategoria.reduce((sum, item) => sum + sanitizeNumero(item.valorTotal || item.valor_total), 0);
 
@@ -1399,7 +1412,9 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
           `Fase gerada a partir do orçamento: ${orcamento.nome}`
         ]
       );
-      fasesIds.push(faseResult.rows[0].id);
+      const faseId = faseResult.rows[0]?.id;
+      console.log(`✅ [APROVAR] Fase criada: ${faseId} (${categoria})`);
+      fasesIds.push(faseId);
     }
 
     // 5. Associar despesas às fases (primeira despesa de cada categoria à fase correspondente)
