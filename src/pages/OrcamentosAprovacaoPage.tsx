@@ -79,13 +79,10 @@ export function OrcamentosAprovacaoPage() {
 
   const handleAprovar = async (orcamentoId: string) => {
     // Se categoria está selecionada, usa como tipo
-    // Se não, exige que tipo seja selecionado
-    let tipo = categoriaFiltro || tipoSelecionado[orcamentoId];
-    if (!tipo?.trim()) {
-      setToastMsg('Selecione um tipo de orçamento ou uma categoria para aprovar');
-      setTimeout(() => setToastMsg(''), 4000);
-      return;
-    }
+    // Se não, usa "Obra Geral" como padrão
+    let tipo = categoriaFiltro || 'Obra Geral';
+    console.log(`📊 Aprovando com tipo: ${tipo}, categoria: ${categoriaFiltro || 'nenhuma'}`);
+
 
     // Itens a aprovar: apenas os filtrados por categoria (se houver filtro) e com preço
     let linhasAprovar = linhasPorOrc[orcamentoId] || [];
