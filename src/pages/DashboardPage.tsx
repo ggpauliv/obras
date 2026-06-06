@@ -3,7 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import type { Obra } from '../store';
 
-interface Row extends Obra {
+interface Row {
+  id: string;
+  nome: string;
+  cliente?: string;
+  pct?: number;
+  data_termino?: string;
   barColor: string;
   status: string;
   statusClass: string;
@@ -50,8 +55,8 @@ export default function DashboardPage() {
   useEffect(() => {
     const carregarDados = async () => {
       try {
-        const obrasData = await apiClient.listarObras();
-        const obrasComStatus: Row[] = obrasData.map((o: Obra) => ({
+        const obrasData: Obra[] = await apiClient.listarObras();
+        const obrasComStatus: Row[] = obrasData.map((o) => ({
           ...o,
           pct: o.pct || 0,
           barColor: (o.pct || 0) >= 75 ? 'bg-[#16A34A]' : (o.pct || 0) >= 50 ? 'bg-[#F59E0B]' : 'bg-error',
