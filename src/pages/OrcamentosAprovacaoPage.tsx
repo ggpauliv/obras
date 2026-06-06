@@ -127,6 +127,14 @@ export function OrcamentosAprovacaoPage() {
   const orcAtivo = orcamentos.find(o => o.id === abaAtiva);
   const linhasAtivas = linhasPorOrc[abaAtiva] || [];
 
+  // Encontra o menor valor entre todos os orçamentos
+  const menorValor = useMemo(() => {
+    if (orcamentos.length === 0) return 0;
+    return Math.min(...orcamentos.map(o => Number(o.valor_total) || 0));
+  }, [orcamentos]);
+
+  const ehMelhorPreco = orcAtivo && Number(orcAtivo.valor_total) === menorValor && menorValor > 0;
+
   return (
     <div className="flex flex-col gap-lg">
       {/* Header */}
@@ -178,19 +186,27 @@ export function OrcamentosAprovacaoPage() {
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
           {/* Headers das abas */}
           <div className="flex gap-0 border-b border-outline-variant overflow-x-auto">
-            {orcamentos.map(orc => (
-              <button
-                key={orc.id}
-                onClick={() => setAbaAtiva(orc.id)}
-                className={`px-lg py-sm text-label-sm whitespace-nowrap transition-colors border-b-2 -mb-px ${
-                  abaAtiva === orc.id
-                    ? 'border-primary text-primary font-semibold'
-                    : 'border-transparent text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                {orc.fornecedor_nome || orc.nome}
-              </button>
-            ))}
+            {orcamentos.map(orc => {
+              const ehMelhor = Number(orc.valor_total) === menorValor && menorValor > 0;
+              return (
+                <button
+                  key={orc.id}
+                  onClick={() => setAbaAtiva(orc.id)}
+                  className={`px-lg py-sm text-label-sm whitespace-nowrap transition-colors border-b-2 -mb-px flex items-center gap-xs ${
+                    abaAtiva === orc.id
+                      ? ehMelhor
+                        ? 'border-emerald-500 text-emerald-600 font-semibold'
+                        : 'border-primary text-primary font-semibold'
+                      : ehMelhor
+                        ? 'border-transparent text-emerald-600/70 hover:text-emerald-600'
+                        : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                  }`}
+                >
+                  {orc.fornecedor_nome || orc.nome}
+                  {ehMelhor && <span className="material-symbols-outlined text-[16px]">emoji_events</span>}
+                </button>
+              );
+            })}
           </div>
 
           {/* Conteúdo da aba ativa */}
@@ -202,9 +218,20 @@ export function OrcamentosAprovacaoPage() {
                   <p className="text-label-sm text-on-surface-variant">Fornecedor</p>
                   <p className="text-label-md font-semibold text-on-surface mt-xs">{orcAtivo.fornecedor_nome || orcAtivo.nome}</p>
                 </div>
-                <div className="bg-surface border border-outline-variant rounded-lg p-md">
-                  <p className="text-label-sm text-on-surface-variant">Valor Total</p>
-                  <p className="text-label-md font-semibold text-on-surface mt-xs">{fmt(orcAtivo.valor_total)}</p>
+                <div className={`rounded-lg p-md ${
+                  ehMelhorPreco
+                    ? 'bg-emerald-50 border-2 border-emerald-400'
+                    : 'bg-surface border border-outline-variant'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <p className={`text-label-sm ${ehMelhorPreco ? 'text-emerald-700 font-semibold' : 'text-on-surface-variant'}`}>
+                      Valor Total
+                    </p>
+                    {ehMelhorPreco && <span className="material-symbols-outlined text-emerald-600">emoji_events</span>}
+                  </div>
+                  <p className={`text-label-md font-semibold mt-xs ${ehMelhorPreco ? 'text-emerald-700' : 'text-on-surface'}`}>
+                    {fmt(orcAtivo.valor_total)}
+                  </p>
                 </div>
                 <div className="bg-surface border border-outline-variant rounded-lg p-md">
                   <p className="text-label-sm text-on-surface-variant">Prazo</p>
@@ -251,19 +278,26 @@ export function OrcamentosAprovacaoPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-variant/30">
-                      {linhasAtivas.map((linha, idx) => (
-                        <tr key={idx} className="hover:bg-surface-container-low/50">
-                          <td className="py-xs px-md text-on-surface">{linha.descricao}</td>
-                          <td className="py-xs px-md text-on-surface-variant">{linha.categoria || '—'}</td>
-                          <td className="py-xs px-md text-on-surface-variant text-center">{linha.quantidade}</td>
-                          <td className="py-xs px-md text-on-surface font-medium text-right">{fmt(linha.valor_total)}</td>
-                        </tr>
-                      ))}
+                      {linhasAtivas.map((linha, idx) => {
+                        const valorTotal = Number(linha.valor_total) || 0;
+                        return (
+                          <tr key={idx} className="hover:bg-surface-container-low/50">
+                            <td className="py-xs px-md text-on-surface">{linha.descricao}</td>
+                            <td className="py-xs px-md text-on-surface-variant">{linha.categoria || '—'}</td>
+                            <td className="py-xs px-md text-on-surface-variant text-center">{Number(linha.quantidade) || 0}</td>
+                            <td className="py-xs px-md text-on-surface font-medium text-right">
+                              {valorTotal > 0 ? fmt(valorTotal) : '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                     <tfoot className="bg-surface-container-low border-t border-outline-variant">
                       <tr>
                         <td colSpan={3} className="py-sm px-md text-label-sm font-semibold text-on-surface">Total ({linhasAtivas.length} itens)</td>
-                        <td className="py-sm px-md text-right text-label-md font-bold text-on-surface">{fmt(orcAtivo.valor_total)}</td>
+                        <td className="py-sm px-md text-right text-label-md font-bold text-on-surface">
+                          {Number(orcAtivo.valor_total) > 0 ? fmt(orcAtivo.valor_total) : '—'}
+                        </td>
                       </tr>
                     </tfoot>
                   </table>
