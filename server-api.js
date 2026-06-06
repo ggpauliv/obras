@@ -716,6 +716,7 @@ app.get('/api/auditoria', autenticar, async (req, res) => {
 app.get('/api/orcamentos', autenticar, async (req, res) => {
   try {
     const { obraId } = req.query;
+    console.log(`📊 GET /api/orcamentos (obraId=${obraId})`);
 
     let query = `SELECT o.id, o.obra_id, o.fornecedor_id, o.nome, o.descricao, o.valor_total,
       o.prazo_dias, o.tipo_orcamento, o.status, o.data_envio, o.data_emissao, o.numero_cotacao, o.criado_em,
@@ -732,6 +733,7 @@ app.get('/api/orcamentos', autenticar, async (req, res) => {
     query += ' ORDER BY o.criado_em DESC';
 
     const result = await db.query(query, params);
+    console.log(`✅ ${result.rows.length} orçamentos encontrados`);
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Erro ao listar orçamentos:', error);
@@ -780,6 +782,7 @@ app.put('/api/orcamentos/:id', autenticar, async (req, res) => {
 // GET /api/orcamentos/:id
 app.get('/api/orcamentos/:id', autenticar, async (req, res) => {
   try {
+    console.log(`📋 GET /api/orcamentos/:id = ${req.params.id}`);
     const orcamento = await db.query(
       `SELECT o.*, f.nome as fornecedor_nome FROM orcamentos o
        LEFT JOIN fornecedores f ON o.fornecedor_id = f.id
@@ -788,6 +791,7 @@ app.get('/api/orcamentos/:id', autenticar, async (req, res) => {
     );
 
     if (orcamento.rows.length === 0) {
+      console.log(`❌ Orçamento ${req.params.id} não encontrado`);
       return res.status(404).json({ erro: 'Orçamento não encontrado' });
     }
 
@@ -796,6 +800,7 @@ app.get('/api/orcamentos/:id', autenticar, async (req, res) => {
       [req.params.id]
     );
 
+    console.log(`✅ Orçamento ${req.params.id}: ${linhas.rows.length} linhas encontradas`);
     res.json({
       ...orcamento.rows[0],
       linhas: linhas.rows,
