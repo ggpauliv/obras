@@ -287,22 +287,23 @@ export function OrcamentosAprovacaoPage() {
                 </div>
               </div>
 
-              {/* Seletor de categoria (filtro) */}
-              <div>
+              {/* Seletor de categoria (filtro) - OPCIONAL */}
+              <div className="p-md bg-surface-container-lowest rounded-lg border border-outline-variant/50">
                 <label className="block text-label-sm text-on-surface-variant mb-2">
-                  Filtrar por Categoria
+                  Filtrar por Categoria <span className="text-outline text-xs">(opcional — deixe em branco para aprovar tudo)</span>
                 </label>
                 <select
                   value={categoriaFiltro}
                   onChange={e => setCategoriaFiltro(e.target.value)}
                   className={FIELD}
                 >
-                  <option value="">Todas as categorias</option>
+                  <option value="">✓ Aprovar TODOS os {linhasAtivas.filter(l => parseFloat(String(l.valorTotal || '0')) || 0 > 0).length} itens</option>
                   {Array.from(new Set(linhasAtivas.map(l => l.categoria).filter(Boolean)))
                     .sort()
-                    .map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
+                    .map(cat => {
+                      const qtd = linhasAtivas.filter(l => l.categoria === cat && (parseFloat(String(l.valorTotal || '0')) || 0 > 0)).length;
+                      return <option key={cat} value={cat}>Apenas {cat} ({qtd} itens)</option>;
+                    })}
                 </select>
               </div>
 
