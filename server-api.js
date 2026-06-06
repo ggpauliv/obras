@@ -1401,10 +1401,15 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
     const dataTermino = new Date();
     dataTermino.setDate(dataTermino.getDate() + prazoDias);
 
-    let ordemFase = 1;
+    // Encontrar a última ordem existente para não conflitar
+    const ultimaOrdemResult = await db.query(
+      'SELECT COALESCE(MAX(ordem), 0) as ultima_ordem FROM fases WHERE obra_id = $1',
+      [obra_id]
+    );
+    let ordemFase = (ultimaOrdemResult.rows[0]?.ultima_ordem || 0) + 1;
     const fasesIds = [];
 
-    console.log(`🔵 [APROVAR] Criando fases para ${categoriasMapa.size} categorias...`);
+    console.log(`🔵 [APROVAR] Criando fases para ${categoriasMapa.size} categorias (próxima ordem: ${ordemFase})...`);
 
     for (const [categoria, itemsCategoria] of categoriasMapa) {
       const valorCategoria = itemsCategoria.reduce((sum, item) => sum + sanitizeNumero(item.valorTotal || item.valor_total), 0);
