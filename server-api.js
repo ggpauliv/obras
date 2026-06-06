@@ -1343,6 +1343,14 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
     const despesasIds = [];
 
     for (const linha of linhas) {
+      const valorSanitizado = sanitizeNumero(linha.valorTotal || linha.valor_total);
+      console.log(`📋 Linha ${linha.itemNumero || linha.item_numero}: valorTotal=${linha.valorTotal}, valor_total=${linha.valor_total}, sanitizado=${valorSanitizado}`);
+
+      if (valorSanitizado === null) {
+        console.error(`❌ ERRO: Linha ${linha.itemNumero || linha.item_numero} tem valor null!`, linha);
+        return res.status(400).json({ erro: `Linha ${linha.itemNumero || linha.item_numero} não tem valor configurado` });
+      }
+
       const despResult = await db.query(
         `INSERT INTO despesas (obra_id, descricao, categoria, valor, data, fornecedor)
          VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
@@ -1350,7 +1358,7 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
           obra_id,
           `${linha.descricao || 'Item'} (Item ${linha.itemNumero || linha.item_numero})`,
           linha.categoria || 'Serviços Gerais',
-          sanitizeNumero(linha.valorTotal || linha.valor_total),
+          valorSanitizado,
           hoje,
           orcamento.fornecedor_nome || orcamento.nome
         ]
