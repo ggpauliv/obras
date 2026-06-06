@@ -5,6 +5,35 @@ Para detalhes finos, ver o `git log`.
 
 ---
 
+## Módulo de Orçamentos — Aprovação com Geração Automática
+
+- **Tela de Aprovação de Orçamentos** (`/orcamentos/aprovacao`):
+  - Lista orçamentos pendentes (status = 'ativo') agrupados por tipo
+  - Filtros por tipo de orçamento (Obra Geral, Terraplanagem, Cobertura, etc.)
+  - Card expandível com detalhes de cada orçamento
+  - Visualização de itens agrupados por categoria
+  - Seletor de tipo de orçamento (obrigatório antes de aprovar)
+
+- **Fluxo de Aprovação** — ao aprovar um orçamento:
+  - ✅ Cria/usa fornecedor (se não existir)
+  - ✅ Gera despesas (uma por linha de orçamento)
+  - ✅ Cria fases/etapas agrupadas por categoria de item
+  - ✅ Associa despesas às fases correspondentes
+  - ✅ Define prazos (hoje + prazo_dias do orçamento)
+  - ✅ Registra auditoria completa
+
+- **Novo endpoint** `POST /api/orcamentos/:id/aprovar`:
+  - Recebe `{ tipoOrcamento: string }`
+  - Retorna resumo do que foi criado (qtd despesas, fases, fornecedor)
+  - Valida e atomiza a operação
+
+- **UI Feedback**:
+  - Toast com mensagem de sucesso/erro
+  - Card desaparece após aprovação bem-sucedida
+  - Validação: tipo de orçamento é obrigatório
+
+---
+
 ## Módulo de Orçamentos — Exportação e Reimportação
 
 - **PDF de apresentação (profissional e completo)** — documento estruturado
