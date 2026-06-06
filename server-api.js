@@ -1406,29 +1406,43 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
       'SELECT COALESCE(MAX(ordem), 0) as ultima_ordem FROM fases WHERE obra_id = $1',
       [obra_id]
     );
-    let ordemFase = (ultimaOrdemResult.rows[0]?.ultima_ordem || 0) + 1;
+    const ultimaOrdem = ultimaOrdemResult.rows[0]?.ultima_ordem || 0;
+    console.log(`🔍 [APROVAR] Última ordem em obra ${obra_id}: ${ultimaOrdem}`);
+    console.log(`🔍 [APROVAR] Próximas ordens serão: ${ultimaOrdem + 1}, ${ultimaOrdem + 2}, etc.`);
+
+    let ordemFase = ultimaOrdem + 1;
     const fasesIds = [];
 
-    console.log(`🔵 [APROVAR] Criando fases para ${categoriasMapa.size} categorias (próxima ordem: ${ordemFase})...`);
+    console.log(`🔵 [APROVAR] Criando fases para ${categoriasMapa.size} categorias (começando ordem: ${ordemFase})...`);
 
     for (const [categoria, itemsCategoria] of categoriasMapa) {
       const valorCategoria = itemsCategoria.reduce((sum, item) => sum + sanitizeNumero(item.valorTotal || item.valor_total), 0);
+      const ordemAtual = ordemFase;
 
-      const faseResult = await db.query(
-        `INSERT INTO fases (obra_id, ordem, nome, inicio, termino, status, categoria, descricao)
-         VALUES ($1, $2, $3, $4, $5, 'nao_iniciada', 'etapa_obra', $6) RETURNING id`,
-        [
-          obra_id,
-          ordemFase++,
-          `${tipoOrcamento || 'Orçamento'} - ${categoria}`,
-          dataInicio.toISOString().split('T')[0],
-          dataTermino.toISOString().split('T')[0],
-          `Fase gerada a partir do orçamento: ${orcamento.nome}`
-        ]
-      );
-      const faseId = faseResult.rows[0]?.id;
-      console.log(`✅ [APROVAR] Fase criada: ${faseId} (${categoria})`);
-      fasesIds.push(faseId);
+      console.log(`📝 [APROVAR] Inserindo fase com ordem=${ordemAtual}, categoria=${categoria}, obra_id=${obra_id}`);
+
+      try {
+        const faseResult = await db.query(
+          `INSERT INTO fases (obra_id, ordem, nome, inicio, termino, status, categoria, descricao)
+           VALUES ($1, $2, $3, $4, $5, 'nao_iniciada', 'etapa_obra', $6) RETURNING id`,
+          [
+            obra_id,
+            ordemAtual,
+            `${tipoOrcamento || 'Orçamento'} - ${categoria}`,
+            dataInicio.toISOString().split('T')[0],
+            dataTermino.toISOString().split('T')[0],
+            `Fase gerada a partir do orçamento: ${orcamento.nome}`
+          ]
+        );
+        const faseId = faseResult.rows[0]?.id;
+        console.log(`✅ [APROVAR] Fase criada: ${faseId} (ordem=${ordemAtual}, categoria=${categoria})`);
+        fasesIds.push(faseId);
+      } catch (err) {
+        console.error(`❌ [APROVAR] Erro ao inserir fase (ordem=${ordemAtual}):`, err.message);
+        throw err;
+      }
+
+      ordemFase++;
     }
 
     // 5. Associar despesas às fases (primeira despesa de cada categoria à fase correspondente)
