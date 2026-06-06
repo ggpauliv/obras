@@ -1,8 +1,9 @@
 export interface NavItem {
   label: string;
-  route: string;
+  route?: string;
   icon: string; // Material Symbols name
   disabled?: boolean;
+  submenu?: NavItem[];
 }
 
 // Itens principais da sidebar (navegação global)
@@ -14,9 +15,15 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Financeiro', route: '/obra-financeiro', icon: 'payments' },
   { label: 'Fornecedores', route: '/fornecedores', icon: 'engineering' },
   { label: 'Importar (IA)', route: '/importar', icon: 'auto_awesome' },
-  { label: 'Orçamentos', route: '/orcamentos/upload', icon: 'request_quote' },
-  { label: 'Comparar Orçamentos', route: '/orcamentos/comparativa', icon: 'compare_arrows' },
-  { label: 'Aprovar Orçamentos', route: '/orcamentos/aprovacao', icon: 'approval' },
+  {
+    label: 'Orçamentos',
+    icon: 'request_quote',
+    submenu: [
+      { label: 'Importar', route: '/orcamentos/upload', icon: 'upload_file' },
+      { label: 'Comparar', route: '/orcamentos/comparativa', icon: 'compare_arrows' },
+      { label: 'Aprovar', route: '/orcamentos/aprovacao', icon: 'approval' },
+    ],
+  },
   { label: 'Usuários', route: '/usuarios', icon: 'group' },
 ];
 

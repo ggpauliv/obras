@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { NAV_ITEMS, SETTINGS_ITEM, NavItem } from '../config/nav';
 import { useAuth } from '../auth/AuthContext';
@@ -21,11 +21,56 @@ function SidebarLink({ item, onClose }: { item: NavItem; onClose: () => void }) 
       </span>
     );
   }
+  if (!item.route) return null;
+
   return (
     <NavLink to={item.route} onClick={onClose} className={({ isActive }) => itemClass(isActive)}>
       <span className="material-symbols-outlined">{item.icon}</span>
       <span>{item.label}</span>
     </NavLink>
+  );
+}
+
+function SidebarMenuWithSubmenu({ item, onClose }: { item: NavItem; onClose: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div>
+      {/* Menu pai (com submenu) */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className={`${baseItem} w-full justify-between`}
+      >
+        <div className="flex items-center gap-md">
+          <span className="material-symbols-outlined">{item.icon}</span>
+          <span>{item.label}</span>
+        </div>
+        <span className="material-symbols-outlined text-[18px] transition-transform" style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+          expand_more
+        </span>
+      </button>
+
+      {/* Submenu */}
+      {expanded && item.submenu && (
+        <div className="ml-md mt-xs space-y-xs">
+          {item.submenu.map((subitem) => (
+            <NavLink
+              key={subitem.label}
+              to={subitem.route || '#'}
+              onClick={onClose}
+              className={({ isActive }) => `${baseItem} text-sm border-l-2 ${
+                isActive
+                  ? 'border-white text-white font-bold'
+                  : 'border-white/30 text-white/70 hover:text-white hover:border-white/70'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">{subitem.icon}</span>
+              <span>{subitem.label}</span>
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -62,7 +107,11 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       {/* Navegação */}
       <div className="flex-1 overflow-y-auto space-y-sm mt-md">
         {NAV_ITEMS.map((item) => (
-          <SidebarLink key={item.label} item={item} onClose={onClose} />
+          item.submenu ? (
+            <SidebarMenuWithSubmenu key={item.label} item={item} onClose={onClose} />
+          ) : (
+            <SidebarLink key={item.label} item={item} onClose={onClose} />
+          )
         ))}
       </div>
 
