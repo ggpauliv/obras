@@ -62,9 +62,15 @@ export function OrcamentosAprovacaoPage() {
     setCarregandoLinhas(true);
     apiClient.obterOrcamento(abaAtiva)
       .then(d => {
-        setLinhasPorOrc(prev => ({ ...prev, [abaAtiva]: d.linhas || [] }));
+        console.log('Orçamento carregado:', d);
+        const linhas = d.linhas || [];
+        console.log('Linhas:', linhas);
+        setLinhasPorOrc(prev => ({ ...prev, [abaAtiva]: linhas }));
       })
-      .catch(() => setLinhasPorOrc(prev => ({ ...prev, [abaAtiva]: [] })))
+      .catch(err => {
+        console.error('Erro ao carregar orçamento:', err);
+        setLinhasPorOrc(prev => ({ ...prev, [abaAtiva]: [] }));
+      })
       .finally(() => setCarregandoLinhas(false));
   }, [abaAtiva]);
 
