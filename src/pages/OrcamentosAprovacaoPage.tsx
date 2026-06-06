@@ -78,9 +78,11 @@ export function OrcamentosAprovacaoPage() {
   }, [abaAtiva]);
 
   const handleAprovar = async (orcamentoId: string) => {
-    const tipo = tipoSelecionado[orcamentoId];
+    // Se categoria está selecionada, usa como tipo
+    // Se não, exige que tipo seja selecionado
+    let tipo = categoriaFiltro || tipoSelecionado[orcamentoId];
     if (!tipo?.trim()) {
-      setToastMsg('Selecione um tipo de orçamento');
+      setToastMsg('Selecione um tipo de orçamento ou uma categoria para aprovar');
       setTimeout(() => setToastMsg(''), 4000);
       return;
     }
@@ -373,31 +375,16 @@ export function OrcamentosAprovacaoPage() {
                 <p className="text-body-sm text-on-surface-variant text-center py-lg">Nenhum item neste orçamento</p>
               )}
 
-              {/* Tipo de Orçamento + Botões de ação */}
-              <div className="space-y-md">
-                <div>
-                  <label className="block text-label-sm text-on-surface-variant mb-2">
-                    Tipo de Orçamento <span className="text-error">*</span>
-                  </label>
-                  <select
-                    value={tipoSelecionado[orcAtivo.id] || ''}
-                    onChange={e => setTipoSelecionado(prev => ({ ...prev, [orcAtivo.id]: e.target.value }))}
-                    className={FIELD}
-                  >
-                    <option value="">Selecione o tipo…</option>
-                    {TIPOS_ORCAMENTO.map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex gap-md pt-lg border-t border-outline-variant">
+              {/* Botões de ação */}
+              <div className="flex gap-md pt-lg border-t border-outline-variant">
                   <button
                     onClick={() => handleAprovar(orcAtivo.id)}
-                    disabled={!tipoSelecionado[orcAtivo.id]}
+                    disabled={false}
                     className="flex-1 px-lg py-2 bg-primary text-on-primary rounded-lg hover:bg-primary/90 text-label-md font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-sm"
+                    title={!categoriaFiltro && !tipoSelecionado[orcAtivo.id] ? "Selecione uma categoria ou um tipo de orçamento" : ""}
                   >
                     <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                    Aprovar
+                    Aprovar {categoriaFiltro && `(${categoriaFiltro})`}
                   </button>
                   <button
                     onClick={() => handleRemover(orcAtivo.id)}
@@ -408,7 +395,6 @@ export function OrcamentosAprovacaoPage() {
                     {removendo ? 'Removendo…' : 'Remover'}
                   </button>
                 </div>
-              </div>
             </div>
           )}
         </div>
