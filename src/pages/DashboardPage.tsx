@@ -8,7 +8,7 @@ interface Row {
   nome: string;
   cliente?: string;
   pct?: number;
-  data_termino?: string;
+  termino?: string;
   barColor: string;
   status: string;
   statusClass: string;
@@ -57,12 +57,14 @@ export default function DashboardPage() {
       try {
         const obrasData: Obra[] = await apiClient.listarObras();
         const obrasComStatus: Row[] = obrasData.map((o) => ({
-          ...o,
+          id: o.id,
+          nome: o.nome,
+          cliente: o.cliente,
           pct: o.pct || 0,
           barColor: (o.pct || 0) >= 75 ? 'bg-[#16A34A]' : (o.pct || 0) >= 50 ? 'bg-[#F59E0B]' : 'bg-error',
           status: getStatusObra(o.pct || 0),
           statusClass: getStatusClass(o.pct || 0),
-          termino: o.data_termino ? new Date(o.data_termino).toLocaleDateString('pt-BR') : '—',
+          termino: o.termino ? new Date(o.termino).toLocaleDateString('pt-BR') : '—',
         }));
         setObras(obrasComStatus);
 
