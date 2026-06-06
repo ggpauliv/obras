@@ -200,9 +200,13 @@ export function OrcamentosAprovacaoPage() {
             <input
               type="checkbox"
               checked={selecionados.size > 0 && selecionados.size === filtrados.length}
-              indeterminate={selecionados.size > 0 && selecionados.size < filtrados.length}
               onChange={toggleTodosSelecionados}
               className="w-5 h-5 rounded border-2 border-primary accent-primary cursor-pointer"
+              ref={(el) => {
+                if (el) {
+                  el.indeterminate = selecionados.size > 0 && selecionados.size < filtrados.length;
+                }
+              }}
             />
             <label className="text-label-md text-on-surface-variant cursor-pointer">
               {selecionados.size === 0
