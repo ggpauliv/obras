@@ -39,7 +39,11 @@ function SidebarMenuWithSubmenu({ item, onClose }: { item: NavItem; onClose: () 
       {/* Menu pai (com submenu) */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className={`${baseItem} w-full justify-between`}
+        className={`${baseItem} w-full justify-between transition-colors ${
+          expanded
+            ? 'bg-white/10 text-white font-bold'
+            : 'text-white/70 hover:text-white hover:bg-white/5'
+        }`}
       >
         <div className="flex items-center gap-md">
           <span className="material-symbols-outlined">{item.icon}</span>
