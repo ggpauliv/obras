@@ -25,6 +25,8 @@ export function OrcamentosAprovacaoPage() {
   const [filtroTipo, setFiltroTipo] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [removendo, setRemovendo] = useState(false);
 
   useEffect(() => {
     listarObras().then(setObras);
@@ -66,9 +68,65 @@ export function OrcamentosAprovacaoPage() {
 
       // Remover do estado
       setOrcamentos(prev => prev.filter(o => o.id !== orcamentoId));
+      setSelecionados(prev => { const s = new Set(prev); s.delete(orcamentoId); return s; });
     } catch (err: any) {
       setToastMsg(`Erro: ${err.message}`);
       setTimeout(() => setToastMsg(''), 4000);
+    }
+  };
+
+  const toggleSelecionado = (id: string) => {
+    setSelecionados(prev => {
+      const novo = new Set(prev);
+      novo.has(id) ? novo.delete(id) : novo.add(id);
+      return novo;
+    });
+  };
+
+  const toggleTodosSelecionados = () => {
+    if (selecionados.size === filtrados.length && filtrados.length > 0) {
+      setSelecionados(new Set());
+    } else {
+      setSelecionados(new Set(filtrados.map(o => o.id)));
+    }
+  };
+
+  const handleRemoverSelecionados = async () => {
+    if (selecionados.size === 0) return;
+
+    const nomes = filtrados
+      .filter(o => selecionados.has(o.id))
+      .map(o => o.nome || 'Sem nome')
+      .join(', ');
+
+    if (!window.confirm(`Remover ${selecionados.size} orçamento(s)?\n\n${nomes}\n\nEsta ação não pode ser desfeita.`)) {
+      return;
+    }
+
+    setRemovendo(true);
+    try {
+      let removidos = 0;
+      let erros = 0;
+
+      for (const id of Array.from(selecionados)) {
+        try {
+          await apiClient.deletarOrcamento(id);
+          removidos++;
+          setOrcamentos(prev => prev.filter(o => o.id !== id));
+        } catch (err) {
+          erros++;
+          console.error('Erro ao remover:', err);
+        }
+      }
+
+      setSelecionados(new Set());
+      const msg = erros > 0
+        ? `${removidos} removido(s), ${erros} erro(s)`
+        : `${removidos} orçamento(s) removido(s) com sucesso`;
+      setToastMsg(msg);
+      setTimeout(() => setToastMsg(''), 4000);
+    } finally {
+      setRemovendo(false);
     }
   };
 
@@ -135,16 +193,60 @@ export function OrcamentosAprovacaoPage() {
         </div>
       )}
 
+      {/* Barra de seleção (quando houver selecionados) */}
+      {filtrados.length > 0 && (
+        <div className="flex items-center justify-between flex-wrap gap-md bg-surface-container-lowest border border-outline-variant rounded-xl p-lg">
+          <div className="flex items-center gap-md">
+            <input
+              type="checkbox"
+              checked={selecionados.size > 0 && selecionados.size === filtrados.length}
+              indeterminate={selecionados.size > 0 && selecionados.size < filtrados.length}
+              onChange={toggleTodosSelecionados}
+              className="w-5 h-5 rounded border-2 border-primary accent-primary cursor-pointer"
+            />
+            <label className="text-label-md text-on-surface-variant cursor-pointer">
+              {selecionados.size === 0
+                ? `Nenhum selecionado`
+                : selecionados.size === filtrados.length
+                  ? `Todos (${filtrados.length}) selecionados`
+                  : `${selecionados.size} de ${filtrados.length} selecionados`}
+            </label>
+          </div>
+
+          {selecionados.size > 0 && (
+            <button
+              onClick={handleRemoverSelecionados}
+              disabled={removendo}
+              className="flex items-center gap-sm px-lg py-2 bg-error text-on-error rounded-lg hover:bg-error/90 text-label-md font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {removendo ? 'progress_activity' : 'delete'}
+              </span>
+              {removendo ? 'Removendo…' : `Remover ${selecionados.size}`}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Lista de orçamentos */}
       {filtrados.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-md">
           {filtrados.map((orcamento) => (
-            <OrcamentoAprovacaoCard
-              key={orcamento.id}
-              orcamento={orcamento}
-              tiposDisp={TIPOS_ORCAMENTO}
-              onAprovado={handleAprovado}
-            />
+            <div key={orcamento.id} className="relative">
+              {/* Checkbox no canto superior direito */}
+              <input
+                type="checkbox"
+                checked={selecionados.has(orcamento.id)}
+                onChange={() => toggleSelecionado(orcamento.id)}
+                className="absolute top-3 right-3 w-5 h-5 rounded border-2 border-primary accent-primary cursor-pointer z-10"
+              />
+
+              <OrcamentoAprovacaoCard
+                orcamento={orcamento}
+                tiposDisp={TIPOS_ORCAMENTO}
+                onAprovado={handleAprovado}
+              />
+            </div>
           ))}
         </div>
       )}
