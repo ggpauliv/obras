@@ -82,8 +82,11 @@ export function OrcamentosAprovacaoPage() {
       return;
     }
 
-    // Itens a aprovar (apenas os filtrados)
-    const linhasAprovar = linhasPorOrc[orcamentoId] || [];
+    // Itens a aprovar (apenas os filtrados por categoria)
+    let linhasAprovar = linhasPorOrc[orcamentoId] || [];
+    if (tipo) {
+      linhasAprovar = linhasAprovar.filter(l => l.categoria === tipo);
+    }
     if (linhasAprovar.length === 0) {
       setToastMsg('Nenhum item para aprovar');
       setTimeout(() => setToastMsg(''), 4000);
