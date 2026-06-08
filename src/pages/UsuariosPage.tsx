@@ -3,6 +3,7 @@ import { listarUsuarios, salvarUsuario, removerUsuario } from '../store';
 import type { Usuario } from '../store';
 import type { Papel } from '../auth/users';
 import { useAuth } from '../auth/AuthContext';
+import { apiClient } from '../api/client';
 
 const ROLE_CHIP: Record<Papel, string> = {
   Admin: 'bg-gray-200 text-gray-800',
@@ -40,8 +41,16 @@ export default function UsuariosPage() {
   const [form, setForm] = useState<Usuario>(VAZIO);
   const [menuKey, setMenuKey] = useState<string | null>(null);
 
+  const [empresaNome, setEmpresaNome] = useState('');
   const recarregar = () => listarUsuarios().then(setUsuarios);
-  useEffect(() => { recarregar(); }, []);
+  useEffect(() => {
+    recarregar();
+    const ativa = localStorage.getItem('pawliv.empresaAtiva');
+    apiClient.listarEmpresas().then((es) => {
+      const e = es.find((x: any) => x.id === ativa) || es[0];
+      setEmpresaNome(e?.nome || '');
+    }).catch(() => {});
+  }, []);
 
   const novo = () => { setForm(VAZIO); setEditando(false); setModalOpen(true); };
   const editar = (u: Usuario) => { setForm({ ...u, senha: '' }); setEditando(true); setModalOpen(true); setMenuKey(null); };
@@ -77,6 +86,13 @@ export default function UsuariosPage() {
 
   return (
     <div className="space-y-lg">
+      <div>
+        <h2 className="text-headline-md font-bold text-on-surface">Usuários{empresaNome ? ` · ${empresaNome}` : ''}</h2>
+        <p className="text-body-sm text-on-surface-variant mt-1">
+          Usuários desta empresa.{logado?.isSuper ? ' Para outra empresa, troque o contexto em Empresas.' : ''}
+        </p>
+      </div>
+
       {/* Filtros e ações */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-md bg-white p-md rounded-lg border border-outline-variant shadow-sm">
         <div className="flex flex-1 items-center gap-sm max-w-2xl flex-wrap">
@@ -100,9 +116,9 @@ export default function UsuariosPage() {
       </div>
 
       {/* Tabela */}
-      <div className="bg-white rounded-lg border border-outline-variant shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[900px]">
+      <div className="bg-white rounded-lg border border-outline-variant shadow-sm">
+        <div>
+          <table className="w-full text-left border-collapse">
             <thead className="bg-surface-container-low">
               <tr className="border-b border-outline-variant">
                 {['Nome', 'Login (e-mail)', 'Papel', 'Status', 'Ações'].map((h) => (
@@ -123,7 +139,10 @@ export default function UsuariosPage() {
                     </div>
                   </td>
                   <td className="px-lg py-md text-body-sm text-on-surface-variant">{u.email}</td>
-                  <td className="px-lg py-md"><span className={`px-sm py-xs rounded text-[11px] font-bold uppercase ${ROLE_CHIP[u.papel]}`}>{u.papel}</span></td>
+                  <td className="px-lg py-md">
+                    <span className={`px-sm py-xs rounded text-[11px] font-bold uppercase ${ROLE_CHIP[u.papel]}`}>{u.papel}</span>
+                    {u.isSuper && <span className="ml-1 px-sm py-xs rounded text-[11px] font-bold uppercase bg-amber-100 text-amber-700">Super</span>}
+                  </td>
                   <td className="px-lg py-md">
                     {u.ativo ? (
                       <span className="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-full text-[11px] font-bold"><span className="w-1.5 h-1.5 rounded-full bg-green-600" /> Ativo</span>
@@ -185,6 +204,12 @@ export default function UsuariosPage() {
                 <input checked={form.ativo} onChange={(e) => set('ativo', e.target.checked)} className="w-4 h-4 rounded text-primary focus:ring-primary border-outline-variant" id="ativo" type="checkbox" />
                 <label className="text-body-sm text-on-surface" htmlFor="ativo">Usuário ativo (pode acessar o sistema)</label>
               </div>
+              {logado?.isSuper && (
+                <div className="flex items-center gap-sm">
+                  <input checked={!!form.isSuper} onChange={(e) => set('isSuper', e.target.checked)} className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-outline-variant" id="super" type="checkbox" />
+                  <label className="text-body-sm text-on-surface" htmlFor="super">Super-admin (acesso geral: cria empresas e gerencia tudo)</label>
+                </div>
+              )}
             </div>
             <div className="px-lg py-md border-t border-outline-variant bg-surface-container-low flex justify-end gap-md">
               <button onClick={() => setModalOpen(false)} className="px-lg py-2 rounded-lg text-label-md text-primary hover:bg-primary/10 transition-colors">Cancelar</button>

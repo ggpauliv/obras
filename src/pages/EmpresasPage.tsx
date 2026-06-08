@@ -75,7 +75,7 @@ export default function EmpresasPage() {
                 </td>
                 <td className="py-sm px-md">
                   <button onClick={() => editar(e)} className="p-xs text-outline hover:text-primary" title="Editar"><span className="material-symbols-outlined text-[18px]">edit</span></button>
-                  <button onClick={() => { trocarAtiva(e.id); navigate('/usuarios'); }} className="p-xs text-outline hover:text-primary" title="Gerenciar usuários"><span className="material-symbols-outlined text-[18px]">group</span></button>
+                  <button onClick={() => { localStorage.setItem('pawliv.empresaAtiva', e.id); setAtiva(e.id); navigate('/usuarios'); }} className="p-xs text-outline hover:text-primary" title="Gerenciar usuários desta empresa"><span className="material-symbols-outlined text-[18px]">group</span></button>
                 </td>
               </tr>
             ))}

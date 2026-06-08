@@ -10,6 +10,7 @@ export interface Usuario {
   papel: Papel;
   ativo: boolean;
   senha?: string;      // só no cadastro/edição; nunca volta do servidor
+  isSuper?: boolean;   // super-admin (acesso geral) — só super define
 }
 
 export async function listarUsuarios(): Promise<Usuario[]> {

@@ -294,9 +294,10 @@ app.post('/api/usuarios', autenticar, async (req, res) => {
       return res.status(409).json({ erro: 'Já existe um usuário com esse login/e-mail' });
     }
     const senhaHash = await bcryptjs.hash(senha, 10);
+    const isSuper = req.usuario.isSuper ? (req.body.isSuper === true) : false;
     const r = await db.query(
-      'INSERT INTO usuarios (nome, email, senha_hash, papel, ativo, empresa_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, nome, email, papel, ativo, empresa_id',
-      [nome, email, senhaHash, papel || 'Engenheiro', ativo !== false, emp]
+      'INSERT INTO usuarios (nome, email, senha_hash, papel, ativo, empresa_id, is_super) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, nome, email, papel, ativo, empresa_id, is_super',
+      [nome, email, senhaHash, papel || 'Engenheiro', ativo !== false, emp, isSuper]
     );
     res.status(201).json(r.rows[0]);
   } catch (error) {
@@ -310,16 +311,18 @@ app.put('/api/usuarios/:id', autenticar, async (req, res) => {
   try {
     if (!(await checarEmpresaDireta(req, res, 'usuarios', req.params.id))) return;
     const { nome, email, senha, papel, ativo } = req.body;
+    // is_super só pode ser alterado por super-admin
+    const setSuper = req.usuario.isSuper ? ', is_super=' + (req.body.isSuper === true ? 'TRUE' : 'FALSE') : '';
     let r;
     if (senha && senha.trim()) {
       const senhaHash = await bcryptjs.hash(senha, 10);
       r = await db.query(
-        'UPDATE usuarios SET nome=$1, email=$2, papel=$3, ativo=$4, senha_hash=$5, atualizado_em=NOW() WHERE id=$6 RETURNING id, nome, email, papel, ativo',
+        `UPDATE usuarios SET nome=$1, email=$2, papel=$3, ativo=$4, senha_hash=$5${setSuper}, atualizado_em=NOW() WHERE id=$6 RETURNING id, nome, email, papel, ativo, is_super`,
         [nome, email, papel, ativo, senhaHash, req.params.id]
       );
     } else {
       r = await db.query(
-        'UPDATE usuarios SET nome=$1, email=$2, papel=$3, ativo=$4, atualizado_em=NOW() WHERE id=$5 RETURNING id, nome, email, papel, ativo',
+        `UPDATE usuarios SET nome=$1, email=$2, papel=$3, ativo=$4${setSuper}, atualizado_em=NOW() WHERE id=$5 RETURNING id, nome, email, papel, ativo, is_super`,
         [nome, email, papel, ativo, req.params.id]
       );
     }
