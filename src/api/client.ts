@@ -196,6 +196,21 @@ class APIClient {
     return this.request(`/api/usuarios/${id}`, { method: 'DELETE' });
   }
 
+  // Ocorrências (Diário de Obra)
+  async listarOcorrencias(obraId?: string): Promise<any[]> {
+    const url = obraId ? `/api/ocorrencias?obraId=${obraId}` : '/api/ocorrencias';
+    return this.request(url);
+  }
+  async criarOcorrencia(dados: any): Promise<any> {
+    return this.request('/api/ocorrencias', { method: 'POST', body: dados });
+  }
+  async atualizarOcorrencia(id: string, dados: any): Promise<any> {
+    return this.request(`/api/ocorrencias/${id}`, { method: 'PUT', body: dados });
+  }
+  async deletarOcorrencia(id: string): Promise<any> {
+    return this.request(`/api/ocorrencias/${id}`, { method: 'DELETE' });
+  }
+
   // Auditoria
   async listarAuditoria(obraId?: string): Promise<any[]> {
     const url = obraId ? `/api/auditoria?obraId=${obraId}` : '/api/auditoria';

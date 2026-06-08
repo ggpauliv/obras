@@ -11,6 +11,7 @@ import ObraFasesPage from './pages/ObraFasesPage';
 import ObraFinanceiroPage from './pages/ObraFinanceiroPage';
 import ObraFotosPage from './pages/ObraFotosPage';
 import ObraAuditoriaPage from './pages/ObraAuditoriaPage';
+import ObraOcorrenciasPage from './pages/ObraOcorrenciasPage';
 import ProgressoPage from './pages/ProgressoPage';
 import ImportarPage from './pages/ImportarPage';
 import UsuariosPage from './pages/UsuariosPage';
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="/obra-financeiro" element={<ObraFinanceiroPage />} />
           <Route path="/obra-fotos" element={<ObraFotosPage />} />
           <Route path="/obra-auditoria" element={<ObraAuditoriaPage />} />
+          <Route path="/obra-ocorrencias" element={<ObraOcorrenciasPage />} />
           <Route path="/progresso" element={<ProgressoPage />} />
           <Route path="/importar" element={<ImportarPage />} />
           <Route path="/usuarios" element={<UsuariosPage />} />

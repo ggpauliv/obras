@@ -47,6 +47,7 @@ export const ROUTE_META: Record<string, RouteMeta> = {
   '/obra-financeiro': { title: 'Financeiro', breadcrumb: ['Obras', 'Edifício Horizonte', 'Financeiro'] },
   '/obra-fotos': { title: 'Fotos', breadcrumb: ['Obras', 'Edifício Horizonte', 'Fotos'] },
   '/obra-auditoria': { title: 'Auditoria', breadcrumb: ['Obras', 'Edifício Horizonte', 'Auditoria'] },
+  '/obra-ocorrencias': { title: 'Ocorrências', breadcrumb: ['Obras', 'Edifício Horizonte', 'Ocorrências'] },
   '/progresso': { title: 'Registro de Progresso', breadcrumb: ['Início', 'Progresso'] },
   '/importar': { title: 'Importar Documento', breadcrumb: ['Início', 'Importar Documento'] },
   '/orcamentos/upload': { title: 'Importar Orçamentos', breadcrumb: ['Início', 'Orçamentos', 'Importar'] },
@@ -62,6 +63,7 @@ export const OBRA_TABS: NavItem[] = [
   { label: 'Fases / Gantt', route: '/obra-fases', icon: 'account_tree' },
   { label: 'Financeiro', route: '/obra-financeiro', icon: 'payments' },
   { label: 'Fotos', route: '/obra-fotos', icon: 'photo_library' },
+  { label: 'Ocorrências', route: '/obra-ocorrencias', icon: 'event_note' },
   { label: 'Auditoria', route: '/obra-auditoria', icon: 'history' },
   { label: 'Importar', route: '/importar', icon: 'smart_toy' },
 ];

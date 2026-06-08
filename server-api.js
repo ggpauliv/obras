@@ -1466,6 +1466,57 @@ app.delete('/api/orcamentos/:id/itens', autenticar, async (req, res) => {
 });
 
 // ============================================
+// OCORRÊNCIAS (Diário de Obra)
+// ============================================
+app.get('/api/ocorrencias', autenticar, async (req, res) => {
+  try {
+    const { obraId } = req.query;
+    const r = await db.query(
+      `SELECT o.*, f.nome AS fase_nome FROM ocorrencias o
+       LEFT JOIN fases f ON o.fase_id = f.id
+       WHERE ($1::uuid IS NULL OR o.obra_id = $1) ORDER BY o.data_inicio DESC`,
+      [obraId || null]
+    );
+    res.json(r.rows);
+  } catch (e) { console.error('❌ listar ocorrencias', e); res.status(500).json({ erro: 'Erro ao listar ocorrências' }); }
+});
+
+app.post('/api/ocorrencias', autenticar, async (req, res) => {
+  try {
+    const { obraId, faseId, tipo, descricao, dataInicio, dataFim } = req.body;
+    if (!obraId || !tipo || !dataInicio) return res.status(400).json({ erro: 'obraId, tipo e dataInicio são obrigatórios' });
+    const r = await db.query(
+      `INSERT INTO ocorrencias (obra_id, fase_id, tipo, descricao, data_inicio, data_fim)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [obraId, faseId || null, tipo, descricao || null, dataInicio, dataFim || null]
+    );
+    await db.query('INSERT INTO auditoria (obra_id, tipo, titulo, descricao, usuario_id) VALUES ($1,$2,$3,$4,$5)',
+      [obraId, 'ocorrencia', `Ocorrência: ${tipo}`, descricao || tipo, req.usuario.id]);
+    res.status(201).json(r.rows[0]);
+  } catch (e) { console.error('❌ criar ocorrencia', e); res.status(500).json({ erro: 'Erro ao criar ocorrência' }); }
+});
+
+app.put('/api/ocorrencias/:id', autenticar, async (req, res) => {
+  try {
+    const { faseId, tipo, descricao, dataInicio, dataFim } = req.body;
+    const r = await db.query(
+      `UPDATE ocorrencias SET fase_id=$1, tipo=$2, descricao=$3, data_inicio=$4, data_fim=$5, atualizado_em=NOW()
+       WHERE id=$6 RETURNING *`,
+      [faseId || null, tipo, descricao || null, dataInicio, dataFim || null, req.params.id]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ erro: 'Ocorrência não encontrada' });
+    res.json(r.rows[0]);
+  } catch (e) { console.error('❌ atualizar ocorrencia', e); res.status(500).json({ erro: 'Erro ao atualizar ocorrência' }); }
+});
+
+app.delete('/api/ocorrencias/:id', autenticar, async (req, res) => {
+  try {
+    await db.query('DELETE FROM ocorrencias WHERE id = $1', [req.params.id]);
+    res.json({ sucesso: true });
+  } catch (e) { console.error('❌ excluir ocorrencia', e); res.status(500).json({ erro: 'Erro ao excluir ocorrência' }); }
+});
+
+// ============================================
 // PROCESSAMENTO DE DOCUMENTOS (GEMINI)
 // ============================================
 
@@ -1604,7 +1655,19 @@ async function garantirSchema() {
     // Permite status 'parcial' nos orçamentos (aprovação parcial)
     await db.query("ALTER TABLE orcamentos DROP CONSTRAINT IF EXISTS orcamentos_status_check");
     await db.query("ALTER TABLE orcamentos ADD CONSTRAINT orcamentos_status_check CHECK (status IN ('ativo','vencido','aceito','descartado','parcial'))");
-    console.log('✅ Schema verificado (papel + orcamento_id + linha_id + status parcial ok)');
+    // Diário de obra / ocorrências (chuva, problema, paralisação, etc.)
+    await db.query(`CREATE TABLE IF NOT EXISTS ocorrencias (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      obra_id UUID NOT NULL REFERENCES obras(id) ON DELETE CASCADE,
+      fase_id UUID REFERENCES fases(id) ON DELETE SET NULL,
+      tipo VARCHAR(50) NOT NULL,
+      descricao TEXT,
+      data_inicio TIMESTAMP NOT NULL,
+      data_fim TIMESTAMP,
+      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    console.log('✅ Schema verificado (papel + orcamento_id + linha_id + status parcial + ocorrencias ok)');
   } catch (e) {
     console.error('⚠️ Falha ao garantir schema:', e.message);
   }

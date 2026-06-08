@@ -85,6 +85,19 @@ CREATE TABLE auditoria (
   data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabela de ocorrências (diário de obra: chuva, problema, paralisação, etc.)
+CREATE TABLE ocorrencias (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  obra_id UUID NOT NULL REFERENCES obras(id) ON DELETE CASCADE,
+  fase_id UUID REFERENCES fases(id) ON DELETE SET NULL,
+  tipo VARCHAR(50) NOT NULL,
+  descricao TEXT,
+  data_inicio TIMESTAMP NOT NULL,
+  data_fim TIMESTAMP,
+  criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Índices para melhor performance
 CREATE INDEX idx_fases_obra_id ON fases(obra_id);
 CREATE INDEX idx_despesas_obra_id ON despesas(obra_id);
