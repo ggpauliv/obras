@@ -13,6 +13,13 @@ const fmt = (v: any) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minim
 const fmtK = (v: number) => v >= 1_000_000 ? `R$ ${(v / 1e6).toFixed(1)}M` : v >= 1000 ? `R$ ${(v / 1000).toFixed(0)}K` : fmt(v);
 const nomeDe = (o: any) => (o?.nome && String(o.nome).trim()) || o?.fornecedorNome || 'Fornecedor';
 const numero = (v: any) => Number(v) || 0;
+// Status REAL derivado dos itens aprovados (despesas existentes), não do campo salvo
+const statusReal = (o: any): 'ativo' | 'parcial' | 'aceito' => {
+  const ap = Number(o?.aprovadas) || 0, it = Number(o?.itens) || 0;
+  if (ap === 0) return 'ativo';
+  return ap >= it && it > 0 ? 'aceito' : 'parcial';
+};
+const rotuloStatus = (s: string) => s === 'aceito' ? 'Aprovado' : s === 'parcial' ? 'Parcial' : 'Pendente';
 
 export function OrcamentosPage() {
   const navigate = useNavigate();
@@ -30,6 +37,7 @@ export function OrcamentosPage() {
   const [acao, setAcao] = useState(false);            // aprovando/removendo
   const [menuExport, setMenuExport] = useState(false);
   const [exportando, setExportando] = useState(false);
+  const [expandComp, setExpandComp] = useState<Set<string>>(new Set());
   const reimportRef = React.useRef<HTMLInputElement>(null);
 
   const aviso = (m: string) => { setToast(m); setTimeout(() => setToast(''), 5000); };
@@ -73,7 +81,7 @@ export function OrcamentosPage() {
     let l = todos.filter(o => {
       const nome = nomeDe(o).toLowerCase();
       const okBusca = !q || nome.includes(q);
-      const okStatus = !filtroStatus || (o.status || 'ativo') === filtroStatus;
+      const okStatus = !filtroStatus || statusReal(o) === filtroStatus;
       return okBusca && okStatus;
     });
     l = [...l].sort((a, b) => ordenar === 'valor' ? numero(a.valorTotal) - numero(b.valorTotal) : nomeDe(a).localeCompare(nomeDe(b)));
@@ -122,6 +130,18 @@ export function OrcamentosPage() {
       setSel(prev => { const s = new Set(prev); s.delete(o.id); return s; });
       await recarregar();
       aviso('Orçamento removido');
+    } catch (e: any) { aviso('Erro: ' + e.message); }
+    setAcao(false);
+  };
+
+  const excluirSelecionados = async () => {
+    if (!window.confirm(`Excluir ${sel.size} orçamento(s)? Esta ação não pode ser desfeita.`)) return;
+    setAcao(true);
+    try {
+      for (const id of Array.from(sel)) await apiClient.deletarOrcamento(id);
+      setSel(new Set());
+      await recarregar();
+      aviso('Orçamentos removidos');
     } catch (e: any) { aviso('Erro: ' + e.message); }
     setAcao(false);
   };
@@ -221,6 +241,11 @@ export function OrcamentosPage() {
               )}
             </div>
           )}
+          {sel.size >= 2 && (
+            <button onClick={excluirSelecionados} disabled={acao} className="flex items-center gap-xs px-lg py-2 bg-error/10 text-error rounded-lg hover:bg-error/20 text-label-md disabled:opacity-50">
+              <span className="material-symbols-outlined text-[18px]">delete</span> Excluir ({sel.size})
+            </button>
+          )}
           <input ref={reimportRef} type="file" accept=".xlsx" className="hidden" onChange={e => reimportar(e.target.files?.[0])} />
           <button onClick={() => reimportRef.current?.click()} disabled={exportando} className="flex items-center gap-xs px-lg py-2 border border-outline-variant rounded-lg hover:bg-surface-container-low text-label-md disabled:opacity-50"><span className="material-symbols-outlined text-[18px]">sync</span> Reimportar</button>
           <button onClick={() => navigate('/orcamentos/upload')} className="flex items-center gap-xs px-lg py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 text-label-md"><span className="material-symbols-outlined text-[18px]">upload_file</span> Importar</button>
@@ -286,7 +311,7 @@ export function OrcamentosPage() {
                     </div>
                     <div className="flex items-center justify-between mt-xs pl-7">
                       <span className="text-body-sm text-on-surface-variant">{fmt(o.valorTotal)}</span>
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusChip(o.status || 'ativo')}`}>{o.status === 'aceito' ? 'Aprovado' : o.status === 'parcial' ? 'Parcial' : 'Pendente'}</span>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusChip(statusReal(o))}`}>{rotuloStatus(statusReal(o))}</span>
                     </div>
                   </button>
                 );
@@ -432,6 +457,52 @@ export function OrcamentosPage() {
                     })}
                   </div>
                 </div>
+                {/* Itens por fornecedor (detalhe) */}
+                <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg">
+                  <h3 className="text-label-lg font-semibold text-on-surface mb-md">Itens por Fornecedor</h3>
+                  <div className="flex flex-col gap-sm">
+                    {selecionados.map(o => {
+                      const aberto = expandComp.has(o.id);
+                      const linhas = linhasPorOrc[o.id] || [];
+                      return (
+                        <div key={o.id} className="border border-outline-variant rounded-lg overflow-hidden">
+                          <button onClick={() => setExpandComp(prev => { const s = new Set(prev); s.has(o.id) ? s.delete(o.id) : s.add(o.id); return s; })}
+                            className="w-full flex items-center justify-between px-md py-sm hover:bg-surface-container-low">
+                            <span className="flex items-center gap-sm min-w-0">
+                              <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: coresPorId[o.id] }} />
+                              <span className="text-label-md font-medium text-on-surface truncate">{nomeDe(o)}</span>
+                              <span className="text-body-sm text-on-surface-variant whitespace-nowrap">{linhas.length} itens · {fmt(o.valorTotal)}</span>
+                            </span>
+                            <span className="material-symbols-outlined text-outline transition-transform" style={{ transform: aberto ? 'rotate(180deg)' : 'none' }}>expand_more</span>
+                          </button>
+                          {aberto && (
+                            <div className="overflow-x-auto border-t border-outline-variant">
+                              <table className="w-full text-body-sm min-w-[560px]">
+                                <thead className="bg-surface-container-low">
+                                  <tr>
+                                    {['Item', 'Descrição', 'Categoria', 'Qtd', 'Total'].map(h => <th key={h} className="py-xs px-md text-left text-label-sm text-on-surface-variant whitespace-nowrap">{h}</th>)}
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-outline-variant/30">
+                                  {linhas.map((l: any, i: number) => (
+                                    <tr key={i} className="hover:bg-surface-container-low/50">
+                                      <td className="py-xs px-md text-on-surface-variant whitespace-nowrap">{l.itemNumero}</td>
+                                      <td className="py-xs px-md text-on-surface">{l.descricao}</td>
+                                      <td className="py-xs px-md text-on-surface-variant">{l.categoria}</td>
+                                      <td className="py-xs px-md text-on-surface-variant text-right whitespace-nowrap">{numero(l.quantidade)}</td>
+                                      <td className="py-xs px-md text-on-surface font-medium text-right whitespace-nowrap">{fmt(l.valorTotal)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <p className="text-body-sm text-on-surface-variant text-center">Para aprovar itens/categorias, selecione apenas <strong>um</strong> orçamento na lista.</p>
               </div>
             )}

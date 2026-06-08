@@ -724,7 +724,9 @@ app.get('/api/orcamentos', autenticar, async (req, res) => {
 
     let query = `SELECT o.id, o.obra_id, o.fornecedor_id, o.nome, o.descricao, o.valor_total,
       o.prazo_dias, o.tipo_orcamento, o.status, o.data_envio, o.data_emissao, o.numero_cotacao, o.criado_em,
-      f.nome as fornecedor_nome
+      f.nome as fornecedor_nome,
+      (SELECT COUNT(*) FROM linhas_orcamento lo WHERE lo.orcamento_id = o.id) AS itens,
+      (SELECT COUNT(DISTINCT d.linha_id) FROM despesas d WHERE d.orcamento_id = o.id AND d.linha_id IS NOT NULL) AS aprovadas
       FROM orcamentos o
       LEFT JOIN fornecedores f ON o.fornecedor_id = f.id`;
     let params = [];
