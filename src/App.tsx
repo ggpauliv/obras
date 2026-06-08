@@ -15,6 +15,7 @@ import ObraOcorrenciasPage from './pages/ObraOcorrenciasPage';
 import ProgressoPage from './pages/ProgressoPage';
 import ImportarPage from './pages/ImportarPage';
 import UsuariosPage from './pages/UsuariosPage';
+import EmpresasPage from './pages/EmpresasPage';
 import ConfiguracoesPage from './pages/ConfiguracoesPage';
 import { OrcamentosUploadPage } from './pages/OrcamentosUploadPage';
 import { OrcamentosPage } from './pages/OrcamentosPage';
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="/progresso" element={<ProgressoPage />} />
           <Route path="/importar" element={<ImportarPage />} />
           <Route path="/usuarios" element={<UsuariosPage />} />
+          <Route path="/empresas" element={<EmpresasPage />} />
           <Route path="/configuracoes" element={<ConfiguracoesPage />} />
           <Route path="/orcamentos/upload" element={<OrcamentosUploadPage />} />
           <Route path="/orcamentos/comparativa" element={<OrcamentosPage />} />

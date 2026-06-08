@@ -36,9 +36,9 @@ function autenticar(req, res, next) {
 /**
  * Cria um token JWT para um usuário
  */
-function gerarToken(usuarioId, email) {
+function gerarToken(usuarioId, email, empresaId, isSuper) {
   return jwt.sign(
-    { id: usuarioId, email },
+    { id: usuarioId, email, empresaId: empresaId || null, isSuper: !!isSuper },
     JWT_SECRET,
     { expiresIn: '24h' }
   );

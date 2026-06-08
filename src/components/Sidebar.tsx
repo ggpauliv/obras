@@ -85,7 +85,8 @@ interface SidebarProps {
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, usuario } = useAuth();
+  const itens = NAV_ITEMS.filter((i) => !i.superOnly || usuario?.isSuper);
 
   return (
     <nav
@@ -110,7 +111,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
       {/* Navegação */}
       <div className="flex-1 overflow-y-auto space-y-sm mt-md">
-        {NAV_ITEMS.map((item) => (
+        {itens.map((item) => (
           item.submenu ? (
             <SidebarMenuWithSubmenu key={item.label} item={item} onClose={onClose} />
           ) : (

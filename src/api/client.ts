@@ -58,6 +58,9 @@ class APIClient {
     if (this.token) {
       finalHeaders.Authorization = `Bearer ${this.token}`;
     }
+    // Empresa ativa (multi-tenant): super-admin usa para escolher o contexto
+    const empresaAtiva = localStorage.getItem('pawliv.empresaAtiva');
+    if (empresaAtiva) finalHeaders['x-empresa-id'] = empresaAtiva;
 
     const config: RequestInit = {
       method,
@@ -194,6 +197,17 @@ class APIClient {
   }
   async deletarUsuario(id: string): Promise<any> {
     return this.request(`/api/usuarios/${id}`, { method: 'DELETE' });
+  }
+
+  // Empresas (multi-tenant)
+  async listarEmpresas(): Promise<any[]> {
+    return this.request('/api/empresas');
+  }
+  async criarEmpresa(dados: any): Promise<any> {
+    return this.request('/api/empresas', { method: 'POST', body: dados });
+  }
+  async atualizarEmpresa(id: string, dados: any): Promise<any> {
+    return this.request(`/api/empresas/${id}`, { method: 'PUT', body: dados });
   }
 
   // Ocorrências (Diário de Obra)

@@ -32,6 +32,20 @@ function sanitizeNumero(val) {
   return parseFloat(clamped.toFixed(2));
 }
 
+// Empresa (tenant) efetiva da requisição:
+// - usuário normal: a empresa dele;
+// - super-admin: a empresa escolhida no contexto (header x-empresa-id), ou null.
+function empresaDaReq(req) {
+  if (req.usuario && req.usuario.isSuper) {
+    return req.headers['x-empresa-id'] || null;
+  }
+  return (req.usuario && req.usuario.empresaId) || null;
+}
+function exigeSuper(req, res) {
+  if (!req.usuario || !req.usuario.isSuper) { res.status(403).json({ erro: 'Apenas o super-admin pode fazer isso' }); return false; }
+  return true;
+}
+
 // Importar módulos customizados
 const db = require('./db-client');
 const { autenticar, gerarToken } = require('./auth-middleware');
@@ -116,7 +130,7 @@ app.post('/api/auth/login', async (req, res) => {
         return res.status(401).json({ erro: 'Email ou senha inválidos' });
       }
 
-      const token = gerarToken(usuario.id, usuario.email);
+      const token = gerarToken(usuario.id, usuario.email, usuario.empresa_id, usuario.is_super);
 
       res.json({
         sucesso: true,
@@ -126,6 +140,8 @@ app.post('/api/auth/login', async (req, res) => {
           nome: usuario.nome,
           email: usuario.email,
           papel: usuario.papel || 'Admin',
+          empresaId: usuario.empresa_id || null,
+          isSuper: !!usuario.is_super,
         },
       });
     });
@@ -177,10 +193,52 @@ app.post('/api/auth/register', async (req, res) => {
 // USUÁRIOS (gestão)
 // ============================================
 
+// ============================================
+// EMPRESAS (multi-tenant) — gestão restrita ao super-admin
+// ============================================
+app.get('/api/empresas', autenticar, async (req, res) => {
+  try {
+    if (req.usuario.isSuper) {
+      const r = await db.query('SELECT id, nome, cnpj, ativo, criado_em FROM empresas ORDER BY nome');
+      return res.json(r.rows);
+    }
+    // usuário normal vê só a própria (para exibir o nome)
+    const r = await db.query('SELECT id, nome, cnpj, ativo FROM empresas WHERE id = $1', [req.usuario.empresaId]);
+    res.json(r.rows);
+  } catch (e) { console.error('❌ listar empresas', e); res.status(500).json({ erro: 'Erro ao listar empresas' }); }
+});
+app.post('/api/empresas', autenticar, async (req, res) => {
+  if (!exigeSuper(req, res)) return;
+  try {
+    const { nome, cnpj } = req.body;
+    if (!nome || !nome.trim()) return res.status(400).json({ erro: 'Nome é obrigatório' });
+    const r = await db.query('INSERT INTO empresas (nome, cnpj) VALUES ($1,$2) RETURNING id, nome, cnpj, ativo', [nome.trim(), cnpj || null]);
+    res.status(201).json(r.rows[0]);
+  } catch (e) { console.error('❌ criar empresa', e); res.status(500).json({ erro: 'Erro ao criar empresa' }); }
+});
+app.put('/api/empresas/:id', autenticar, async (req, res) => {
+  if (!exigeSuper(req, res)) return;
+  try {
+    const { nome, cnpj, ativo } = req.body;
+    const r = await db.query('UPDATE empresas SET nome=$1, cnpj=$2, ativo=$3 WHERE id=$4 RETURNING id, nome, cnpj, ativo',
+      [nome, cnpj || null, ativo !== false, req.params.id]);
+    if (r.rows.length === 0) return res.status(404).json({ erro: 'Empresa não encontrada' });
+    res.json(r.rows[0]);
+  } catch (e) { console.error('❌ atualizar empresa', e); res.status(500).json({ erro: 'Erro ao atualizar empresa' }); }
+});
+
 // GET /api/usuarios
 app.get('/api/usuarios', autenticar, async (req, res) => {
   try {
-    const r = await db.query('SELECT id, nome, email, papel, ativo FROM usuarios ORDER BY criado_em');
+    const emp = empresaDaReq(req);
+    let r;
+    if (emp) {
+      r = await db.query('SELECT id, nome, email, papel, ativo, empresa_id, is_super FROM usuarios WHERE empresa_id = $1 ORDER BY criado_em', [emp]);
+    } else if (req.usuario.isSuper) {
+      r = await db.query('SELECT id, nome, email, papel, ativo, empresa_id, is_super FROM usuarios ORDER BY criado_em');
+    } else {
+      r = { rows: [] };
+    }
     res.json(r.rows);
   } catch (error) {
     console.error('❌ Erro ao listar usuários:', error);
@@ -193,17 +251,19 @@ app.post('/api/usuarios', autenticar, async (req, res) => {
   try {
     const { nome, senha, papel, ativo } = req.body;
     const email = String(req.body.email || '').trim();
+    const emp = empresaDaReq(req);
     if (!nome || !email || !senha) {
       return res.status(400).json({ erro: 'Nome, login (e-mail) e senha são obrigatórios' });
     }
+    if (!emp) return res.status(400).json({ erro: 'Selecione uma empresa antes de cadastrar o usuário' });
     const existing = await db.query('SELECT id FROM usuarios WHERE LOWER(email) = LOWER($1)', [email]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ erro: 'Já existe um usuário com esse login/e-mail' });
     }
     const senhaHash = await bcryptjs.hash(senha, 10);
     const r = await db.query(
-      'INSERT INTO usuarios (nome, email, senha_hash, papel, ativo) VALUES ($1, $2, $3, $4, $5) RETURNING id, nome, email, papel, ativo',
-      [nome, email, senhaHash, papel || 'Engenheiro', ativo !== false]
+      'INSERT INTO usuarios (nome, email, senha_hash, papel, ativo, empresa_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, nome, email, papel, ativo, empresa_id',
+      [nome, email, senhaHash, papel || 'Engenheiro', ativo !== false, emp]
     );
     res.status(201).json(r.rows[0]);
   } catch (error) {
@@ -258,12 +318,18 @@ app.delete('/api/usuarios/:id', autenticar, async (req, res) => {
 // OBRAS
 // ============================================
 
-// GET /api/obras
+// GET /api/obras (escopo por empresa)
 app.get('/api/obras', autenticar, async (req, res) => {
   try {
-    const result = await db.query(
-      'SELECT id, nome, cliente, tipo, inicio, termino, pct, status FROM obras ORDER BY criado_em DESC'
-    );
+    const emp = empresaDaReq(req);
+    let result;
+    if (emp) {
+      result = await db.query('SELECT id, nome, cliente, tipo, inicio, termino, pct, status FROM obras WHERE empresa_id = $1 ORDER BY criado_em DESC', [emp]);
+    } else if (req.usuario.isSuper) {
+      result = await db.query('SELECT id, nome, cliente, tipo, inicio, termino, pct, status FROM obras ORDER BY criado_em DESC');
+    } else {
+      result = { rows: [] };
+    }
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Erro ao listar obras:', error);
@@ -298,10 +364,12 @@ app.post('/api/obras', autenticar, async (req, res) => {
     if (!nome || !cliente || !inicio || !termino) {
       return res.status(400).json({ erro: 'Campos obrigatórios: nome, cliente, inicio, termino' });
     }
+    const emp = empresaDaReq(req);
+    if (!emp) return res.status(400).json({ erro: 'Selecione uma empresa antes de criar a obra' });
 
     const result = await db.query(
-      'INSERT INTO obras (nome, cliente, tipo, inicio, termino, pct, status) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-      [nome, cliente, tipo, inicio, termino, pct || 0, status || 'planejamento']
+      'INSERT INTO obras (nome, cliente, tipo, inicio, termino, pct, status, empresa_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+      [nome, cliente, tipo, inicio, termino, pct || 0, status || 'planejamento', emp]
     );
 
     // Registrar auditoria
@@ -590,12 +658,18 @@ app.delete('/api/despesas/:id', autenticar, async (req, res) => {
 // FORNECEDORES
 // ============================================
 
-// GET /api/fornecedores
+// GET /api/fornecedores (escopo por empresa)
 app.get('/api/fornecedores', autenticar, async (req, res) => {
   try {
-    const result = await db.query(
-      'SELECT id, nome, categoria, cnpj, contato, status FROM fornecedores ORDER BY nome'
-    );
+    const emp = empresaDaReq(req);
+    let result;
+    if (emp) {
+      result = await db.query('SELECT id, nome, categoria, cnpj, contato, status FROM fornecedores WHERE empresa_id = $1 ORDER BY nome', [emp]);
+    } else if (req.usuario.isSuper) {
+      result = await db.query('SELECT id, nome, categoria, cnpj, contato, status FROM fornecedores ORDER BY nome');
+    } else {
+      result = { rows: [] };
+    }
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Erro ao listar fornecedores:', error);
@@ -611,10 +685,11 @@ app.post('/api/fornecedores', autenticar, async (req, res) => {
     if (!nome) {
       return res.status(400).json({ erro: 'Campo obrigatório: nome' });
     }
+    const emp = empresaDaReq(req);
 
     const result = await db.query(
-      'INSERT INTO fornecedores (nome, categoria, cnpj, contato, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [nome, categoria, cnpj, contato, status || 'ativo']
+      'INSERT INTO fornecedores (nome, categoria, cnpj, contato, status, empresa_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [nome, categoria, cnpj, contato, status || 'ativo', emp]
     );
 
     // Registrar auditoria
@@ -1670,7 +1745,26 @@ async function garantirSchema() {
       atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
     await db.query("ALTER TABLE ocorrencias ADD COLUMN IF NOT EXISTS impacto_dias INTEGER");
-    console.log('✅ Schema verificado (papel + orcamento_id + linha_id + status parcial + ocorrencias ok)');
+
+    // ── Multi-empresa (multi-tenant) ──
+    await db.query(`CREATE TABLE IF NOT EXISTS empresas (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      nome VARCHAR(255) NOT NULL,
+      cnpj VARCHAR(18),
+      ativo BOOLEAN DEFAULT TRUE,
+      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await db.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS empresa_id UUID");
+    await db.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS is_super BOOLEAN DEFAULT FALSE");
+    await db.query("ALTER TABLE obras ADD COLUMN IF NOT EXISTS empresa_id UUID");
+    await db.query("ALTER TABLE fornecedores ADD COLUMN IF NOT EXISTS empresa_id UUID");
+    // Empresa padrão + backfill dos dados existentes
+    await db.query("INSERT INTO empresas (nome) SELECT 'Vaccinar' WHERE NOT EXISTS (SELECT 1 FROM empresas)");
+    await db.query("UPDATE obras SET empresa_id = (SELECT id FROM empresas ORDER BY criado_em LIMIT 1) WHERE empresa_id IS NULL");
+    await db.query("UPDATE fornecedores SET empresa_id = (SELECT id FROM empresas ORDER BY criado_em LIMIT 1) WHERE empresa_id IS NULL");
+    await db.query("UPDATE usuarios SET empresa_id = (SELECT id FROM empresas ORDER BY criado_em LIMIT 1) WHERE empresa_id IS NULL");
+    await db.query("UPDATE usuarios SET is_super = TRUE WHERE email = 'ggpauliv'");
+    console.log('✅ Schema verificado (multi-empresa + ocorrencias + orçamentos ok)');
   } catch (e) {
     console.error('⚠️ Falha ao garantir schema:', e.message);
   }

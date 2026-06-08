@@ -3,6 +3,7 @@ export interface NavItem {
   route?: string;
   icon: string; // Material Symbols name
   disabled?: boolean;
+  superOnly?: boolean; // visível apenas para super-admin
   submenu?: NavItem[];
 }
 
@@ -24,6 +25,7 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: 'Usuários', route: '/usuarios', icon: 'group' },
+  { label: 'Empresas', route: '/empresas', icon: 'apartment', superOnly: true },
 ];
 
 export const SETTINGS_ITEM: NavItem = {
@@ -54,6 +56,7 @@ export const ROUTE_META: Record<string, RouteMeta> = {
   '/orcamentos/comparativa': { title: 'Orçamentos', breadcrumb: ['Início', 'Orçamentos', 'Análise & Aprovação'] },
   '/orcamentos/aprovacao': { title: 'Orçamentos', breadcrumb: ['Início', 'Orçamentos', 'Análise & Aprovação'] },
   '/usuarios': { title: 'Usuários', breadcrumb: ['Início', 'Usuários'] },
+  '/empresas': { title: 'Empresas', breadcrumb: ['Início', 'Empresas'] },
   '/configuracoes': { title: 'Configurações', breadcrumb: ['Início', 'Configurações'] },
 };
 

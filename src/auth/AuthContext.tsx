@@ -9,6 +9,8 @@ interface SessaoUsuario {
   nome: string;
   email: string;
   papel: Papel;
+  empresaId: string | null;
+  isSuper: boolean;
 }
 
 interface AuthContextValue {
@@ -47,9 +49,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         nome: resp.usuario.nome,
         email: resp.usuario.email,
         papel: resp.usuario.papel || 'Admin',
+        empresaId: resp.usuario.empresaId ?? null,
+        isSuper: !!resp.usuario.isSuper,
       };
       setUsuario(sessao);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(sessao));
+      // Empresa ativa inicial = empresa do usuário
+      if (resp.usuario.empresaId) localStorage.setItem('pawliv.empresaAtiva', resp.usuario.empresaId);
       return true;
     } catch {
       return false;
@@ -60,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUsuario(null);
     apiClient.clearToken();
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('pawliv.empresaAtiva');
   }, []);
 
   const can = useCallback((_permissao: string) => usuario !== null, [usuario]);
