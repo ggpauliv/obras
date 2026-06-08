@@ -158,7 +158,7 @@ export default function ObraOcorrenciasPage() {
               <button onClick={() => setModalOpen(false)} className="p-xs text-outline hover:text-error rounded-md"><span className="material-symbols-outlined">close</span></button>
             </div>
             <div className="p-lg space-y-md bg-surface-bright">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-md items-end">
                 <div>
                   <label className="block text-label-sm text-on-surface mb-1">Tipo *</label>
                   <select className={FIELD} value={form.tipo} onChange={e => setCampo('tipo', e.target.value)}>
@@ -177,7 +177,7 @@ export default function ObraOcorrenciasPage() {
                   <input type="datetime-local" className={FIELD} value={form.dataInicio} onChange={e => setCampo('dataInicio', e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-label-sm text-on-surface mb-1">Fim <span className="text-outline text-xs">(deixe em branco se ainda em aberto)</span></label>
+                  <label className="block text-label-sm text-on-surface mb-1">Fim <span className="text-outline text-xs">(vazio = em aberto)</span></label>
                   <input type="datetime-local" className={FIELD} value={form.dataFim || ''} onChange={e => setCampo('dataFim', e.target.value || null)} />
                 </div>
                 <div className="sm:col-span-2">
