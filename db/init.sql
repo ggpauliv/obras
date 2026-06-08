@@ -94,6 +94,7 @@ CREATE TABLE ocorrencias (
   descricao TEXT,
   data_inicio TIMESTAMP NOT NULL,
   data_fim TIMESTAMP,
+  impacto_dias INTEGER,
   criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

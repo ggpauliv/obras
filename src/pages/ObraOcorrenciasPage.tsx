@@ -3,6 +3,7 @@ import ObraHeader from '../components/ObraHeader';
 import { getObraAtivaId, listarFases } from '../store';
 import type { Fase } from '../store';
 import { apiClient } from '../api/client';
+import { impactoAuto, impactoEfetivo, impactoTotal } from '../utils/ocorrencias';
 
 const TIPOS = ['Chuva', 'Problema', 'Atraso', 'Paralisação', 'Acidente', 'Visita técnica', 'Entrega', 'Inspeção', 'Outro'];
 
@@ -35,7 +36,7 @@ function duracao(ini: any, fim: any): string {
 
 interface Ocorrencia {
   id?: string; obraId: string; faseId: string | null; tipo: string; descricao: string;
-  dataInicio: string; dataFim: string | null; faseNome?: string;
+  dataInicio: string; dataFim: string | null; impactoDias: string | number | null; faseNome?: string;
 }
 
 export default function ObraOcorrenciasPage() {
@@ -53,11 +54,11 @@ export default function ObraOcorrenciasPage() {
   }, [obraId]); // eslint-disable-line
 
   const nova = () => {
-    setForm({ obraId, faseId: null, tipo: 'Chuva', descricao: '', dataInicio: new Date().toISOString().slice(0, 16), dataFim: null });
+    setForm({ obraId, faseId: null, tipo: 'Chuva', descricao: '', dataInicio: new Date().toISOString().slice(0, 16), dataFim: null, impactoDias: '' });
     setModalOpen(true);
   };
   const editar = (o: any) => {
-    setForm({ id: o.id, obraId, faseId: o.faseId || null, tipo: o.tipo, descricao: o.descricao || '', dataInicio: paraInput(o.dataInicio), dataFim: o.dataFim ? paraInput(o.dataFim) : null });
+    setForm({ id: o.id, obraId, faseId: o.faseId || null, tipo: o.tipo, descricao: o.descricao || '', dataInicio: paraInput(o.dataInicio), dataFim: o.dataFim ? paraInput(o.dataFim) : null, impactoDias: o.impactoDias ?? '' });
     setModalOpen(true);
   };
   const excluir = async (id: string) => {
@@ -67,7 +68,7 @@ export default function ObraOcorrenciasPage() {
   };
   const salvar = async () => {
     if (!form || !form.tipo || !form.dataInicio) { alert('Informe tipo e data de início.'); return; }
-    const payload = { obraId, faseId: form.faseId, tipo: form.tipo, descricao: form.descricao, dataInicio: form.dataInicio, dataFim: form.dataFim || null };
+    const payload = { obraId, faseId: form.faseId, tipo: form.tipo, descricao: form.descricao, dataInicio: form.dataInicio, dataFim: form.dataFim || null, impactoDias: form.impactoDias === '' ? null : form.impactoDias };
     try {
       if (form.id) await apiClient.atualizarOcorrencia(form.id, payload);
       else await apiClient.criarOcorrencia(payload);
@@ -79,6 +80,7 @@ export default function ObraOcorrenciasPage() {
 
   const filtrados = filtroTipo ? lista.filter(o => o.tipo === filtroTipo) : lista;
   const emAberto = lista.filter(o => !o.dataFim).length;
+  const totalImpacto = impactoTotal(lista);
 
   return (
     <div className="flex flex-col gap-lg">
@@ -96,6 +98,17 @@ export default function ObraOcorrenciasPage() {
           <span className="material-symbols-outlined text-[20px]">add</span> Nova Ocorrência
         </button>
       </div>
+
+      {/* Impacto acumulado no prazo */}
+      {totalImpacto > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-md flex items-center gap-md">
+          <span className="material-symbols-outlined text-amber-600 text-[28px]">running_with_errors</span>
+          <div>
+            <p className="text-label-md font-semibold text-amber-800">Impacto acumulado no prazo: +{totalImpacto} dia(s)</p>
+            <p className="text-body-sm text-amber-700">Soma do impacto das ocorrências. A "Previsão ajustada" aparece na Visão Geral.</p>
+          </div>
+        </div>
+      )}
 
       <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm">
         {filtrados.length === 0 ? (
@@ -122,6 +135,7 @@ export default function ObraOcorrenciasPage() {
                     {o.descricao && <p className="text-body-sm text-on-surface-variant mt-1">{o.descricao}</p>}
                     <p className="text-body-sm text-on-surface-variant mt-1">
                       {fmtData(o.dataInicio)}{o.dataFim ? ` → ${fmtData(o.dataFim)}` : ''} · <span className="font-medium">{duracao(o.dataInicio, o.dataFim)}</span>
+                      {impactoEfetivo(o) > 0 && <span className="text-amber-700"> · impacto: {impactoEfetivo(o)} dia(s)</span>}
                     </p>
                   </div>
                   <div className="flex gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
@@ -165,6 +179,14 @@ export default function ObraOcorrenciasPage() {
                 <div>
                   <label className="block text-label-sm text-on-surface mb-1">Fim <span className="text-outline text-xs">(deixe em branco se ainda em aberto)</span></label>
                   <input type="datetime-local" className={FIELD} value={form.dataFim || ''} onChange={e => setCampo('dataFim', e.target.value || null)} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-label-sm text-on-surface mb-1">
+                    Impacto no prazo (dias) <span className="text-outline text-xs">(em branco = automático pela duração; 0 = não atrasa)</span>
+                  </label>
+                  <input type="number" min={0} className={FIELD} value={form.impactoDias ?? ''}
+                    onChange={e => setCampo('impactoDias', e.target.value)}
+                    placeholder={`Automático: ${impactoAuto({ ...form, impactoDias: '' })} dia(s)`} />
                 </div>
               </div>
               <div>

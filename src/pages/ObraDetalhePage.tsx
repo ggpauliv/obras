@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import ObraHeader from '../components/ObraHeader';
 import { getObraAtivaId, obterObra, listarFases, listarDespesas } from '../store';
 import type { Obra, Fase, Despesa, FaseStatus } from '../store';
+import { apiClient } from '../api/client';
+import { impactoTotal } from '../utils/ocorrencias';
 
 const STATUS_INFO: Record<FaseStatus, { label: string; bar: string; text: string; iconWrap: string; icon: string }> = {
   concluida: { label: 'Concluída', bar: 'bg-[#16A34A]', text: 'text-[#16A34A] font-bold', iconWrap: 'bg-[#16A34A]/10 text-[#16A34A]', icon: 'check' },
@@ -31,6 +33,7 @@ export default function ObraDetalhePage() {
   const [obra, setObra] = useState<Obra | undefined>();
   const [fases, setFases] = useState<Fase[]>([]);
   const [despesas, setDespesas] = useState<Despesa[]>([]);
+  const [ocorrencias, setOcorrencias] = useState<any[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -43,14 +46,9 @@ export default function ObraDetalhePage() {
         setErro('Erro ao carregar dados da obra');
         setObra(undefined);
       }),
-      listarFases(obraId).then(setFases).catch(err => {
-        console.error('Erro ao carregar fases:', err);
-        setFases([]);
-      }),
-      listarDespesas(obraId).then(setDespesas).catch(err => {
-        console.error('Erro ao carregar despesas:', err);
-        setDespesas([]);
-      }),
+      listarFases(obraId).then(setFases).catch(() => setFases([])),
+      listarDespesas(obraId).then(setDespesas).catch(() => setDespesas([])),
+      apiClient.listarOcorrencias(obraId).then(setOcorrencias).catch(() => setOcorrencias([])),
     ]).finally(() => setCarregando(false));
   }, [obraId]);
 
@@ -73,6 +71,12 @@ export default function ObraDetalhePage() {
   const totalDias = ini && fim ? Math.max(1, Math.round((fim - ini) / 86400000)) : null;
   const diasCorridos = ini ? Math.max(0, Math.round((hoje - ini) / 86400000)) : null;
   const pctTempo = totalDias && diasCorridos != null ? Math.min(100, (diasCorridos / totalDias) * 100) : null;
+
+  // Impacto das ocorrências no prazo → previsão ajustada de entrega
+  const impacto = impactoTotal(ocorrencias);
+  const baseTermino = parseBR(obra?.termino || '') ?? fim;
+  const terminoAjustado = baseTermino != null ? baseTermino + impacto * 86400000 : null;
+  const fmtDia = (ts: number | null) => ts != null ? new Date(ts).toLocaleDateString('pt-BR') : '—';
 
   if (carregando) {
     return (
@@ -104,7 +108,7 @@ export default function ObraDetalhePage() {
       <ObraHeader />
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-gutter">
         <Kpi>
           <div className="flex justify-between items-start">
             <h3 className="text-label-md text-on-surface-variant uppercase tracking-wider">Progresso Geral</h3>
@@ -143,6 +147,20 @@ export default function ObraDetalhePage() {
           </div>
           <div className="flex items-end gap-sm"><span className="text-display-lg text-on-surface font-bold">{fmt(totalDespesas)}</span></div>
           <p className="text-body-sm text-on-surface-variant mt-1">{despesas.length} lançamento(s) · veja em Financeiro</p>
+        </Kpi>
+        <Kpi>
+          <div className="flex justify-between items-start">
+            <h3 className="text-label-md text-on-surface-variant uppercase tracking-wider">Previsão de Entrega</h3>
+            <div className={`p-1.5 rounded-md ${impacto > 0 ? 'bg-error-container text-error' : 'bg-surface-container text-primary'}`}><span className="material-symbols-outlined text-[18px]">event_available</span></div>
+          </div>
+          <div className="flex items-end gap-sm">
+            <span className={`text-headline-md font-bold ${impacto > 0 ? 'text-error' : 'text-on-surface'}`}>{fmtDia(terminoAjustado)}</span>
+          </div>
+          {impacto > 0 ? (
+            <p className="text-body-sm text-error mt-1">+{impacto} dia(s) de atraso · planejado: {fmtDia(baseTermino)}</p>
+          ) : (
+            <p className="text-body-sm text-on-surface-variant mt-1">No prazo planejado</p>
+          )}
         </Kpi>
       </div>
 

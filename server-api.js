@@ -1483,12 +1483,13 @@ app.get('/api/ocorrencias', autenticar, async (req, res) => {
 
 app.post('/api/ocorrencias', autenticar, async (req, res) => {
   try {
-    const { obraId, faseId, tipo, descricao, dataInicio, dataFim } = req.body;
+    const { obraId, faseId, tipo, descricao, dataInicio, dataFim, impactoDias } = req.body;
     if (!obraId || !tipo || !dataInicio) return res.status(400).json({ erro: 'obraId, tipo e dataInicio são obrigatórios' });
+    const imp = (impactoDias === '' || impactoDias === null || impactoDias === undefined) ? null : parseInt(impactoDias, 10);
     const r = await db.query(
-      `INSERT INTO ocorrencias (obra_id, fase_id, tipo, descricao, data_inicio, data_fim)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [obraId, faseId || null, tipo, descricao || null, dataInicio, dataFim || null]
+      `INSERT INTO ocorrencias (obra_id, fase_id, tipo, descricao, data_inicio, data_fim, impacto_dias)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [obraId, faseId || null, tipo, descricao || null, dataInicio, dataFim || null, imp]
     );
     await db.query('INSERT INTO auditoria (obra_id, tipo, titulo, descricao, usuario_id) VALUES ($1,$2,$3,$4,$5)',
       [obraId, 'ocorrencia', `Ocorrência: ${tipo}`, descricao || tipo, req.usuario.id]);
@@ -1498,11 +1499,12 @@ app.post('/api/ocorrencias', autenticar, async (req, res) => {
 
 app.put('/api/ocorrencias/:id', autenticar, async (req, res) => {
   try {
-    const { faseId, tipo, descricao, dataInicio, dataFim } = req.body;
+    const { faseId, tipo, descricao, dataInicio, dataFim, impactoDias } = req.body;
+    const imp = (impactoDias === '' || impactoDias === null || impactoDias === undefined) ? null : parseInt(impactoDias, 10);
     const r = await db.query(
-      `UPDATE ocorrencias SET fase_id=$1, tipo=$2, descricao=$3, data_inicio=$4, data_fim=$5, atualizado_em=NOW()
-       WHERE id=$6 RETURNING *`,
-      [faseId || null, tipo, descricao || null, dataInicio, dataFim || null, req.params.id]
+      `UPDATE ocorrencias SET fase_id=$1, tipo=$2, descricao=$3, data_inicio=$4, data_fim=$5, impacto_dias=$6, atualizado_em=NOW()
+       WHERE id=$7 RETURNING *`,
+      [faseId || null, tipo, descricao || null, dataInicio, dataFim || null, imp, req.params.id]
     );
     if (r.rows.length === 0) return res.status(404).json({ erro: 'Ocorrência não encontrada' });
     res.json(r.rows[0]);
@@ -1667,6 +1669,7 @@ async function garantirSchema() {
       criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
+    await db.query("ALTER TABLE ocorrencias ADD COLUMN IF NOT EXISTS impacto_dias INTEGER");
     console.log('✅ Schema verificado (papel + orcamento_id + linha_id + status parcial + ocorrencias ok)');
   } catch (e) {
     console.error('⚠️ Falha ao garantir schema:', e.message);
