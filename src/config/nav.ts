@@ -20,8 +20,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: 'request_quote',
     submenu: [
       { label: 'Importar', route: '/orcamentos/upload', icon: 'upload_file' },
-      { label: 'Comparar', route: '/orcamentos/comparativa', icon: 'compare_arrows' },
-      { label: 'Aprovar', route: '/orcamentos/aprovacao', icon: 'approval' },
+      { label: 'Analisar & Aprovar', route: '/orcamentos/comparativa', icon: 'compare_arrows' },
     ],
   },
   { label: 'Usuários', route: '/usuarios', icon: 'group' },
@@ -51,8 +50,8 @@ export const ROUTE_META: Record<string, RouteMeta> = {
   '/progresso': { title: 'Registro de Progresso', breadcrumb: ['Início', 'Progresso'] },
   '/importar': { title: 'Importar Documento', breadcrumb: ['Início', 'Importar Documento'] },
   '/orcamentos/upload': { title: 'Importar Orçamentos', breadcrumb: ['Início', 'Orçamentos', 'Importar'] },
-  '/orcamentos/comparativa': { title: 'Comparar Orçamentos', breadcrumb: ['Início', 'Orçamentos', 'Comparativa'] },
-  '/orcamentos/aprovacao': { title: 'Aprovar Orçamentos', breadcrumb: ['Início', 'Orçamentos', 'Aprovação'] },
+  '/orcamentos/comparativa': { title: 'Orçamentos', breadcrumb: ['Início', 'Orçamentos', 'Análise & Aprovação'] },
+  '/orcamentos/aprovacao': { title: 'Orçamentos', breadcrumb: ['Início', 'Orçamentos', 'Análise & Aprovação'] },
   '/usuarios': { title: 'Usuários', breadcrumb: ['Início', 'Usuários'] },
   '/configuracoes': { title: 'Configurações', breadcrumb: ['Início', 'Configurações'] },
 };

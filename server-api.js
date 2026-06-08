@@ -800,7 +800,10 @@ app.get('/api/orcamentos/:id', autenticar, async (req, res) => {
     }
 
     const linhas = await db.query(
-      'SELECT * FROM linhas_orcamento WHERE orcamento_id = $1 ORDER BY item_numero',
+      `SELECT lo.*, EXISTS (
+         SELECT 1 FROM despesas d WHERE d.orcamento_id = lo.orcamento_id AND d.linha_id = lo.id
+       ) AS aprovada
+       FROM linhas_orcamento lo WHERE lo.orcamento_id = $1 ORDER BY lo.item_numero`,
       [req.params.id]
     );
 
@@ -1306,24 +1309,25 @@ app.get('/api/orcamentos/comparar', autenticar, async (req, res) => {
 });
 
 // POST /api/orcamentos/:id/aprovar — gera despesas e fases a partir do orçamento.
-// Body: { categorias?: string[] }. Se vier vazio/ausente → aprova TODAS as categorias.
-// Idempotente por categoria: aprovar/reaprovar uma categoria SUBSTITUI o que ela
-// havia gerado (não duplica). A fase recebe o nome da própria categoria.
+// Body: { linhaIds?: string[], categorias?: string[] }
+//   - linhaIds  → aprova apenas esses itens
+//   - categorias → aprova todos os itens dessas categorias
+//   - nenhum    → aprova TODOS os itens
+// Idempotente POR ITEM (despesa vinculada a linha_id): reaprovar substitui, não duplica.
+// A fase é única por (orçamento, categoria) e recebe o nome da categoria.
 app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
   try {
     const orcamentoId = req.params.id;
-    const categoriasScope = Array.isArray(req.body.categorias) ? req.body.categorias.filter(Boolean) : [];
+    const linhaIds = Array.isArray(req.body.linhaIds) ? req.body.linhaIds.filter(Boolean) : [];
+    const categorias = Array.isArray(req.body.categorias) ? req.body.categorias.filter(Boolean) : [];
 
     const orcResult = await db.query(
-      `SELECT o.id, o.obra_id, o.nome, o.valor_total, o.prazo_dias, o.fornecedor_id, f.nome as fornecedor_nome
-       FROM orcamentos o
-       LEFT JOIN fornecedores f ON o.fornecedor_id = f.id
+      `SELECT o.id, o.obra_id, o.nome, o.prazo_dias, o.fornecedor_id, f.nome as fornecedor_nome
+       FROM orcamentos o LEFT JOIN fornecedores f ON o.fornecedor_id = f.id
        WHERE o.id = $1`,
       [orcamentoId]
     );
-    if (orcResult.rows.length === 0) {
-      return res.status(404).json({ erro: 'Orçamento não encontrado' });
-    }
+    if (orcResult.rows.length === 0) return res.status(404).json({ erro: 'Orçamento não encontrado' });
     const orcamento = orcResult.rows[0];
     const obra_id = orcamento.obra_id;
 
@@ -1331,97 +1335,79 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
     try {
       await client.query('BEGIN');
 
-      const linhasResult = await client.query(
-        'SELECT * FROM linhas_orcamento WHERE orcamento_id = $1 ORDER BY item_numero',
-        [orcamentoId]
-      );
-      const linhas = linhasResult.rows;
-      if (linhas.length === 0) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ erro: 'Orçamento sem itens para aprovar' });
-      }
+      const linhasResult = await client.query('SELECT * FROM linhas_orcamento WHERE orcamento_id = $1', [orcamentoId]);
+      const todas = linhasResult.rows;
+      if (todas.length === 0) { await client.query('ROLLBACK'); return res.status(400).json({ erro: 'Orçamento sem itens' }); }
+
+      // Define o conjunto-alvo de linhas
+      let alvo;
+      if (linhaIds.length) alvo = todas.filter((l) => linhaIds.includes(l.id));
+      else if (categorias.length) alvo = todas.filter((l) => categorias.includes(l.categoria || 'Outros'));
+      else alvo = todas;
+      alvo = alvo.filter((l) => sanitizeNumero(l.valor_total) !== null);
+      if (alvo.length === 0) { await client.query('ROLLBACK'); return res.status(400).json({ erro: 'Nenhum item válido para aprovar' }); }
 
       // Fornecedor
       let fornecedorId = orcamento.fornecedor_id;
       if (!fornecedorId) {
         const fr = await client.query(
-          `INSERT INTO fornecedores (nome, status, criado_em, atualizado_em)
-           VALUES ($1, 'ativo', NOW(), NOW()) RETURNING id`,
+          `INSERT INTO fornecedores (nome, status, criado_em, atualizado_em) VALUES ($1,'ativo',NOW(),NOW()) RETURNING id`,
           [orcamento.fornecedor_nome || orcamento.nome]
         );
         fornecedorId = fr.rows[0].id;
       }
 
-      // Agrupa por categoria
-      const categoriasMapa = new Map();
-      for (const l of linhas) {
-        const cat = l.categoria || 'Outros';
-        if (!categoriasMapa.has(cat)) categoriasMapa.set(cat, []);
-        categoriasMapa.get(cat).push(l);
-      }
-      // Escopo: categorias pedidas (∩ existentes) ou todas
-      const escopo = categoriasScope.length
-        ? [...categoriasMapa.keys()].filter((c) => categoriasScope.includes(c))
-        : [...categoriasMapa.keys()];
-      if (escopo.length === 0) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ erro: 'Nenhuma categoria válida para aprovar' });
-      }
-
       const hoje = new Date().toISOString().split('T')[0];
-      const dataInicio = new Date();
-      const prazoDias = orcamento.prazo_dias || 30;
       const dataTermino = new Date();
-      dataTermino.setDate(dataTermino.getDate() + prazoDias);
-      const ini = dataInicio.toISOString().split('T')[0];
+      dataTermino.setDate(dataTermino.getDate() + (orcamento.prazo_dias || 30));
+      const ini = new Date().toISOString().split('T')[0];
       const fim = dataTermino.toISOString().split('T')[0];
 
-      let nDesp = 0, nFases = 0;
-      for (const categoria of escopo) {
-        const items = categoriasMapa.get(categoria) || [];
-
-        // Idempotência por categoria: remove o que esta categoria deste orçamento gerou
-        await client.query('DELETE FROM despesas WHERE orcamento_id = $1 AND categoria = $2', [orcamentoId, categoria]);
-        await client.query('DELETE FROM fases WHERE orcamento_id = $1 AND nome = $2', [orcamentoId, categoria]);
-
-        const ordRes = await client.query('SELECT COALESCE(MAX(ordem), 0) AS o FROM fases WHERE obra_id = $1', [obra_id]);
-        const ordemFase = (ordRes.rows[0].o || 0) + 1;
-
+      // Garante uma fase por categoria (não duplica) e mapeia categoria->faseId
+      const cats = Array.from(new Set(alvo.map((l) => l.categoria || 'Outros')));
+      const faseDaCategoria = new Map();
+      for (const categoria of cats) {
+        const ex = await client.query('SELECT id FROM fases WHERE orcamento_id = $1 AND nome = $2 LIMIT 1', [orcamentoId, categoria]);
+        if (ex.rows.length) { faseDaCategoria.set(categoria, ex.rows[0].id); continue; }
+        const ordRes = await client.query('SELECT COALESCE(MAX(ordem),0) AS o FROM fases WHERE obra_id = $1', [obra_id]);
         const faseRes = await client.query(
           `INSERT INTO fases (obra_id, ordem, nome, inicio, termino, status, categoria, descricao, orcamento_id)
-           VALUES ($1, $2, $3, $4, $5, 'nao_iniciada', 'etapa_obra', $6, $7) RETURNING id`,
-          [obra_id, ordemFase, categoria, ini, fim,
-           `Gerada do orçamento: ${orcamento.nome}`, orcamentoId]
+           VALUES ($1,$2,$3,$4,$5,'nao_iniciada','etapa_obra',$6,$7) RETURNING id`,
+          [obra_id, (ordRes.rows[0].o || 0) + 1, categoria, ini, fim, `Gerada do orçamento: ${orcamento.nome}`, orcamentoId]
         );
-        const faseId = faseRes.rows[0].id;
-        nFases++;
-
-        for (const l of items) {
-          const valor = sanitizeNumero(l.valor_total);
-          if (valor === null) continue;
-          await client.query(
-            `INSERT INTO despesas (obra_id, fase_id, descricao, categoria, valor, data, fornecedor, orcamento_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-            [obra_id, faseId, l.descricao || 'Item', categoria, valor, hoje,
-             orcamento.fornecedor_nome || orcamento.nome, orcamentoId]
-          );
-          nDesp++;
-        }
+        faseDaCategoria.set(categoria, faseRes.rows[0].id);
       }
 
+      // Upsert por item: remove a despesa anterior daquela linha e recria
+      let nDesp = 0;
+      for (const l of alvo) {
+        const categoria = l.categoria || 'Outros';
+        const valor = sanitizeNumero(l.valor_total);
+        await client.query('DELETE FROM despesas WHERE orcamento_id = $1 AND linha_id = $2', [orcamentoId, l.id]);
+        await client.query(
+          `INSERT INTO despesas (obra_id, fase_id, descricao, categoria, valor, data, fornecedor, orcamento_id, linha_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          [obra_id, faseDaCategoria.get(categoria), l.descricao || 'Item', categoria, valor, hoje,
+           orcamento.fornecedor_nome || orcamento.nome, orcamentoId, l.id]
+        );
+        nDesp++;
+      }
+
+      // Status: aceito se todos os itens (com valor) já têm despesa; senão parcial
+      const totalComValor = todas.filter((l) => sanitizeNumero(l.valor_total) !== null).length;
+      const aprovadasRes = await client.query('SELECT COUNT(DISTINCT linha_id) AS n FROM despesas WHERE orcamento_id = $1 AND linha_id IS NOT NULL', [orcamentoId]);
+      const nAprovadas = parseInt(aprovadasRes.rows[0].n, 10) || 0;
+      const status = nAprovadas >= totalComValor ? 'aceito' : 'parcial';
+
+      await client.query('UPDATE orcamentos SET status = $1, fornecedor_id = $2, atualizado_em = NOW() WHERE id = $3', [status, fornecedorId, orcamentoId]);
       await client.query(
-        'UPDATE orcamentos SET status = $1, fornecedor_id = $2, atualizado_em = NOW() WHERE id = $3',
-        ['aceito', fornecedorId, orcamentoId]
-      );
-      await client.query(
-        'INSERT INTO auditoria (obra_id, tipo, titulo, descricao, usuario_id) VALUES ($1, $2, $3, $4, $5)',
-        [obra_id, 'APPROVE', 'Orçamento aprovado',
-         `Orçamento "${orcamento.nome}": ${nDesp} despesa(s) e ${nFases} fase(s) em ${escopo.length} categoria(s).`,
-         req.usuario.id]
+        'INSERT INTO auditoria (obra_id, tipo, titulo, descricao, usuario_id) VALUES ($1,$2,$3,$4,$5)',
+        [obra_id, 'APPROVE', 'Itens de orçamento aprovados',
+         `Orçamento "${orcamento.nome}": ${nDesp} item(ns) aprovado(s) em ${cats.length} categoria(s) [${status}].`, req.usuario.id]
       );
 
       await client.query('COMMIT');
-      res.json({ sucesso: true, mensagem: `Aprovado: ${nFases} categoria(s), ${nDesp} despesa(s).`, despesas: nDesp, fases: nFases });
+      res.json({ sucesso: true, mensagem: `${nDesp} item(ns) aprovado(s).`, despesas: nDesp, fases: cats.length, status });
     } catch (errTx) {
       await client.query('ROLLBACK').catch(() => {});
       throw errTx;
@@ -1568,8 +1554,9 @@ async function garantirSchema() {
     await db.query("UPDATE usuarios SET papel = 'Admin' WHERE email = 'ggpauliv' AND (papel IS NULL OR papel = 'Engenheiro')");
     // Vínculo de origem para tornar a aprovação de orçamentos idempotente
     await db.query("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS orcamento_id UUID");
+    await db.query("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS linha_id UUID");
     await db.query("ALTER TABLE fases ADD COLUMN IF NOT EXISTS orcamento_id UUID");
-    console.log('✅ Schema verificado (papel + orcamento_id ok)');
+    console.log('✅ Schema verificado (papel + orcamento_id + linha_id ok)');
   } catch (e) {
     console.error('⚠️ Falha ao garantir schema:', e.message);
   }
