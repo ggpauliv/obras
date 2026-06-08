@@ -77,64 +77,28 @@ export function OrcamentosAprovacaoPage() {
       .finally(() => setCarregandoLinhas(false));
   }, [abaAtiva]);
 
+  const [aprovando, setAprovando] = useState(false);
+
   const handleAprovar = async (orcamentoId: string) => {
-    // Se categoria está selecionada, usa como tipo
-    // Se não, usa "Obra Geral" como padrão
-    let tipo = categoriaFiltro || 'Obra Geral';
-    console.log(`📊 Aprovando com tipo: ${tipo}, categoria: ${categoriaFiltro || 'nenhuma'}`);
-
-
-    // Itens a aprovar: apenas os filtrados por categoria (se houver filtro) e com preço
-    let linhasAprovar = linhasPorOrc[orcamentoId] || [];
-    linhasAprovar = linhasAprovar.filter(l => {
-      // Filtrar por categoria se selecionada
-      if (categoriaFiltro && l.categoria !== categoriaFiltro) return false;
-      // Filtrar itens sem preço
-      return parseFloat(String(l.valorTotal || '0')) || 0 > 0;
-    });
-    if (linhasAprovar.length === 0) {
-      setToastMsg('Nenhum item para aprovar');
-      setTimeout(() => setToastMsg(''), 4000);
-      return;
-    }
-
+    // A aprovação sempre considera TODAS as linhas do orçamento (no backend).
+    // Reaprovar atualiza (substitui) — não duplica. O "tipo" rotula as fases.
+    const tipo = tipoSelecionado[orcamentoId] || 'Obra Geral';
+    setAprovando(true);
     try {
-      const res = await apiClient.aprovarOrcamento(orcamentoId, tipo, linhasAprovar);
-      setToastMsg(`✅ ${linhasAprovar.length} item(ns) de ${tipo} aprovado(s)!`);
-      // Manter toast visível por mais tempo
-      const timeout = setTimeout(() => setToastMsg(''), 6000);
-      return () => clearTimeout(timeout);
-
-      // Remove linhas aprovadas do estado
-      setLinhasPorOrc(prev => {
-        const nova = { ...prev };
-        if (nova[orcamentoId]) {
-          nova[orcamentoId] = nova[orcamentoId].filter(
-            linha => !linhasAprovar.find(l => l.id === linha.id)
-          );
-        }
-        return nova;
-      });
-
-      // Se não há mais linhas, remove o orçamento
-      if (linhasPorOrc[orcamentoId]?.length === linhasAprovar.length) {
-        setOrcamentos(prev => prev.filter(o => o.id !== orcamentoId));
-        if (orcamentos.length > 1) {
-          setAbaAtiva(orcamentos.find(o => o.id !== orcamentoId)?.id || '');
-        } else {
-          setAbaAtiva('');
-        }
-      } else {
-        // Limpa filtro para ver itens restantes
-        setTipoSelecionado(prev => {
-          const novo = { ...prev };
-          delete novo[orcamentoId];
-          return novo;
-        });
-      }
+      const res = await apiClient.aprovarOrcamento(orcamentoId, tipo);
+      setToastMsg(`✅ ${res?.mensagem || 'Orçamento aprovado!'}`);
+      setTimeout(() => setToastMsg(''), 6000);
+      // Recarrega o orçamento para refletir o novo status/itens
+      try {
+        const d = await apiClient.obterOrcamento(orcamentoId);
+        setLinhasPorOrc(prev => ({ ...prev, [orcamentoId]: d.linhas || [] }));
+        setOrcamentos(prev => prev.map(o => o.id === orcamentoId ? { ...o, status: 'aceito' } : o));
+      } catch { /* ignore */ }
     } catch (err: any) {
       setToastMsg(`Erro: ${err.message}`);
-      setTimeout(() => setToastMsg(''), 4000);
+      setTimeout(() => setToastMsg(''), 5000);
+    } finally {
+      setAprovando(false);
     }
   };
 
@@ -289,14 +253,14 @@ export function OrcamentosAprovacaoPage() {
               {/* Seletor de categoria (filtro) - OPCIONAL */}
               <div className="p-md bg-surface-container-lowest rounded-lg border border-outline-variant/50">
                 <label className="block text-label-sm text-on-surface-variant mb-2">
-                  Filtrar por Categoria <span className="text-outline text-xs">(opcional — deixe em branco para aprovar tudo)</span>
+                  Filtrar visualização por Categoria <span className="text-outline text-xs">(apenas filtra a tabela abaixo — a aprovação considera todos os itens)</span>
                 </label>
                 <select
                   value={categoriaFiltro}
                   onChange={e => setCategoriaFiltro(e.target.value)}
                   className={FIELD}
                 >
-                  <option value="">✓ Aprovar TODOS os {linhasAtivas.filter(l => parseFloat(String(l.valorTotal || '0')) || 0 > 0).length} itens</option>
+                  <option value="">Todas as categorias ({linhasAtivas.filter(l => (parseFloat(String(l.valorTotal || '0')) || 0) > 0).length} itens)</option>
                   {Array.from(new Set(linhasAtivas.map(l => l.categoria).filter(Boolean)))
                     .sort()
                     .map(cat => {
@@ -373,15 +337,25 @@ export function OrcamentosAprovacaoPage() {
               )}
 
               {/* Botões de ação */}
-              <div className="flex gap-md pt-lg border-t border-outline-variant">
+              <div className="flex flex-col sm:flex-row gap-md pt-lg border-t border-outline-variant items-stretch sm:items-end">
+                  <div className="flex-1">
+                    <label className="block text-label-sm text-on-surface-variant mb-1">Tipo do orçamento (rótulo das fases geradas)</label>
+                    <select
+                      value={tipoSelecionado[orcAtivo.id] || 'Obra Geral'}
+                      onChange={e => setTipoSelecionado(prev => ({ ...prev, [orcAtivo.id]: e.target.value }))}
+                      className={FIELD}
+                    >
+                      {TIPOS_ORCAMENTO.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
                   <button
                     onClick={() => handleAprovar(orcAtivo.id)}
-                    disabled={false}
-                    className="flex-1 px-lg py-2 bg-primary text-on-primary rounded-lg hover:bg-primary/90 text-label-md font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-sm"
-                    title={!categoriaFiltro && !tipoSelecionado[orcAtivo.id] ? "Selecione uma categoria ou um tipo de orçamento" : ""}
+                    disabled={aprovando}
+                    className="px-lg py-2 bg-primary text-on-primary rounded-lg hover:bg-primary/90 text-label-md font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-sm"
+                    title="Aprova o orçamento inteiro (gera/atualiza despesas e fases). Reaprovar atualiza, não duplica."
                   >
-                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                    Aprovar {categoriaFiltro && `(${categoriaFiltro})`}
+                    <span className={`material-symbols-outlined text-[18px] ${aprovando ? 'animate-spin' : ''}`}>{aprovando ? 'progress_activity' : 'check_circle'}</span>
+                    {aprovando ? 'Aprovando…' : (orcAtivo.status === 'aceito' ? 'Reaprovar (atualizar)' : 'Aprovar orçamento')}
                   </button>
                   <button
                     onClick={() => handleRemover(orcAtivo.id)}

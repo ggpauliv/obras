@@ -143,7 +143,7 @@ export default function ObraFinanceiroPage() {
                   <td className="py-md px-md text-on-surface-variant">{d.fornecedor || '—'}</td>
                   <td className="py-md px-md text-on-surface-variant">{d.numeroNota || '—'}</td>
                   <td className="py-md px-md text-on-surface-variant">{d.data}</td>
-                  <td className="py-md px-md text-on-surface font-medium text-right">{d.valor}</td>
+                  <td className="py-md px-md text-on-surface font-medium text-right">{fmt(parseValor(d.valor))}</td>
                   <td className="py-md px-md text-right whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => editar(d)} className="text-on-surface-variant hover:text-primary p-xs"><span className="material-symbols-outlined text-[18px]">edit</span></button>
                     <button onClick={() => excluir(d.id)} className="text-on-surface-variant hover:text-error p-xs"><span className="material-symbols-outlined text-[18px]">delete</span></button>

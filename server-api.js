@@ -18,8 +18,12 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 function sanitizeNumero(val) {
   if (val === null || val === undefined || val === '') return null;
   if (typeof val === 'string') {
-    // Remove formatação brasileira: "1.234.567,89" -> 1234567.89
-    val = val.replace(/\./g, '').replace(',', '.').replace(/[^0-9.\-]/g, '');
+    val = val.trim().replace(/[^0-9.,-]/g, '');
+    if (val.includes(',')) {
+      // Formato brasileiro "1.234.567,89" -> ponto é milhar, vírgula é decimal
+      val = val.replace(/\./g, '').replace(',', '.');
+    }
+    // Caso contrário (ISO "1234.89") o ponto já é o decimal — não remover
   }
   const n = parseFloat(val);
   if (isNaN(n) || !isFinite(n)) return null;
@@ -1331,167 +1335,99 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
     const orcamento = orcResult.rows[0];
     const obra_id = orcamento.obra_id;
 
-    // Se linhas específicas foram passadas, usar apenas aquelas; senão, buscar todas
-    let linhas;
-    if (linhasAprovar && Array.isArray(linhasAprovar) && linhasAprovar.length > 0) {
-      linhas = linhasAprovar;
-    } else {
-      const linhasResult = await db.query(
+    // Aprovação SEMPRE considera TODAS as linhas do orçamento (substitui o
+    // conjunto anterior) — idempotente: reaprovar atualiza, não duplica.
+    const client = await db.getClient();
+    try {
+      await client.query('BEGIN');
+
+      const linhasResult = await client.query(
         'SELECT * FROM linhas_orcamento WHERE orcamento_id = $1 ORDER BY item_numero',
         [orcamentoId]
       );
-      linhas = linhasResult.rows;
-    }
-
-    // 2. Criar ou atualizar fornecedor
-    let fornecedorId = orcamento.fornecedor_id;
-    if (!fornecedorId) {
-      const fornecResult = await db.query(
-        `INSERT INTO fornecedores (nome, status, criado_em, atualizado_em)
-         VALUES ($1, 'ativo', NOW(), NOW()) RETURNING id`,
-        [orcamento.fornecedor_nome || orcamento.nome]
-      );
-      fornecedorId = fornecResult.rows[0].id;
-    }
-
-    // 3. Criar despesas a partir das linhas
-    const hoje = new Date().toISOString().split('T')[0];
-    const despesasIds = [];
-
-    console.log(`🔵 [APROVAR] Criando ${linhas.length} despesas...`);
-
-    for (const linha of linhas) {
-      const valorSanitizado = sanitizeNumero(linha.valorTotal || linha.valor_total);
-      console.log(`📋 Linha ${linha.itemNumero || linha.item_numero}: valorTotal=${linha.valorTotal}, valor_total=${linha.valor_total}, sanitizado=${valorSanitizado}`);
-
-      if (valorSanitizado === null) {
-        console.error(`❌ ERRO: Linha ${linha.itemNumero || linha.item_numero} tem valor null!`, linha);
-        return res.status(400).json({ erro: `Linha ${linha.itemNumero || linha.item_numero} não tem valor configurado` });
+      const linhas = linhasResult.rows;
+      if (linhas.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ erro: 'Orçamento sem itens para aprovar' });
       }
 
-      const despResult = await db.query(
-        `INSERT INTO despesas (obra_id, descricao, categoria, valor, data, fornecedor)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-        [
-          obra_id,
-          `${linha.descricao || 'Item'} (Item ${linha.itemNumero || linha.item_numero})`,
-          linha.categoria || 'Serviços Gerais',
-          valorSanitizado,
-          hoje,
-          orcamento.fornecedor_nome || orcamento.nome
-        ]
-      );
-      const despId = despResult.rows[0]?.id;
-      console.log(`✅ [APROVAR] Despesa criada: ${despId}`);
-      despesasIds.push(despId);
-    }
-
-    // 4. Criar fases/etapas agrupando por categoria
-    const categoriasMapa = new Map();
-    for (const linha of linhas) {
-      const cat = linha.categoria || 'Outros';
-      if (!categoriasMapa.has(cat)) {
-        categoriasMapa.set(cat, []);
-      }
-      categoriasMapa.get(cat).push(linha);
-    }
-
-    const dataInicio = new Date();
-    const prazoDias = orcamento.prazo_dias || 30;
-    const dataTermino = new Date();
-    dataTermino.setDate(dataTermino.getDate() + prazoDias);
-
-    // Encontrar a última ordem existente para não conflitar
-    const ultimaOrdemResult = await db.query(
-      'SELECT COALESCE(MAX(ordem), 0) as ultima_ordem FROM fases WHERE obra_id = $1',
-      [obra_id]
-    );
-    const ultimaOrdem = ultimaOrdemResult.rows[0]?.ultima_ordem || 0;
-    console.log(`🔍 [APROVAR] Última ordem em obra ${obra_id}: ${ultimaOrdem}`);
-    console.log(`🔍 [APROVAR] Próximas ordens serão: ${ultimaOrdem + 1}, ${ultimaOrdem + 2}, etc.`);
-
-    let ordemFase = ultimaOrdem + 1;
-    const fasesIds = [];
-
-    console.log(`🔵 [APROVAR] Criando fases para ${categoriasMapa.size} categorias (começando ordem: ${ordemFase})...`);
-
-    for (const [categoria, itemsCategoria] of categoriasMapa) {
-      const valorCategoria = itemsCategoria.reduce((sum, item) => sum + sanitizeNumero(item.valorTotal || item.valor_total), 0);
-      const ordemAtual = ordemFase;
-
-      console.log(`📝 [APROVAR] Inserindo fase com ordem=${ordemAtual}, categoria=${categoria}, obra_id=${obra_id}`);
-
-      try {
-        const faseResult = await db.query(
-          `INSERT INTO fases (obra_id, ordem, nome, inicio, termino, status, categoria, descricao)
-           VALUES ($1, $2, $3, $4, $5, 'nao_iniciada', 'etapa_obra', $6) RETURNING id`,
-          [
-            obra_id,
-            ordemAtual,
-            `${tipoOrcamento || 'Orçamento'} - ${categoria}`,
-            dataInicio.toISOString().split('T')[0],
-            dataTermino.toISOString().split('T')[0],
-            `Fase gerada a partir do orçamento: ${orcamento.nome}`
-          ]
+      // Fornecedor
+      let fornecedorId = orcamento.fornecedor_id;
+      if (!fornecedorId) {
+        const fr = await client.query(
+          `INSERT INTO fornecedores (nome, status, criado_em, atualizado_em)
+           VALUES ($1, 'ativo', NOW(), NOW()) RETURNING id`,
+          [orcamento.fornecedor_nome || orcamento.nome]
         );
-        const faseId = faseResult.rows[0]?.id;
-        console.log(`✅ [APROVAR] Fase criada: ${faseId} (ordem=${ordemAtual}, categoria=${categoria})`);
-        fasesIds.push(faseId);
-      } catch (err) {
-        console.error(`❌ [APROVAR] Erro ao inserir fase (ordem=${ordemAtual}):`, err.message);
-        throw err;
+        fornecedorId = fr.rows[0].id;
       }
 
-      ordemFase++;
-    }
+      // Idempotência: remove o que este orçamento já havia gerado
+      await client.query('DELETE FROM despesas WHERE orcamento_id = $1', [orcamentoId]);
+      await client.query('DELETE FROM fases WHERE orcamento_id = $1', [orcamentoId]);
 
-    // 5. Associar despesas às fases (primeira despesa de cada categoria à fase correspondente)
-    let faseIdx = 0;
-    for (const [categoria, itemsCategoria] of categoriasMapa) {
-      if (faseIdx < fasesIds.length) {
-        // Associar a primeira despesa dessa categoria
-        const itemCategoria = itemsCategoria[0];
-        const despAssoc = despesasIds.find((_, i) => {
-          const linha = linhas[i];
-          return linha.categoria === categoria;
-        });
+      const hoje = new Date().toISOString().split('T')[0];
+      const dataInicio = new Date();
+      const prazoDias = orcamento.prazo_dias || 30;
+      const dataTermino = new Date();
+      dataTermino.setDate(dataTermino.getDate() + prazoDias);
+      const ini = dataInicio.toISOString().split('T')[0];
+      const fim = dataTermino.toISOString().split('T')[0];
 
-        if (despAssoc) {
-          await db.query(
-            'UPDATE despesas SET fase_id = $1 WHERE id = $2',
-            [fasesIds[faseIdx], despAssoc]
+      // Agrupa por categoria
+      const categoriasMapa = new Map();
+      for (const l of linhas) {
+        const cat = l.categoria || 'Outros';
+        if (!categoriasMapa.has(cat)) categoriasMapa.set(cat, []);
+        categoriasMapa.get(cat).push(l);
+      }
+
+      const ordRes = await client.query('SELECT COALESCE(MAX(ordem), 0) AS o FROM fases WHERE obra_id = $1', [obra_id]);
+      let ordemFase = (ordRes.rows[0].o || 0) + 1;
+
+      let nDesp = 0, nFases = 0;
+      for (const [categoria, items] of categoriasMapa) {
+        const faseRes = await client.query(
+          `INSERT INTO fases (obra_id, ordem, nome, inicio, termino, status, categoria, descricao, orcamento_id)
+           VALUES ($1, $2, $3, $4, $5, 'nao_iniciada', 'etapa_obra', $6, $7) RETURNING id`,
+          [obra_id, ordemFase, `${tipoOrcamento || 'Orçamento'} - ${categoria}`, ini, fim,
+           `Fase gerada a partir do orçamento: ${orcamento.nome}`, orcamentoId]
+        );
+        const faseId = faseRes.rows[0].id;
+        nFases++; ordemFase++;
+
+        for (const l of items) {
+          const valor = sanitizeNumero(l.valor_total);
+          if (valor === null) continue; // ignora itens sem valor
+          await client.query(
+            `INSERT INTO despesas (obra_id, fase_id, descricao, categoria, valor, data, fornecedor, orcamento_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [obra_id, faseId, `${l.descricao || 'Item'} (Item ${l.item_numero})`,
+             l.categoria || 'Serviços Gerais', valor, hoje, orcamento.fornecedor_nome || orcamento.nome, orcamentoId]
           );
+          nDesp++;
         }
       }
-      faseIdx++;
+
+      await client.query(
+        'UPDATE orcamentos SET status = $1, tipo_orcamento = $2, fornecedor_id = $3, atualizado_em = NOW() WHERE id = $4',
+        ['aceito', tipoOrcamento || null, fornecedorId, orcamentoId]
+      );
+      await client.query(
+        'INSERT INTO auditoria (obra_id, tipo, titulo, descricao, usuario_id) VALUES ($1, $2, $3, $4, $5)',
+        [obra_id, 'APPROVE', 'Orçamento aprovado',
+         `Orçamento "${orcamento.nome}" aprovado: ${nDesp} despesa(s) e ${nFases} fase(s) (substituídas se já existiam).`,
+         req.usuario.id]
+      );
+
+      await client.query('COMMIT');
+      res.json({ sucesso: true, mensagem: `Aprovado: ${nDesp} despesa(s) e ${nFases} fase(s).`, despesas: nDesp, fases: nFases });
+    } catch (errTx) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw errTx;
+    } finally {
+      client.release();
     }
-
-    // 6. Atualizar status do orçamento
-    await db.query(
-      'UPDATE orcamentos SET status = $1, tipo_orcamento = $2, fornecedor_id = $3, atualizado_em = NOW() WHERE id = $4',
-      ['aceito', tipoOrcamento || null, fornecedorId, orcamentoId]
-    );
-
-    // 7. Registrar auditoria
-    await db.query(
-      'INSERT INTO auditoria (obra_id, tipo, titulo, descricao, usuario_id) VALUES ($1, $2, $3, $4, $5)',
-      [
-        obra_id,
-        'APPROVE',
-        'Orçamento aprovado',
-        `Orçamento "${orcamento.nome}" aprovado. Criadas ${despesasIds.length} despesas e ${fasesIds.length} fases.`,
-        req.usuario.id
-      ]
-    );
-
-    res.json({
-      sucesso: true,
-      mensagem: `Orçamento aprovado! Criadas ${despesasIds.length} despesas e ${fasesIds.length} fases.`,
-      orcamentoId,
-      despesasIds,
-      fasesIds,
-      fornecedorId
-    });
 
   } catch (error) {
     console.error('❌ Erro ao aprovar orçamento:', error);
@@ -1631,7 +1567,10 @@ async function garantirSchema() {
   try {
     await db.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS papel VARCHAR(50) DEFAULT 'Engenheiro'");
     await db.query("UPDATE usuarios SET papel = 'Admin' WHERE email = 'ggpauliv' AND (papel IS NULL OR papel = 'Engenheiro')");
-    console.log('✅ Schema verificado (coluna usuarios.papel ok)');
+    // Vínculo de origem para tornar a aprovação de orçamentos idempotente
+    await db.query("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS orcamento_id UUID");
+    await db.query("ALTER TABLE fases ADD COLUMN IF NOT EXISTS orcamento_id UUID");
+    console.log('✅ Schema verificado (papel + orcamento_id ok)');
   } catch (e) {
     console.error('⚠️ Falha ao garantir schema:', e.message);
   }
