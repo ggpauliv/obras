@@ -8,7 +8,7 @@ const STATUS: Record<FornecedorStatus, { label: string; chip: string }> = {
   inativo: { label: 'Inativo', chip: 'bg-outline-variant/30 text-on-surface-variant border-outline-variant' },
 };
 
-const SELECT = 'appearance-none pl-4 pr-10 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary text-body-sm text-on-surface cursor-pointer';
+const SELECT = 'pl-4 pr-8 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary text-body-sm text-on-surface cursor-pointer';
 const FIELD = 'w-full rounded-lg border border-outline-variant text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary py-2 px-3';
 
 const VAZIO: Fornecedor = { id: '', nome: '', categoria: '', cnpj: '', contato: '', obras: 0, status: 'ativo' };
@@ -93,7 +93,6 @@ export default function FornecedoresPage() {
               <option value="">Categoria (Todas)</option>
               {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
-            <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none text-[20px]">expand_more</span>
           </div>
           <div className="relative">
             <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className={SELECT}>
@@ -102,7 +101,6 @@ export default function FornecedoresPage() {
               <option value="pendente">Pendente</option>
               <option value="inativo">Inativo</option>
             </select>
-            <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none text-[20px]">expand_more</span>
           </div>
         </div>
         <button onClick={novo} className="w-full sm:w-auto flex items-center justify-center gap-xs px-lg py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors shadow-sm text-label-md shrink-0">
@@ -111,9 +109,9 @@ export default function FornecedoresPage() {
       </div>
 
       {/* Tabela */}
-      <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[900px]">
+      <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm">
+        <div>
+          <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-surface-container-low border-b border-outline-variant">
                 {['Fornecedor', 'Categoria', 'CNPJ', 'Contato', 'Obras', 'Status', 'Ações'].map((h) => (

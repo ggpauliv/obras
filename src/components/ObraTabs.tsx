@@ -6,6 +6,7 @@ const TABS = [
   { label: 'Fases', route: '/obra-fases', icon: 'layers' },
   { label: 'Financeiro', route: '/obra-financeiro', icon: 'payments' },
   { label: 'Fotos', route: '/obra-fotos', icon: 'photo_camera' },
+  { label: 'Ocorrências', route: '/obra-ocorrencias', icon: 'event_note' },
   { label: 'Auditoria', route: '/obra-auditoria', icon: 'fact_check' },
 ];
 
