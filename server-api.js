@@ -1305,21 +1305,15 @@ app.get('/api/orcamentos/comparar', autenticar, async (req, res) => {
   }
 });
 
-// POST /api/orcamentos/:id/aprovar — aprova orçamento e gera despesas, fornecedor, fases
-// Pode aprovar apenas linhas específicas (categorias) se passadas no body
+// POST /api/orcamentos/:id/aprovar — gera despesas e fases a partir do orçamento.
+// Body: { categorias?: string[] }. Se vier vazio/ausente → aprova TODAS as categorias.
+// Idempotente por categoria: aprovar/reaprovar uma categoria SUBSTITUI o que ela
+// havia gerado (não duplica). A fase recebe o nome da própria categoria.
 app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
   try {
     const orcamentoId = req.params.id;
-    const { tipoOrcamento, linhas: linhasAprovar } = req.body;
+    const categoriasScope = Array.isArray(req.body.categorias) ? req.body.categorias.filter(Boolean) : [];
 
-    console.log(`🔵 [APROVAR] Iniciando aprovação do orçamento ${orcamentoId}`);
-    console.log(`🔵 [APROVAR] tipoOrcamento: ${tipoOrcamento}`);
-    console.log(`🔵 [APROVAR] linhasAprovar recebidas: ${linhasAprovar?.length || 0} linhas`);
-    if (linhasAprovar && linhasAprovar.length > 0) {
-      console.log(`🔵 [APROVAR] Primeira linha:`, linhasAprovar[0]);
-    }
-
-    // 1. Buscar orçamento e suas linhas
     const orcResult = await db.query(
       `SELECT o.id, o.obra_id, o.nome, o.valor_total, o.prazo_dias, o.fornecedor_id, f.nome as fornecedor_nome
        FROM orcamentos o
@@ -1327,16 +1321,12 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
        WHERE o.id = $1`,
       [orcamentoId]
     );
-
     if (orcResult.rows.length === 0) {
       return res.status(404).json({ erro: 'Orçamento não encontrado' });
     }
-
     const orcamento = orcResult.rows[0];
     const obra_id = orcamento.obra_id;
 
-    // Aprovação SEMPRE considera TODAS as linhas do orçamento (substitui o
-    // conjunto anterior) — idempotente: reaprovar atualiza, não duplica.
     const client = await db.getClient();
     try {
       await client.query('BEGIN');
@@ -1362,9 +1352,21 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
         fornecedorId = fr.rows[0].id;
       }
 
-      // Idempotência: remove o que este orçamento já havia gerado
-      await client.query('DELETE FROM despesas WHERE orcamento_id = $1', [orcamentoId]);
-      await client.query('DELETE FROM fases WHERE orcamento_id = $1', [orcamentoId]);
+      // Agrupa por categoria
+      const categoriasMapa = new Map();
+      for (const l of linhas) {
+        const cat = l.categoria || 'Outros';
+        if (!categoriasMapa.has(cat)) categoriasMapa.set(cat, []);
+        categoriasMapa.get(cat).push(l);
+      }
+      // Escopo: categorias pedidas (∩ existentes) ou todas
+      const escopo = categoriasScope.length
+        ? [...categoriasMapa.keys()].filter((c) => categoriasScope.includes(c))
+        : [...categoriasMapa.keys()];
+      if (escopo.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ erro: 'Nenhuma categoria válida para aprovar' });
+      }
 
       const hoje = new Date().toISOString().split('T')[0];
       const dataInicio = new Date();
@@ -1374,61 +1376,58 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
       const ini = dataInicio.toISOString().split('T')[0];
       const fim = dataTermino.toISOString().split('T')[0];
 
-      // Agrupa por categoria
-      const categoriasMapa = new Map();
-      for (const l of linhas) {
-        const cat = l.categoria || 'Outros';
-        if (!categoriasMapa.has(cat)) categoriasMapa.set(cat, []);
-        categoriasMapa.get(cat).push(l);
-      }
-
-      const ordRes = await client.query('SELECT COALESCE(MAX(ordem), 0) AS o FROM fases WHERE obra_id = $1', [obra_id]);
-      let ordemFase = (ordRes.rows[0].o || 0) + 1;
-
       let nDesp = 0, nFases = 0;
-      for (const [categoria, items] of categoriasMapa) {
+      for (const categoria of escopo) {
+        const items = categoriasMapa.get(categoria) || [];
+
+        // Idempotência por categoria: remove o que esta categoria deste orçamento gerou
+        await client.query('DELETE FROM despesas WHERE orcamento_id = $1 AND categoria = $2', [orcamentoId, categoria]);
+        await client.query('DELETE FROM fases WHERE orcamento_id = $1 AND nome = $2', [orcamentoId, categoria]);
+
+        const ordRes = await client.query('SELECT COALESCE(MAX(ordem), 0) AS o FROM fases WHERE obra_id = $1', [obra_id]);
+        const ordemFase = (ordRes.rows[0].o || 0) + 1;
+
         const faseRes = await client.query(
           `INSERT INTO fases (obra_id, ordem, nome, inicio, termino, status, categoria, descricao, orcamento_id)
            VALUES ($1, $2, $3, $4, $5, 'nao_iniciada', 'etapa_obra', $6, $7) RETURNING id`,
-          [obra_id, ordemFase, `${tipoOrcamento || 'Orçamento'} - ${categoria}`, ini, fim,
-           `Fase gerada a partir do orçamento: ${orcamento.nome}`, orcamentoId]
+          [obra_id, ordemFase, categoria, ini, fim,
+           `Gerada do orçamento: ${orcamento.nome}`, orcamentoId]
         );
         const faseId = faseRes.rows[0].id;
-        nFases++; ordemFase++;
+        nFases++;
 
         for (const l of items) {
           const valor = sanitizeNumero(l.valor_total);
-          if (valor === null) continue; // ignora itens sem valor
+          if (valor === null) continue;
           await client.query(
             `INSERT INTO despesas (obra_id, fase_id, descricao, categoria, valor, data, fornecedor, orcamento_id)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-            [obra_id, faseId, `${l.descricao || 'Item'} (Item ${l.item_numero})`,
-             l.categoria || 'Serviços Gerais', valor, hoje, orcamento.fornecedor_nome || orcamento.nome, orcamentoId]
+            [obra_id, faseId, l.descricao || 'Item', categoria, valor, hoje,
+             orcamento.fornecedor_nome || orcamento.nome, orcamentoId]
           );
           nDesp++;
         }
       }
 
       await client.query(
-        'UPDATE orcamentos SET status = $1, tipo_orcamento = $2, fornecedor_id = $3, atualizado_em = NOW() WHERE id = $4',
-        ['aceito', tipoOrcamento || null, fornecedorId, orcamentoId]
+        'UPDATE orcamentos SET status = $1, fornecedor_id = $2, atualizado_em = NOW() WHERE id = $3',
+        ['aceito', fornecedorId, orcamentoId]
       );
       await client.query(
         'INSERT INTO auditoria (obra_id, tipo, titulo, descricao, usuario_id) VALUES ($1, $2, $3, $4, $5)',
         [obra_id, 'APPROVE', 'Orçamento aprovado',
-         `Orçamento "${orcamento.nome}" aprovado: ${nDesp} despesa(s) e ${nFases} fase(s) (substituídas se já existiam).`,
+         `Orçamento "${orcamento.nome}": ${nDesp} despesa(s) e ${nFases} fase(s) em ${escopo.length} categoria(s).`,
          req.usuario.id]
       );
 
       await client.query('COMMIT');
-      res.json({ sucesso: true, mensagem: `Aprovado: ${nDesp} despesa(s) e ${nFases} fase(s).`, despesas: nDesp, fases: nFases });
+      res.json({ sucesso: true, mensagem: `Aprovado: ${nFases} categoria(s), ${nDesp} despesa(s).`, despesas: nDesp, fases: nFases });
     } catch (errTx) {
       await client.query('ROLLBACK').catch(() => {});
       throw errTx;
     } finally {
       client.release();
     }
-
   } catch (error) {
     console.error('❌ Erro ao aprovar orçamento:', error);
     res.status(500).json({ erro: 'Erro ao aprovar orçamento: ' + error.message });

@@ -3,20 +3,6 @@ import { listarObras } from '../store';
 import type { Obra } from '../store';
 import { apiClient } from '../api/client';
 
-const TIPOS_ORCAMENTO = [
-  'Obra Geral',
-  'Terraplanagem',
-  'Fundações',
-  'Estrutura',
-  'Cobertura',
-  'Alvenaria',
-  'Instalações Elétricas',
-  'Instalações Hidráulicas',
-  'Acabamento',
-  'Pintura',
-  'Serviços Gerais',
-];
-
 const fmt = (v: any) =>
   Number(v)?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) ?? '—';
 
@@ -30,7 +16,6 @@ export function OrcamentosAprovacaoPage() {
   const [toastMsg, setToastMsg] = useState('');
   const [abaAtiva, setAbaAtiva] = useState<string>('');
   const [removendo, setRemovendo] = useState(false);
-  const [tipoSelecionado, setTipoSelecionado] = useState<Record<string, string>>({});
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('');
 
   useEffect(() => {
@@ -80,15 +65,17 @@ export function OrcamentosAprovacaoPage() {
   const [aprovando, setAprovando] = useState(false);
 
   const handleAprovar = async (orcamentoId: string) => {
-    // A aprovação sempre considera TODAS as linhas do orçamento (no backend).
-    // Reaprovar atualiza (substitui) — não duplica. O "tipo" rotula as fases.
-    const tipo = tipoSelecionado[orcamentoId] || 'Obra Geral';
+    // Escopo = categoria filtrada (se houver) ou todas as categorias do orçamento.
+    // Idempotente por categoria no backend: reaprovar substitui, não duplica.
+    const linhas = linhasPorOrc[orcamentoId] || [];
+    const categorias = categoriaFiltro
+      ? [categoriaFiltro]
+      : Array.from(new Set(linhas.map(l => l.categoria || 'Outros')));
     setAprovando(true);
     try {
-      const res = await apiClient.aprovarOrcamento(orcamentoId, tipo);
+      const res = await apiClient.aprovarOrcamento(orcamentoId, categorias);
       setToastMsg(`✅ ${res?.mensagem || 'Orçamento aprovado!'}`);
       setTimeout(() => setToastMsg(''), 6000);
-      // Recarrega o orçamento para refletir o novo status/itens
       try {
         const d = await apiClient.obterOrcamento(orcamentoId);
         setLinhasPorOrc(prev => ({ ...prev, [orcamentoId]: d.linhas || [] }));
@@ -337,25 +324,15 @@ export function OrcamentosAprovacaoPage() {
               )}
 
               {/* Botões de ação */}
-              <div className="flex flex-col sm:flex-row gap-md pt-lg border-t border-outline-variant items-stretch sm:items-end">
-                  <div className="flex-1">
-                    <label className="block text-label-sm text-on-surface-variant mb-1">Tipo do orçamento (rótulo das fases geradas)</label>
-                    <select
-                      value={tipoSelecionado[orcAtivo.id] || 'Obra Geral'}
-                      onChange={e => setTipoSelecionado(prev => ({ ...prev, [orcAtivo.id]: e.target.value }))}
-                      className={FIELD}
-                    >
-                      {TIPOS_ORCAMENTO.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
+              <div className="flex flex-col sm:flex-row gap-md pt-lg border-t border-outline-variant">
                   <button
                     onClick={() => handleAprovar(orcAtivo.id)}
                     disabled={aprovando}
-                    className="px-lg py-2 bg-primary text-on-primary rounded-lg hover:bg-primary/90 text-label-md font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-sm"
-                    title="Aprova o orçamento inteiro (gera/atualiza despesas e fases). Reaprovar atualiza, não duplica."
+                    className="flex-1 px-lg py-2 bg-primary text-on-primary rounded-lg hover:bg-primary/90 text-label-md font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-sm"
+                    title="Gera/atualiza despesas e fases. Reaprovar a mesma categoria substitui (não duplica)."
                   >
                     <span className={`material-symbols-outlined text-[18px] ${aprovando ? 'animate-spin' : ''}`}>{aprovando ? 'progress_activity' : 'check_circle'}</span>
-                    {aprovando ? 'Aprovando…' : (orcAtivo.status === 'aceito' ? 'Reaprovar (atualizar)' : 'Aprovar orçamento')}
+                    {aprovando ? 'Aprovando…' : (categoriaFiltro ? `Aprovar categoria: ${categoriaFiltro}` : (orcAtivo.status === 'aceito' ? 'Reaprovar todas as categorias' : 'Aprovar todas as categorias'))}
                   </button>
                   <button
                     onClick={() => handleRemover(orcAtivo.id)}

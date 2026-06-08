@@ -268,10 +268,10 @@ class APIClient {
   }
 
   // Aprovação de orçamentos (com itens selecionados)
-  async aprovarOrcamento(id: string, tipoOrcamento: string, linhas?: any[]): Promise<any> {
+  async aprovarOrcamento(id: string, categorias?: string[]): Promise<any> {
     return this.request(`/api/orcamentos/${id}/aprovar`, {
       method: 'POST',
-      body: { tipoOrcamento, linhas: linhas || [] },
+      body: { categorias: categorias || [] },
     });
   }
 }

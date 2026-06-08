@@ -46,6 +46,12 @@ export function OrcamentosComparativaPage() {
 
   useEffect(() => { listarObras().then(setObras); }, []);
 
+  // Pré-seleciona a obra quando vem de um link (?obraId=...)
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get('obraId');
+    if (p) setObraId(p);
+  }, []);
+
   useEffect(() => {
     if (!obraId) { setTodos([]); setSelecionados(new Set()); setLinhasPorOrc({}); return; }
     setCarregando(true);

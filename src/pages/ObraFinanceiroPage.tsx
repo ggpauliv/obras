@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ObraHeader from '../components/ObraHeader';
 import { listarDespesas, salvarDespesa, removerDespesa, getObraAtivaId } from '../store';
 import type { Despesa } from '../store';
@@ -17,6 +18,7 @@ function parseValor(v: any): number {
 }
 
 export default function ObraFinanceiroPage() {
+  const navigate = useNavigate();
   const obraId = getObraAtivaId();
   const [despesas, setDespesas] = useState<Despesa[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -145,6 +147,9 @@ export default function ObraFinanceiroPage() {
                   <td className="py-md px-md text-on-surface-variant">{d.data}</td>
                   <td className="py-md px-md text-on-surface font-medium text-right">{fmt(parseValor(d.valor))}</td>
                   <td className="py-md px-md text-right whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                    {(d as any).orcamentoId && (
+                      <button onClick={() => navigate(`/orcamentos/comparativa?obraId=${obraId}`)} title="Ver orçamento de origem" className="text-on-surface-variant hover:text-primary p-xs"><span className="material-symbols-outlined text-[18px]">receipt_long</span></button>
+                    )}
                     <button onClick={() => editar(d)} className="text-on-surface-variant hover:text-primary p-xs"><span className="material-symbols-outlined text-[18px]">edit</span></button>
                     <button onClick={() => excluir(d.id)} className="text-on-surface-variant hover:text-error p-xs"><span className="material-symbols-outlined text-[18px]">delete</span></button>
                   </td>
