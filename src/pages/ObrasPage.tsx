@@ -12,7 +12,7 @@ const STATUS: Record<StatusKey, { label: string; chip: string; bar: string; pctT
   concluida: { label: 'Concluída', chip: 'bg-emerald-100 text-emerald-800 border-emerald-200', bar: 'bg-emerald-600', pctText: 'text-emerald-700' },
 };
 
-const SELECT = 'appearance-none pl-4 pr-10 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary text-body-sm text-on-surface cursor-pointer';
+const SELECT = 'pl-4 pr-8 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest focus:outline-none focus:border-primary text-body-sm text-on-surface cursor-pointer';
 const FIELD = 'w-full rounded-lg border border-outline-variant text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary py-2 px-3';
 
 const VAZIA: Obra = { id: '', nome: '', cliente: '', tipo: 'Residencial', inicio: '', termino: '', pct: 0, status: 'planejamento' };
@@ -95,7 +95,6 @@ export default function ObrasPage() {
               <option value="atrasada">Atrasada</option>
               <option value="planejamento">Planejamento</option>
             </select>
-            <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none text-[20px]">expand_more</span>
           </div>
           <div className="relative hidden lg:block">
             <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)} className={SELECT}>
@@ -104,7 +103,6 @@ export default function ObrasPage() {
               <option value="Comercial">Comercial</option>
               <option value="Infraestrutura">Infraestrutura</option>
             </select>
-            <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none text-[20px]">expand_more</span>
           </div>
         </div>
         <button onClick={novaObra} className="w-full sm:w-auto flex items-center justify-center gap-xs px-lg py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors shadow-sm text-label-md shrink-0">
@@ -113,25 +111,24 @@ export default function ObrasPage() {
       </div>
 
       {/* Tabela */}
-      <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm overflow-hidden flex flex-col">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
+      <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm flex flex-col">
+        <div>
+          <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-surface-container-low border-b border-outline-variant">
-                {['#', 'Nome da Obra', 'Cliente', 'Tipo', 'Início', 'Término Previsto', '% Conclusão', 'Status', 'Ações'].map((h) => (
+                {['Nome da Obra', 'Cliente', 'Tipo', 'Início', 'Término Previsto', '% Conclusão', 'Status', 'Ações'].map((h) => (
                   <th key={h} className="py-sm px-md text-label-sm text-on-surface-variant font-semibold whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="text-body-sm divide-y divide-outline-variant/50">
               {filtradas.length === 0 && (
-                <tr><td colSpan={9} className="py-xl px-md text-center text-on-surface-variant">Nenhuma obra encontrada.</td></tr>
+                <tr><td colSpan={8} className="py-xl px-md text-center text-on-surface-variant">Nenhuma obra encontrada.</td></tr>
               )}
               {filtradas.map((o, idx) => {
                 const s = STATUS[o.status];
                 return (
                   <tr key={o.id} className={`hover:bg-surface-container-low transition-colors group ${idx % 2 === 1 ? 'bg-surface-bright' : ''}`}>
-                    <td className="py-sm px-md text-on-surface-variant text-center">{o.id}</td>
                     <td onClick={() => abrirObra(o.id)} className="py-sm px-md font-medium text-on-surface group-hover:text-primary transition-colors cursor-pointer">{o.nome}</td>
                     <td className="py-sm px-md text-secondary">{o.cliente}</td>
                     <td className="py-sm px-md text-secondary">{o.tipo}</td>

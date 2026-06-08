@@ -58,14 +58,21 @@ export default function ObraDetalhePage() {
   const concluidas = fases.filter((f) => f.status === 'concluida').length;
   const atrasadas = fases.filter((f) => f.status === 'atrasada').length;
 
-  // Tempo decorrido (para o progresso esperado)
-  const ini = parseBR(obra?.inicio || '');
-  const fim = parseBR(obra?.termino || '');
+  // Progresso real = média do progresso das fases (reflete o que já aconteceu);
+  // se não houver fases, usa o % da obra.
+  const pct = fases.length
+    ? Math.round(fases.reduce((s, f) => s + (f.pct || 0), 0) / fases.length)
+    : (obra?.pct ?? 0);
+
+  // Timeline considera as datas da obra E das fases (pega o início mais cedo e o término mais tarde)
+  const iniCand = [parseBR(obra?.inicio || ''), ...fases.map((f) => parseBR(f.inicio))].filter((n): n is number => n != null);
+  const fimCand = [parseBR(obra?.termino || ''), ...fases.map((f) => parseBR(f.termino))].filter((n): n is number => n != null);
+  const ini = iniCand.length ? Math.min(...iniCand) : null;
+  const fim = fimCand.length ? Math.max(...fimCand) : null;
   const hoje = Date.now();
   const totalDias = ini && fim ? Math.max(1, Math.round((fim - ini) / 86400000)) : null;
   const diasCorridos = ini ? Math.max(0, Math.round((hoje - ini) / 86400000)) : null;
   const pctTempo = totalDias && diasCorridos != null ? Math.min(100, (diasCorridos / totalDias) * 100) : null;
-  const pct = obra?.pct ?? 0;
 
   if (carregando) {
     return (
