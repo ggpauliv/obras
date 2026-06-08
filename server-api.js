@@ -1601,7 +1601,10 @@ async function garantirSchema() {
     await db.query("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS orcamento_id UUID");
     await db.query("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS linha_id UUID");
     await db.query("ALTER TABLE fases ADD COLUMN IF NOT EXISTS orcamento_id UUID");
-    console.log('✅ Schema verificado (papel + orcamento_id + linha_id ok)');
+    // Permite status 'parcial' nos orçamentos (aprovação parcial)
+    await db.query("ALTER TABLE orcamentos DROP CONSTRAINT IF EXISTS orcamentos_status_check");
+    await db.query("ALTER TABLE orcamentos ADD CONSTRAINT orcamentos_status_check CHECK (status IN ('ativo','vencido','aceito','descartado','parcial'))");
+    console.log('✅ Schema verificado (papel + orcamento_id + linha_id + status parcial ok)');
   } catch (e) {
     console.error('⚠️ Falha ao garantir schema:', e.message);
   }
