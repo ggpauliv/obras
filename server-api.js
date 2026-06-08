@@ -48,6 +48,39 @@ function exigeSuper(req, res) {
 
 // Importar módulos customizados
 const db = require('./db-client');
+
+// Blindagem multi-tenant: confirma que a obra pertence à empresa do contexto.
+// Retorna true se ok; senão já responde 403/404 e retorna false.
+async function checarObra(req, res, obraId) {
+  const emp = empresaDaReq(req);
+  if (!emp && req.usuario.isSuper) return true; // super sem contexto: acesso amplo
+  if (!obraId) { res.status(400).json({ erro: 'obraId é obrigatório' }); return false; }
+  const r = await db.query('SELECT empresa_id FROM obras WHERE id = $1', [obraId]);
+  if (r.rows.length === 0) { res.status(404).json({ erro: 'Obra não encontrada' }); return false; }
+  if (r.rows[0].empresa_id !== emp) { res.status(403).json({ erro: 'Sem acesso a esta obra' }); return false; }
+  return true;
+}
+// Confirma que um recurso filho (que tem obra_id) pertence à empresa do contexto.
+async function checarPorObraId(req, res, tabela, id) {
+  const r = await db.query(`SELECT obra_id FROM ${tabela} WHERE id = $1`, [id]);
+  if (r.rows.length === 0) { res.status(404).json({ erro: 'Registro não encontrado' }); return false; }
+  return checarObra(req, res, r.rows[0].obra_id);
+}
+// Confirma que um orçamento pertence à empresa do contexto (via sua obra).
+async function checarOrcamento(req, res, id) {
+  const r = await db.query('SELECT obra_id FROM orcamentos WHERE id = $1', [id]);
+  if (r.rows.length === 0) { res.status(404).json({ erro: 'Orçamento não encontrado' }); return false; }
+  return checarObra(req, res, r.rows[0].obra_id);
+}
+// Confirma que um recurso com empresa_id direto (fornecedores/usuarios) pertence ao contexto.
+async function checarEmpresaDireta(req, res, tabela, id) {
+  const emp = empresaDaReq(req);
+  if (!emp && req.usuario.isSuper) return true;
+  const r = await db.query(`SELECT empresa_id FROM ${tabela} WHERE id = $1`, [id]);
+  if (r.rows.length === 0) { res.status(404).json({ erro: 'Registro não encontrado' }); return false; }
+  if (r.rows[0].empresa_id !== emp) { res.status(403).json({ erro: 'Sem acesso a este registro' }); return false; }
+  return true;
+}
 const { autenticar, gerarToken } = require('./auth-middleware');
 const { extrairOrcamento } = require('./orcamento-extrator');
 
@@ -275,6 +308,7 @@ app.post('/api/usuarios', autenticar, async (req, res) => {
 // PUT /api/usuarios/:id  (senha opcional — só atualiza se enviada)
 app.put('/api/usuarios/:id', autenticar, async (req, res) => {
   try {
+    if (!(await checarEmpresaDireta(req, res, 'usuarios', req.params.id))) return;
     const { nome, email, senha, papel, ativo } = req.body;
     let r;
     if (senha && senha.trim()) {
@@ -303,6 +337,7 @@ app.delete('/api/usuarios/:id', autenticar, async (req, res) => {
     if (req.params.id === req.usuario.id) {
       return res.status(400).json({ erro: 'Você não pode excluir o próprio usuário logado' });
     }
+    if (!(await checarEmpresaDireta(req, res, 'usuarios', req.params.id))) return;
     // Solta as referências de auditoria (FK sem ON DELETE) antes de remover.
     await db.query('UPDATE auditoria SET usuario_id = NULL WHERE usuario_id = $1', [req.params.id]);
     const r = await db.query('DELETE FROM usuarios WHERE id = $1', [req.params.id]);
@@ -340,6 +375,7 @@ app.get('/api/obras', autenticar, async (req, res) => {
 // GET /api/obras/:id
 app.get('/api/obras/:id', autenticar, async (req, res) => {
   try {
+    if (!(await checarObra(req, res, req.params.id))) return;
     const result = await db.query(
       'SELECT id, nome, cliente, tipo, inicio, termino, pct, status FROM obras WHERE id = $1',
       [req.params.id]
@@ -388,6 +424,7 @@ app.post('/api/obras', autenticar, async (req, res) => {
 // PUT /api/obras/:id
 app.put('/api/obras/:id', autenticar, async (req, res) => {
   try {
+    if (!(await checarObra(req, res, req.params.id))) return;
     const { nome, cliente, tipo, inicio, termino, status, pct } = req.body;
 
     const result = await db.query(
@@ -415,6 +452,7 @@ app.put('/api/obras/:id', autenticar, async (req, res) => {
 // DELETE /api/obras/:id
 app.delete('/api/obras/:id', autenticar, async (req, res) => {
   try {
+    if (!(await checarObra(req, res, req.params.id))) return;
     // Obter nome da obra antes de deletar
     const obraResult = await db.query('SELECT nome FROM obras WHERE id = $1', [req.params.id]);
 
@@ -448,6 +486,7 @@ app.delete('/api/obras/:id', autenticar, async (req, res) => {
 app.get('/api/fases', autenticar, async (req, res) => {
   try {
     const { obraId } = req.query;
+    if (obraId) { if (!(await checarObra(req, res, obraId))) return; }
 
     let query = 'SELECT id, obra_id, ordem, nome, inicio, termino, pct, status, categoria, descricao FROM fases';
     let params = [];
@@ -475,6 +514,7 @@ app.post('/api/fases', autenticar, async (req, res) => {
     if (!obraId || !ordem || !nome || !inicio || !termino) {
       return res.status(400).json({ erro: 'Campos obrigatórios: obraId, ordem, nome, inicio, termino' });
     }
+    if (!(await checarObra(req, res, obraId))) return;
 
     const result = await db.query(
       'INSERT INTO fases (obra_id, ordem, nome, inicio, termino, pct, status, categoria, descricao) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
@@ -497,6 +537,7 @@ app.post('/api/fases', autenticar, async (req, res) => {
 // PUT /api/fases/:id
 app.put('/api/fases/:id', autenticar, async (req, res) => {
   try {
+    if (!(await checarPorObraId(req, res, 'fases', req.params.id))) return;
     const { nome, inicio, termino, pct, status, categoria, descricao } = req.body;
 
     const result = await db.query(
@@ -524,6 +565,7 @@ app.put('/api/fases/:id', autenticar, async (req, res) => {
 // DELETE /api/fases/:id
 app.delete('/api/fases/:id', autenticar, async (req, res) => {
   try {
+    if (!(await checarPorObraId(req, res, 'fases', req.params.id))) return;
     const faseResult = await db.query('SELECT nome, obra_id FROM fases WHERE id = $1', [req.params.id]);
 
     if (faseResult.rows.length === 0) {
@@ -555,6 +597,7 @@ app.delete('/api/fases/:id', autenticar, async (req, res) => {
 app.get('/api/despesas', autenticar, async (req, res) => {
   try {
     const { obraId } = req.query;
+    if (obraId) { if (!(await checarObra(req, res, obraId))) return; }
 
     let query = 'SELECT id, obra_id, fase_id, descricao, categoria, valor, data, fornecedor, cnpj, numero_nota, chave_acesso FROM despesas';
     let params = [];
@@ -582,6 +625,7 @@ app.post('/api/despesas', autenticar, async (req, res) => {
     if (!obraId || !descricao || !valor || !data) {
       return res.status(400).json({ erro: 'Campos obrigatórios: obraId, descricao, valor, data' });
     }
+    if (!(await checarObra(req, res, obraId))) return;
 
     const result = await db.query(
       'INSERT INTO despesas (obra_id, fase_id, descricao, categoria, valor, data, fornecedor, cnpj, numero_nota, chave_acesso) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
@@ -604,6 +648,7 @@ app.post('/api/despesas', autenticar, async (req, res) => {
 // PUT /api/despesas/:id
 app.put('/api/despesas/:id', autenticar, async (req, res) => {
   try {
+    if (!(await checarPorObraId(req, res, 'despesas', req.params.id))) return;
     const { descricao, categoria, valor, data, fornecedor, cnpj, numeroNota, chaveAcesso } = req.body;
 
     const result = await db.query(
@@ -631,6 +676,7 @@ app.put('/api/despesas/:id', autenticar, async (req, res) => {
 // DELETE /api/despesas/:id
 app.delete('/api/despesas/:id', autenticar, async (req, res) => {
   try {
+    if (!(await checarPorObraId(req, res, 'despesas', req.params.id))) return;
     const despesaResult = await db.query('SELECT descricao, valor, obra_id FROM despesas WHERE id = $1', [req.params.id]);
 
     if (despesaResult.rows.length === 0) {
@@ -708,6 +754,7 @@ app.post('/api/fornecedores', autenticar, async (req, res) => {
 // PUT /api/fornecedores/:id
 app.put('/api/fornecedores/:id', autenticar, async (req, res) => {
   try {
+    if (!(await checarEmpresaDireta(req, res, 'fornecedores', req.params.id))) return;
     const { nome, categoria, cnpj, contato, status } = req.body;
 
     const result = await db.query(
@@ -735,6 +782,7 @@ app.put('/api/fornecedores/:id', autenticar, async (req, res) => {
 // DELETE /api/fornecedores/:id
 app.delete('/api/fornecedores/:id', autenticar, async (req, res) => {
   try {
+    if (!(await checarEmpresaDireta(req, res, 'fornecedores', req.params.id))) return;
     const fornecedorResult = await db.query('SELECT nome FROM fornecedores WHERE id = $1', [req.params.id]);
 
     if (fornecedorResult.rows.length === 0) {
@@ -766,6 +814,7 @@ app.delete('/api/fornecedores/:id', autenticar, async (req, res) => {
 app.get('/api/auditoria', autenticar, async (req, res) => {
   try {
     const { obraId } = req.query;
+    if (obraId) { if (!(await checarObra(req, res, obraId))) return; }
 
     let query = `SELECT a.id, a.obra_id, a.tipo, a.titulo, a.descricao, a.usuario_id, a.data, u.nome as usuario_nome
       FROM auditoria a
@@ -795,6 +844,7 @@ app.get('/api/auditoria', autenticar, async (req, res) => {
 app.get('/api/orcamentos', autenticar, async (req, res) => {
   try {
     const { obraId } = req.query;
+    if (obraId) { if (!(await checarObra(req, res, obraId))) return; }
     console.log(`📊 GET /api/orcamentos (obraId=${obraId})`);
 
     let query = `SELECT o.id, o.obra_id, o.fornecedor_id, o.nome, o.descricao, o.valor_total,
@@ -831,6 +881,7 @@ app.put('/api/orcamentos/categoria', autenticar, async (req, res) => {
     if (!obraId || !itemNumero || !categoria) {
       return res.status(400).json({ erro: 'obraId, itemNumero e categoria são obrigatórios' });
     }
+    if (!(await checarObra(req, res, obraId))) return;
     const r = await db.query(
       `UPDATE linhas_orcamento SET categoria = $1
        WHERE item_numero = $2 AND orcamento_id IN (SELECT id FROM orcamentos WHERE obra_id = $3)`,
@@ -846,6 +897,7 @@ app.put('/api/orcamentos/categoria', autenticar, async (req, res) => {
 // PUT /api/orcamentos/:id — renomeia (e opcionalmente atualiza prazo) o orçamento.
 app.put('/api/orcamentos/:id', autenticar, async (req, res) => {
   try {
+    if (!(await checarOrcamento(req, res, req.params.id))) return;
     const { nome } = req.body;
     if (!nome || !nome.trim()) return res.status(400).json({ erro: 'nome é obrigatório' });
     const r = await db.query(
@@ -863,6 +915,7 @@ app.put('/api/orcamentos/:id', autenticar, async (req, res) => {
 // GET /api/orcamentos/:id
 app.get('/api/orcamentos/:id', autenticar, async (req, res) => {
   try {
+    if (!(await checarOrcamento(req, res, req.params.id))) return;
     console.log(`📋 GET /api/orcamentos/:id = ${req.params.id}`);
     const orcamento = await db.query(
       `SELECT o.*, f.nome as fornecedor_nome FROM orcamentos o
@@ -903,6 +956,7 @@ app.post('/api/orcamentos', autenticar, async (req, res) => {
     if (!obraId || !nome) {
       return res.status(400).json({ erro: 'Campos obrigatórios: obraId, nome' });
     }
+    if (!(await checarObra(req, res, obraId))) return;
 
     const result = await db.query(
       `INSERT INTO orcamentos (obra_id, fornecedor_id, nome, descricao, valor_total, prazo_dias, data_emissao, numero_cotacao)
@@ -939,6 +993,7 @@ app.post('/api/orcamentos', autenticar, async (req, res) => {
 // DELETE /api/orcamentos/:id
 app.delete('/api/orcamentos/:id', autenticar, async (req, res) => {
   try {
+    if (!(await checarOrcamento(req, res, req.params.id))) return;
     const orcResult = await db.query('SELECT nome, obra_id FROM orcamentos WHERE id = $1', [req.params.id]);
 
     if (orcResult.rows.length === 0) {
@@ -1229,6 +1284,12 @@ app.post('/api/orcamentos/reimportar', autenticar, async (req, res) => {
       const orcamentoId = meta[i] && meta[i][1];
       const obraId = meta[i] && meta[i][2];
       if (!aba || !orcamentoId) continue;
+      // Blindagem: só processa orçamentos da empresa do contexto
+      const empCtx = empresaDaReq(req);
+      if (empCtx) {
+        const chk = await db.query('SELECT o.empresa_id FROM orcamentos orc JOIN obras o ON orc.obra_id = o.id WHERE orc.id = $1', [orcamentoId]);
+        if (chk.rows.length === 0 || chk.rows[0].empresa_id !== empCtx) continue;
+      }
       obraIdAud = obraId || obraIdAud;
       const sh = wb.Sheets[aba];
       if (!sh) continue;
@@ -1284,6 +1345,7 @@ app.post('/api/orcamentos/salvar', autenticar, async (req, res) => {
   try {
     const { obraId, dados } = req.body;
     if (!obraId || !dados) return res.status(400).json({ erro: 'obraId e dados são obrigatórios' });
+    if (!(await checarObra(req, res, obraId))) return;
 
     const nomeFornecedor = dados.fornecedor || 'Fornecedor Desconhecido';
 
@@ -1355,6 +1417,7 @@ app.get('/api/orcamentos/comparar', autenticar, async (req, res) => {
     if (!obraId) {
       return res.status(400).json({ erro: 'obraId é obrigatório' });
     }
+    if (!(await checarObra(req, res, obraId))) return;
 
     // Obter todos os orçamentos da obra
     const orcamentos = await db.query(
@@ -1395,6 +1458,7 @@ app.get('/api/orcamentos/comparar', autenticar, async (req, res) => {
 app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
   try {
     const orcamentoId = req.params.id;
+    if (!(await checarOrcamento(req, res, orcamentoId))) return;
     const linhaIds = Array.isArray(req.body.linhaIds) ? req.body.linhaIds.filter(Boolean) : [];
     const categorias = Array.isArray(req.body.categorias) ? req.body.categorias.filter(Boolean) : [];
 
@@ -1501,6 +1565,7 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
 app.delete('/api/orcamentos/:id/itens', autenticar, async (req, res) => {
   try {
     const orcamentoId = req.params.id;
+    if (!(await checarOrcamento(req, res, orcamentoId))) return;
     const linhaIds = Array.isArray(req.body.linhaIds) ? req.body.linhaIds.filter(Boolean) : [];
     if (linhaIds.length === 0) return res.status(400).json({ erro: 'Nenhum item informado' });
 
@@ -1546,6 +1611,7 @@ app.delete('/api/orcamentos/:id/itens', autenticar, async (req, res) => {
 app.get('/api/ocorrencias', autenticar, async (req, res) => {
   try {
     const { obraId } = req.query;
+    if (obraId) { if (!(await checarObra(req, res, obraId))) return; }
     const r = await db.query(
       `SELECT o.*, f.nome AS fase_nome FROM ocorrencias o
        LEFT JOIN fases f ON o.fase_id = f.id
@@ -1560,6 +1626,7 @@ app.post('/api/ocorrencias', autenticar, async (req, res) => {
   try {
     const { obraId, faseId, tipo, descricao, dataInicio, dataFim, impactoDias } = req.body;
     if (!obraId || !tipo || !dataInicio) return res.status(400).json({ erro: 'obraId, tipo e dataInicio são obrigatórios' });
+    if (!(await checarObra(req, res, obraId))) return;
     const imp = (impactoDias === '' || impactoDias === null || impactoDias === undefined) ? null : parseInt(impactoDias, 10);
     const r = await db.query(
       `INSERT INTO ocorrencias (obra_id, fase_id, tipo, descricao, data_inicio, data_fim, impacto_dias)
@@ -1574,6 +1641,7 @@ app.post('/api/ocorrencias', autenticar, async (req, res) => {
 
 app.put('/api/ocorrencias/:id', autenticar, async (req, res) => {
   try {
+    if (!(await checarPorObraId(req, res, 'ocorrencias', req.params.id))) return;
     const { faseId, tipo, descricao, dataInicio, dataFim, impactoDias } = req.body;
     const imp = (impactoDias === '' || impactoDias === null || impactoDias === undefined) ? null : parseInt(impactoDias, 10);
     const r = await db.query(
@@ -1588,6 +1656,7 @@ app.put('/api/ocorrencias/:id', autenticar, async (req, res) => {
 
 app.delete('/api/ocorrencias/:id', autenticar, async (req, res) => {
   try {
+    if (!(await checarPorObraId(req, res, 'ocorrencias', req.params.id))) return;
     await db.query('DELETE FROM ocorrencias WHERE id = $1', [req.params.id]);
     res.json({ sucesso: true });
   } catch (e) { console.error('❌ excluir ocorrencia', e); res.status(500).json({ erro: 'Erro ao excluir ocorrência' }); }
