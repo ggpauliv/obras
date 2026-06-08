@@ -1422,6 +1422,49 @@ app.post('/api/orcamentos/:id/aprovar', autenticar, async (req, res) => {
   }
 });
 
+// DELETE /api/orcamentos/:id/itens — remove linhas do orçamento (e despesas vinculadas)
+app.delete('/api/orcamentos/:id/itens', autenticar, async (req, res) => {
+  try {
+    const orcamentoId = req.params.id;
+    const linhaIds = Array.isArray(req.body.linhaIds) ? req.body.linhaIds.filter(Boolean) : [];
+    if (linhaIds.length === 0) return res.status(400).json({ erro: 'Nenhum item informado' });
+
+    const client = await db.getClient();
+    try {
+      await client.query('BEGIN');
+      // Remove despesas geradas por essas linhas
+      await client.query(
+        'DELETE FROM despesas WHERE orcamento_id = $1 AND linha_id = ANY($2::uuid[])',
+        [orcamentoId, linhaIds]
+      );
+      // Remove as linhas
+      const del = await client.query(
+        'DELETE FROM linhas_orcamento WHERE orcamento_id = $1 AND id = ANY($2::uuid[])',
+        [orcamentoId, linhaIds]
+      );
+      // Recalcula o total do orçamento
+      const soma = await client.query(
+        'SELECT COALESCE(SUM(valor_total), 0) AS total FROM linhas_orcamento WHERE orcamento_id = $1',
+        [orcamentoId]
+      );
+      await client.query(
+        'UPDATE orcamentos SET valor_total = $1, atualizado_em = NOW() WHERE id = $2',
+        [sanitizeNumero(soma.rows[0].total) || 0, orcamentoId]
+      );
+      await client.query('COMMIT');
+      res.json({ sucesso: true, removidos: del.rowCount });
+    } catch (e) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw e;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('❌ Erro ao excluir itens:', error);
+    res.status(500).json({ erro: 'Erro ao excluir itens: ' + error.message });
+  }
+});
+
 // ============================================
 // PROCESSAMENTO DE DOCUMENTOS (GEMINI)
 // ============================================

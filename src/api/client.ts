@@ -274,6 +274,10 @@ class APIClient {
       body: { linhaIds: opts?.linhaIds || [], categorias: opts?.categorias || [] },
     });
   }
+
+  async excluirItensOrcamento(id: string, linhaIds: string[]): Promise<any> {
+    return this.request(`/api/orcamentos/${id}/itens`, { method: 'DELETE', body: { linhaIds } });
+  }
 }
 
 // Exportar instância singleton

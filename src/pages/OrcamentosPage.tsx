@@ -122,6 +122,21 @@ export function OrcamentosPage() {
     setAcao(false);
   };
 
+  const excluirItens = async () => {
+    if (!orcAtivo || itensSel.size === 0) return;
+    if (!window.confirm(`Excluir ${itensSel.size} item(ns) deste orçamento? Esta ação não pode ser desfeita.`)) return;
+    setAcao(true);
+    try {
+      await apiClient.excluirItensOrcamento(orcAtivo.id, Array.from(itensSel));
+      aviso('Itens removidos');
+      const d = await apiClient.obterOrcamento(orcAtivo.id);
+      setLinhasPorOrc(prev => ({ ...prev, [orcAtivo.id]: d.linhas || [] }));
+      setItensSel(new Set());
+      await recarregar();
+    } catch (e: any) { aviso('Erro: ' + e.message); }
+    setAcao(false);
+  };
+
   const remover = async (o: any) => {
     if (!window.confirm(`Remover orçamento "${nomeDe(o)}"?`)) return;
     setAcao(true);
@@ -342,9 +357,14 @@ export function OrcamentosPage() {
                       <span className={`material-symbols-outlined text-[18px] ${acao ? 'animate-spin' : ''}`}>{acao ? 'progress_activity' : 'task_alt'}</span> Aprovar tudo
                     </button>
                     {itensSel.size > 0 && (
-                      <button onClick={() => aprovar({ linhaIds: Array.from(itensSel) })} disabled={acao} className="px-lg py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-label-md disabled:opacity-50">
-                        Aprovar {itensSel.size} selecionado(s)
-                      </button>
+                      <>
+                        <button onClick={() => aprovar({ linhaIds: Array.from(itensSel) })} disabled={acao} className="px-lg py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-label-md disabled:opacity-50">
+                          Aprovar {itensSel.size} selecionado(s)
+                        </button>
+                        <button onClick={excluirItens} disabled={acao} className="px-lg py-2 bg-error/10 text-error rounded-lg hover:bg-error/20 text-label-md disabled:opacity-50 flex items-center gap-xs">
+                          <span className="material-symbols-outlined text-[18px]">delete_sweep</span> Excluir {itensSel.size}
+                        </button>
+                      </>
                     )}
                     <button onClick={() => remover(orcAtivo)} disabled={acao} className="px-lg py-2 bg-error/10 text-error rounded-lg hover:bg-error/20 text-label-md disabled:opacity-50"><span className="material-symbols-outlined text-[18px]">delete</span></button>
                   </div>
