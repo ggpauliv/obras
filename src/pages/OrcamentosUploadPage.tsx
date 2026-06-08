@@ -337,13 +337,13 @@ export function OrcamentosUploadPage() {
             disabled={Object.values(salvando).some(Boolean)}
             className="px-xl py-3 rounded-lg bg-primary text-on-primary text-label-lg font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-sm"
           >
-            <span className="material-symbols-outlined text-[20px]">save_all</span>
+            <span className="material-symbols-outlined text-[20px]">save</span>
             Salvar todos ({resultados.filter(r => !r.salvo).length} pendentes)
           </button>
         )}
         {todosSalvos && (
           <button
-            onClick={() => navigate('/orcamentos/comparativa')}
+            onClick={() => navigate(`/orcamentos/comparativa?obraId=${obraId}`)}
             className="px-xl py-3 rounded-lg bg-primary text-on-primary text-label-lg font-medium hover:bg-primary/90 transition-colors flex items-center gap-sm"
           >
             <span className="material-symbols-outlined text-[20px]">compare_arrows</span>
