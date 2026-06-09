@@ -20,7 +20,6 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Orçamentos',
     icon: 'request_quote',
     submenu: [
-      { label: 'Importar', route: '/orcamentos/upload', icon: 'upload_file' },
       { label: 'Analisar & Aprovar', route: '/orcamentos/comparativa', icon: 'compare_arrows' },
     ],
   },
