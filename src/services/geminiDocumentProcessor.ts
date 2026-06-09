@@ -138,11 +138,18 @@ export async function processarDocumento(
     const body = JSON.stringify({ content });
     let response: Response | null = null;
 
+    // Cabeçalhos de autenticação (o endpoint exige JWT) + contexto de empresa.
+    const authHeaders: Record<string, string> = { 'content-type': 'application/json' };
+    const token = localStorage.getItem('auth_token');
+    if (token) authHeaders.Authorization = `Bearer ${token}`;
+    const empresaAtiva = localStorage.getItem('pawliv.empresaAtiva');
+    if (empresaAtiva) authHeaders['x-empresa-id'] = empresaAtiva;
+
     for (let tentativa = 0; tentativa <= MAX_RETRIES; tentativa++) {
       try {
         response = await fetchComTimeout(
           `${process.env.REACT_APP_API_URL ?? 'http://localhost:3001'}/api/process-document`,
-          { method: 'POST', headers: { 'content-type': 'application/json' }, body },
+          { method: 'POST', headers: authHeaders, body },
           TIMEOUT_MS
         );
       } catch (e) {
