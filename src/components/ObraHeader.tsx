@@ -16,8 +16,18 @@ export default function ObraHeader() {
   const ativaId = getObraAtivaId();
 
   useEffect(() => {
-    obterObra(ativaId).then(setObra);
-    listarObras().then(setObras);
+    listarObras().then((lista) => {
+      setObras(lista);
+      // Se a obra ativa estiver vazia ou não pertencer à lista (id antigo / outra
+      // empresa), seleciona a primeira obra válida e recarrega para alinhar todas as abas.
+      const valida = ativaId && lista.some((o) => o.id === ativaId);
+      if (!valida && lista.length > 0) {
+        setObraAtivaId(lista[0].id);
+        window.location.reload();
+        return;
+      }
+      if (valida) obterObra(ativaId).then(setObra);
+    });
   }, [ativaId]);
 
   const trocarObra = (id: string) => {

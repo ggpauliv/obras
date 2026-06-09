@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ROUTE_META } from '../config/nav';
 import { useAuth } from '../auth/AuthContext';
+import { getObraAtivaId, obterObra } from '../store';
 
 function iniciais(nome: string): string {
   const partes = nome.trim().split(/\s+/);
@@ -13,6 +14,16 @@ export default function TopBar({ onMenu }: { onMenu: () => void }) {
   const meta = ROUTE_META[pathname] || { title: '', breadcrumb: [] };
   const { usuario } = useAuth();
 
+  // Substitui o placeholder "Edifício Horizonte" pelo nome real da obra ativa.
+  const [obraNome, setObraNome] = useState('');
+  useEffect(() => {
+    const id = getObraAtivaId();
+    if (id) obterObra(id).then((o) => setObraNome(o?.nome || '')).catch(() => setObraNome(''));
+    else setObraNome('');
+  }, [pathname]);
+  const breadcrumb = meta.breadcrumb.map((c) => (c === 'Edifício Horizonte' && obraNome ? obraNome : c));
+  const titulo = meta.title === 'Edifício Horizonte' && obraNome ? obraNome : meta.title;
+
   return (
     <header className="flex items-center justify-between px-margin-mobile md:px-margin-desktop w-full h-16 bg-surface border-b border-outline-variant sticky top-0 z-10">
       <div className="flex items-center gap-sm min-w-0">
@@ -21,7 +32,7 @@ export default function TopBar({ onMenu }: { onMenu: () => void }) {
         </button>
         <div className="flex flex-col min-w-0">
         <span className="text-label-sm text-outline flex items-center gap-1">
-          {meta.breadcrumb.map((crumb, i) => (
+          {breadcrumb.map((crumb, i) => (
             <React.Fragment key={crumb + i}>
               {i > 0 && (
                 <span className="material-symbols-outlined text-[14px]">chevron_right</span>
@@ -30,7 +41,7 @@ export default function TopBar({ onMenu }: { onMenu: () => void }) {
             </React.Fragment>
           ))}
         </span>
-          <h2 className="text-headline-sm font-bold text-primary truncate">{meta.title}</h2>
+          <h2 className="text-headline-sm font-bold text-primary truncate">{titulo}</h2>
         </div>
       </div>
 
