@@ -46,6 +46,7 @@ export const ROUTE_META: Record<string, RouteMeta> = {
   '/obra-detalhe': { title: 'Edifício Horizonte', breadcrumb: ['Obras', 'Edifício Horizonte'] },
   '/obra-fases': { title: 'Fases / Cronograma', breadcrumb: ['Obras', 'Edifício Horizonte', 'Fases'] },
   '/obra-financeiro': { title: 'Financeiro', breadcrumb: ['Obras', 'Edifício Horizonte', 'Financeiro'] },
+  '/obra-documentos': { title: 'Documentos', breadcrumb: ['Obras', 'Edifício Horizonte', 'Documentos'] },
   '/obra-fotos': { title: 'Fotos', breadcrumb: ['Obras', 'Edifício Horizonte', 'Fotos'] },
   '/obra-auditoria': { title: 'Auditoria', breadcrumb: ['Obras', 'Edifício Horizonte', 'Auditoria'] },
   '/obra-ocorrencias': { title: 'Ocorrências', breadcrumb: ['Obras', 'Edifício Horizonte', 'Ocorrências'] },

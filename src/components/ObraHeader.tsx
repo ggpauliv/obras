@@ -61,16 +61,20 @@ export default function ObraHeader() {
               )}
             </div>
             {/* Seletor de obra — troca a obra ativa em todas as abas */}
-            <select
-              value={ativaId}
-              onChange={(e) => trocarObra(e.target.value)}
-              title="Trocar de obra"
-              className="bg-white/15 text-on-primary text-body-sm rounded-lg px-3 py-1.5 border border-white/25 focus:outline-none focus:border-white cursor-pointer max-w-[260px]"
-            >
-              {obras.map((o) => (
-                <option key={o.id} value={o.id} className="text-on-surface">{o.nome}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2 bg-white/15 rounded-lg pl-3 pr-1 py-1 border border-white/30">
+              <span className="material-symbols-outlined text-[18px] text-on-primary/80">swap_horiz</span>
+              <span className="text-label-sm text-on-primary/80 hidden sm:inline">Obra:</span>
+              <select
+                value={ativaId}
+                onChange={(e) => trocarObra(e.target.value)}
+                title="Trocar de obra"
+                className="bg-transparent text-on-primary text-body-sm font-medium rounded px-1 py-1 focus:outline-none cursor-pointer max-w-[220px]"
+              >
+                {obras.map((o) => (
+                  <option key={o.id} value={o.id} className="text-on-surface">{o.nome}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="flex flex-wrap gap-x-lg gap-y-sm text-body-sm text-on-primary/90">
             {info.map(([icon, label, valor]) => (
