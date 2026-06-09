@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listarObras } from '../store';
+import { listarObras, setObraAtivaId } from '../store';
 import type { Obra } from '../store';
 import { apiClient } from '../api/client';
 import { exportarComparativoPDF } from '../utils/exportar';
@@ -56,7 +56,7 @@ export function OrcamentosPage() {
       .catch(() => setTodos([]))
       .finally(() => setCarregando(false));
   };
-  useEffect(() => { setSel(new Set()); setItensSel(new Set()); setLinhasPorOrc({}); recarregar(obraId); /* eslint-disable-next-line */ }, [obraId]);
+  useEffect(() => { if (obraId) setObraAtivaId(obraId); setSel(new Set()); setItensSel(new Set()); setLinhasPorOrc({}); recarregar(obraId); /* eslint-disable-next-line */ }, [obraId]);
 
   // Carrega linhas dos selecionados
   useEffect(() => {
