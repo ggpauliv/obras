@@ -1229,6 +1229,260 @@ REGRAS CRÍTICAS:
   }
 });
 
+// ============================================
+// IMPORTADOR INTELIGENTE — detecta o tipo do documento e roteia
+// (orçamento de fornecedor, NF-e de compra, NFS-e de serviço, documento da obra)
+// ============================================
+
+const CATEGORIAS_VALIDAS = 'Estrutura, Alvenaria, Cobertura, Instalações Elétricas, Instalações Hidráulicas, Acabamento, Pintura, Fundações, Terraplanagem, Serviços Gerais, Materiais, Mão de Obra';
+
+// POST /api/importar-inteligente — analisa e CLASSIFICA o documento (não grava).
+app.post('/api/importar-inteligente', autenticar, async (req, res) => {
+  const XLSX = require('xlsx');
+  if (!GEMINI_API_KEY) return res.status(500).json({ erro: 'Gemini API não configurada' });
+  try {
+    const { arquivo, obraId } = req.body;
+    if (!arquivo) return res.status(400).json({ erro: 'arquivo é obrigatório' });
+    if (obraId) { if (!(await checarObra(req, res, obraId))) return; }
+
+    const buffer = Buffer.from(arquivo, 'base64');
+    const ehPDF = buffer.slice(0, 5).toString('latin1') === '%PDF-';
+
+    const instrucoes = `Você é um especialista em documentos de construção civil no Brasil.
+Analise o documento, CLASSIFIQUE seu tipo e extraia os dados no formato JSON correto.
+
+Os tipos possíveis (campo "tipo"):
+- "orcamento": proposta/cotação de fornecedor ou mapa de equalização (preços a aprovar).
+- "nfe": Nota Fiscal Eletrônica de produtos/materiais (compra já realizada).
+- "nfse": Nota Fiscal de Serviço (serviço já contratado/realizado).
+- "documento": qualquer outro documento da obra (contrato, ART/RRT, alvará, licença, projeto, memorial, laudo, etc.).
+
+Responda SOMENTE com JSON neste formato (preencha apenas o bloco do tipo detectado):
+{
+  "tipo": "orcamento|nfe|nfse|documento",
+  "confianca": número entre 0 e 1,
+  "orcamento": {
+    "itens": [ { "itemNumero": "1.1", "descricao": "...", "unidade": "un ou null", "quantidade": número ou null, "categoria": "uma de: ${CATEGORIAS_VALIDAS}" } ],
+    "fornecedores": [ { "fornecedor": "nome", "cnpj": "ou null", "numeroCotacao": "ou null", "dataEmissao": "YYYY-MM-DD ou null", "prazoDias": número ou null, "precos": { "1.1": { "valorUnitario": número, "valorTotal": número } } } ]
+  },
+  "despesa": {
+    "fornecedor": "nome do emitente",
+    "cnpj": "CNPJ do emitente ou null",
+    "numeroNota": "número da nota ou null",
+    "dataEmissao": "YYYY-MM-DD ou null",
+    "valorTotal": número,
+    "itens": [ { "descricao": "...", "quantidade": número ou null, "valorUnitario": número ou null, "valorTotal": número, "categoria": "uma de: ${CATEGORIAS_VALIDAS}" } ]
+  },
+  "documento": {
+    "tipoDocumento": "contrato|art|alvara|licenca|projeto|memorial|laudo|outro",
+    "titulo": "título curto do documento",
+    "numero": "número/identificação ou null",
+    "emissor": "órgão/empresa emissora ou null",
+    "partes": "partes envolvidas (ex: contratante x contratada) ou null",
+    "dataDocumento": "YYYY-MM-DD ou null",
+    "dataValidade": "YYYY-MM-DD ou null",
+    "valor": número ou null,
+    "resumo": "2-3 frases resumindo o documento"
+  }
+}
+REGRAS:
+- Números sem "R$", sem ponto de milhar, ponto como separador decimal.
+- Para nfe/nfse use o tipo correto e preencha "despesa".
+- Para orçamento, "itens" tem categoria única por item; "precos" usa os mesmos itemNumero.
+- Não invente dados; use null quando não houver.`;
+
+    let content;
+    if (ehPDF) {
+      content = [ { text: instrucoes }, { inlineData: { mimeType: 'application/pdf', data: arquivo } } ];
+    } else {
+      const workbook = XLSX.read(buffer, { type: 'buffer' });
+      let txt = '';
+      for (const s of workbook.SheetNames) {
+        const csv = XLSX.utils.sheet_to_csv(workbook.Sheets[s], { blankrows: false });
+        if (csv.trim()) txt += `\n=== ABA: ${s} ===\n${csv}\n`;
+      }
+      if (txt.length > 60000) txt = txt.substring(0, 60000) + '\n...[truncado]';
+      content = `${instrucoes}\n\nDOCUMENTO:\n${txt}`;
+    }
+
+    const resposta = await chamarGeminiComRetry(content);
+    let parsed;
+    try {
+      let t = resposta.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const i = t.indexOf('{'), f = t.lastIndexOf('}');
+      if (i >= 0 && f > i) t = t.slice(i, f + 1);
+      parsed = JSON.parse(t);
+    } catch (e) {
+      return res.status(500).json({ erro: 'A IA retornou uma resposta inválida. Tente um arquivo mais simples.' });
+    }
+
+    const tipo = String(parsed.tipo || '').toLowerCase();
+
+    if (tipo === 'orcamento' && parsed.orcamento) {
+      // Normaliza no mesmo formato do /analisar (itens compartilhados + preços)
+      const itens = (parsed.orcamento.itens || []).map((it) => ({
+        itemNumero: String(it.itemNumero ?? ''), descricao: it.descricao || '',
+        unidade: it.unidade || null, quantidade: sanitizeNumero(it.quantidade) || null,
+        categoria: it.categoria || 'Serviços Gerais',
+      }));
+      const orcamentos = (parsed.orcamento.fornecedores || []).map((fo) => {
+        const precos = fo.precos || {};
+        const linhas = itens.map((it) => {
+          const p = precos[it.itemNumero] || {};
+          const vu = sanitizeNumero(p.valorUnitario) || 0;
+          let vt = sanitizeNumero(p.valorTotal);
+          if (!vt && vu && it.quantidade) vt = vu * it.quantidade;
+          return { ...it, valorUnitario: vu, valorTotal: vt || 0 };
+        });
+        return {
+          fornecedor: fo.fornecedor || 'Fornecedor', cnpj: fo.cnpj || null,
+          numeroCotacao: fo.numeroCotacao || null, dataEmissao: fo.dataEmissao || null,
+          prazoDias: sanitizeNumero(fo.prazoDias) || null,
+          valorTotal: linhas.reduce((a, l) => a + (l.valorTotal || 0), 0),
+          linhas, avisos: [],
+        };
+      }).filter((o) => o.fornecedor || (o.linhas && o.linhas.length));
+      if (orcamentos.length === 0) return res.status(422).json({ erro: 'Não identifiquei itens de orçamento no documento.' });
+      return res.json({ tipo: 'orcamento', confianca: parsed.confianca ?? null, orcamentos });
+    }
+
+    if ((tipo === 'nfe' || tipo === 'nfse') && parsed.despesa) {
+      const d = parsed.despesa;
+      const itens = (d.itens || []).map((it) => ({
+        descricao: it.descricao || 'Item', quantidade: sanitizeNumero(it.quantidade) || null,
+        valorUnitario: sanitizeNumero(it.valorUnitario), valorTotal: sanitizeNumero(it.valorTotal) || 0,
+        categoria: it.categoria || (tipo === 'nfse' ? 'Mão de Obra' : 'Materiais'),
+      }));
+      let valorTotal = sanitizeNumero(d.valorTotal);
+      if (!valorTotal) valorTotal = itens.reduce((a, l) => a + (l.valorTotal || 0), 0);
+      return res.json({
+        tipo, confianca: parsed.confianca ?? null,
+        despesa: {
+          fornecedor: d.fornecedor || 'Fornecedor', cnpj: d.cnpj || null,
+          numeroNota: d.numeroNota || null, dataEmissao: d.dataEmissao || null,
+          valorTotal, itens,
+        },
+      });
+    }
+
+    // documento (default)
+    const doc = parsed.documento || {};
+    return res.json({
+      tipo: 'documento', confianca: parsed.confianca ?? null,
+      documento: {
+        tipoDocumento: doc.tipoDocumento || 'outro', titulo: doc.titulo || 'Documento',
+        numero: doc.numero || null, emissor: doc.emissor || null, partes: doc.partes || null,
+        dataDocumento: doc.dataDocumento || null, dataValidade: doc.dataValidade || null,
+        valor: sanitizeNumero(doc.valor) || null, resumo: doc.resumo || '',
+      },
+    });
+  } catch (error) {
+    console.error('❌ Erro no importador inteligente:', error);
+    res.status(500).json({ erro: 'Erro ao analisar documento: ' + error.message });
+  }
+});
+
+// POST /api/importar-inteligente/confirmar — grava conforme o tipo confirmado pelo usuário.
+app.post('/api/importar-inteligente/confirmar', autenticar, async (req, res) => {
+  try {
+    const { obraId, tipo, dados } = req.body;
+    if (!obraId || !tipo || !dados) return res.status(400).json({ erro: 'obraId, tipo e dados são obrigatórios' });
+    if (!(await checarObra(req, res, obraId))) return;
+
+    // Helper: encontra ou cria fornecedor (escopado por empresa da obra)
+    const empObra = (await db.query('SELECT empresa_id FROM obras WHERE id = $1', [obraId])).rows[0]?.empresa_id || null;
+    async function acharOuCriarFornecedor(nome, cnpj) {
+      if (cnpj) {
+        const r = await db.query('SELECT id FROM fornecedores WHERE cnpj = $1', [cnpj]);
+        if (r.rows.length) return r.rows[0].id;
+      }
+      const rn = await db.query('SELECT id FROM fornecedores WHERE LOWER(nome) = LOWER($1)', [nome || 'Fornecedor']);
+      if (rn.rows.length) return rn.rows[0].id;
+      const ins = await db.query(
+        'INSERT INTO fornecedores (nome, cnpj, status, empresa_id) VALUES ($1,$2,$3,$4) RETURNING id',
+        [nome || 'Fornecedor', cnpj || null, 'ativo', empObra]
+      );
+      return ins.rows[0].id;
+    }
+
+    if (tipo === 'nfe' || tipo === 'nfse') {
+      const d = dados;
+      await acharOuCriarFornecedor(d.fornecedor, d.cnpj);
+      const hoje = (d.dataEmissao || new Date().toISOString().split('T')[0]);
+      const itens = Array.isArray(d.itens) && d.itens.length
+        ? d.itens
+        : [{ descricao: d.fornecedor || 'Nota fiscal', valorTotal: sanitizeNumero(d.valorTotal) || 0, categoria: tipo === 'nfse' ? 'Mão de Obra' : 'Materiais' }];
+      let n = 0;
+      for (const it of itens) {
+        await db.query(
+          `INSERT INTO despesas (obra_id, fase_id, descricao, categoria, valor, data, fornecedor, cnpj, numero_nota, origem)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+          [obraId, null, it.descricao || 'Item', it.categoria || (tipo === 'nfse' ? 'Mão de Obra' : 'Materiais'),
+           sanitizeNumero(it.valorTotal) || 0, hoje, d.fornecedor || 'Fornecedor', d.cnpj || null, d.numeroNota || null, tipo]
+        );
+        n++;
+      }
+      await db.query(
+        'INSERT INTO auditoria (obra_id, tipo, titulo, descricao, usuario_id) VALUES ($1,$2,$3,$4,$5)',
+        [obraId, 'CREATE', tipo === 'nfse' ? 'NFS-e lançada no Financeiro' : 'NF-e lançada no Financeiro',
+         `${d.fornecedor || 'Fornecedor'} — nota ${d.numeroNota || 's/n'}: ${n} item(ns), R$ ${(sanitizeNumero(d.valorTotal) || 0).toLocaleString('pt-BR')}`,
+         req.usuario.id]
+      );
+      return res.status(201).json({ sucesso: true, tipo, despesas: n, mensagem: `${n} despesa(s) lançada(s) no Financeiro.` });
+    }
+
+    if (tipo === 'documento') {
+      const d = dados;
+      const ins = await db.query(
+        `INSERT INTO documentos (obra_id, tipo_documento, titulo, numero, emissor, partes, data_documento, data_validade, valor, resumo, dados)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+        [obraId, d.tipoDocumento || 'outro', d.titulo || 'Documento', d.numero || null, d.emissor || null,
+         d.partes || null, d.dataDocumento || null, d.dataValidade || null, sanitizeNumero(d.valor) || null,
+         d.resumo || null, JSON.stringify(d)]
+      );
+      await db.query(
+        'INSERT INTO auditoria (obra_id, tipo, titulo, descricao, usuario_id) VALUES ($1,$2,$3,$4,$5)',
+        [obraId, 'CREATE', 'Documento da obra registrado', `${d.tipoDocumento || 'documento'}: ${d.titulo || ''}`, req.usuario.id]
+      );
+      return res.status(201).json({ sucesso: true, tipo, id: ins.rows[0].id, mensagem: 'Documento registrado.' });
+    }
+
+    return res.status(400).json({ erro: 'Tipo inválido para confirmação. Orçamentos use a tela de Orçamentos.' });
+  } catch (error) {
+    console.error('❌ Erro ao confirmar importação:', error);
+    res.status(500).json({ erro: 'Erro ao confirmar: ' + error.message });
+  }
+});
+
+// GET /api/documentos?obraId=... — lista documentos da obra
+app.get('/api/documentos', autenticar, async (req, res) => {
+  try {
+    const { obraId } = req.query;
+    if (obraId) { if (!(await checarObra(req, res, obraId))) return; }
+    let query = 'SELECT id, obra_id, tipo_documento, titulo, numero, emissor, partes, data_documento, data_validade, valor, resumo, criado_em FROM documentos';
+    const params = [];
+    if (obraId) { query += ' WHERE obra_id = $1'; params.push(obraId); }
+    query += ' ORDER BY criado_em DESC';
+    const r = await db.query(query, params);
+    res.json(r.rows);
+  } catch (error) {
+    console.error('❌ Erro ao listar documentos:', error);
+    res.status(500).json({ erro: 'Erro ao listar documentos' });
+  }
+});
+
+// DELETE /api/documentos/:id
+app.delete('/api/documentos/:id', autenticar, async (req, res) => {
+  try {
+    if (!(await checarPorObraId(req, res, 'documentos', req.params.id))) return;
+    await db.query('DELETE FROM documentos WHERE id = $1', [req.params.id]);
+    res.json({ sucesso: true });
+  } catch (error) {
+    console.error('❌ Erro ao excluir documento:', error);
+    res.status(500).json({ erro: 'Erro ao excluir documento' });
+  }
+});
+
 // POST /api/orcamentos/exportar-excel — Gera .xlsx com gráficos nativos (via Python/XlsxWriter)
 app.post('/api/orcamentos/exportar-excel', autenticar, async (req, res) => {
   const { spawn } = require('child_process');
@@ -1836,7 +2090,26 @@ async function garantirSchema() {
     await db.query("UPDATE fornecedores SET empresa_id = (SELECT id FROM empresas ORDER BY criado_em LIMIT 1) WHERE empresa_id IS NULL");
     await db.query("UPDATE usuarios SET empresa_id = (SELECT id FROM empresas ORDER BY criado_em LIMIT 1) WHERE empresa_id IS NULL");
     await db.query("UPDATE usuarios SET is_super = TRUE WHERE email = 'ggpauliv'");
-    console.log('✅ Schema verificado (multi-empresa + ocorrencias + orçamentos ok)');
+
+    // Documentos da obra (contratos, ART, licenças, projetos...) — metadados extraídos pela IA
+    await db.query(`CREATE TABLE IF NOT EXISTS documentos (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      obra_id UUID NOT NULL REFERENCES obras(id) ON DELETE CASCADE,
+      tipo_documento VARCHAR(80),
+      titulo TEXT,
+      numero VARCHAR(120),
+      emissor TEXT,
+      partes TEXT,
+      data_documento DATE,
+      data_validade DATE,
+      valor NUMERIC,
+      resumo TEXT,
+      dados JSONB,
+      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    // Origem da despesa (nfe/nfse/orcamento/manual) para rastreabilidade
+    await db.query("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS origem VARCHAR(20)");
+    console.log('✅ Schema verificado (multi-empresa + ocorrencias + documentos + orçamentos ok)');
   } catch (e) {
     console.error('⚠️ Falha ao garantir schema:', e.message);
   }

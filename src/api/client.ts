@@ -307,6 +307,23 @@ class APIClient {
   async excluirItensOrcamento(id: string, linhaIds: string[]): Promise<any> {
     return this.request(`/api/orcamentos/${id}/itens`, { method: 'DELETE', body: { linhaIds } });
   }
+
+  // Importador inteligente (detecta tipo: orçamento, NF-e, NFS-e, documento)
+  async importarInteligente(arquivo: string, obraId?: string): Promise<any> {
+    return this.request('/api/importar-inteligente', { method: 'POST', body: { arquivo, obraId } });
+  }
+  async confirmarImportacao(obraId: string, tipo: string, dados: any): Promise<any> {
+    return this.request('/api/importar-inteligente/confirmar', { method: 'POST', body: { obraId, tipo, dados } });
+  }
+
+  // Documentos da obra
+  async listarDocumentos(obraId?: string): Promise<any[]> {
+    const url = obraId ? `/api/documentos?obraId=${obraId}` : '/api/documentos';
+    return this.request(url);
+  }
+  async deletarDocumento(id: string): Promise<any> {
+    return this.request(`/api/documentos/${id}`, { method: 'DELETE' });
+  }
 }
 
 // Exportar instância singleton
