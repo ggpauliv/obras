@@ -284,6 +284,11 @@ class APIClient {
     return this.request('/api/orcamentos/categoria', { method: 'PUT', body: { obraId, itemNumero, categoria } });
   }
 
+  /** Move UMA linha de orçamento para outra categoria. */
+  async moverCategoriaLinha(linhaId: string, categoria: string): Promise<any> {
+    return this.request(`/api/orcamentos/linha/${linhaId}/categoria`, { method: 'PUT', body: { categoria } });
+  }
+
   async compararOrcamentos(obraId: string): Promise<any> {
     return this.request(`/api/orcamentos/comparar?obraId=${obraId}`);
   }

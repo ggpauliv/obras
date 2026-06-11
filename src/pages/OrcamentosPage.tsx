@@ -107,6 +107,7 @@ export function OrcamentosPage() {
     linhasAtivo.forEach(l => { const c = l.categoria || 'Outros'; if (!map.has(c)) map.set(c, []); map.get(c)!.push(l); });
     return Array.from(map.entries());
   }, [linhasAtivo]);
+  const nomesCategorias = useMemo(() => categoriasAtivo.map(([c]) => c), [categoriasAtivo]);
 
   const aprovar = async (opts: { linhaIds?: string[]; categorias?: string[] }) => {
     if (!orcAtivo) return;
@@ -133,6 +134,18 @@ export function OrcamentosPage() {
       setLinhasPorOrc(prev => ({ ...prev, [orcAtivo.id]: d.linhas || [] }));
       setItensSel(new Set());
       await recarregar();
+    } catch (e: any) { aviso('Erro: ' + e.message); }
+    setAcao(false);
+  };
+
+  const moverCategoria = async (linha: any, novaCat: string) => {
+    if (!orcAtivo || !novaCat || novaCat === (linha.categoria || 'Outros')) return;
+    setAcao(true);
+    try {
+      await apiClient.moverCategoriaLinha(linha.id, novaCat);
+      const d = await apiClient.obterOrcamento(orcAtivo.id);
+      setLinhasPorOrc(prev => ({ ...prev, [orcAtivo.id]: d.linhas || [] }));
+      aviso('Item movido de categoria');
     } catch (e: any) { aviso('Erro: ' + e.message); }
     setAcao(false);
   };
@@ -397,6 +410,26 @@ export function OrcamentosPage() {
                                   </button>
                                 </td>
                                 <td className="py-xs px-md text-on-surface">{l.descricao}</td>
+                                <td className="py-xs px-md whitespace-nowrap">
+                                  <select
+                                    value={l.categoria || 'Outros'}
+                                    disabled={acao || l.aprovada}
+                                    title={l.aprovada ? 'Desaprove o item para mover de categoria' : 'Mover para outra categoria'}
+                                    onChange={(e) => {
+                                      if (e.target.value === '__nova__') {
+                                        const nome = window.prompt('Nome da nova categoria:');
+                                        if (nome && nome.trim()) moverCategoria(l, nome.trim());
+                                      } else {
+                                        moverCategoria(l, e.target.value);
+                                      }
+                                    }}
+                                    className="text-[11px] bg-surface-container-low border border-outline-variant rounded px-1.5 py-0.5 text-on-surface-variant focus:outline-none focus:border-primary disabled:opacity-50 cursor-pointer max-w-[160px]"
+                                  >
+                                    {!nomesCategorias.includes(l.categoria || 'Outros') && <option value={l.categoria || 'Outros'}>{l.categoria || 'Outros'}</option>}
+                                    {nomesCategorias.map((c) => <option key={c} value={c}>{c}</option>)}
+                                    <option value="__nova__">+ Nova categoria…</option>
+                                  </select>
+                                </td>
                                 <td className="py-xs px-md text-on-surface-variant text-center whitespace-nowrap">{numero(l.quantidade)}</td>
                                 <td className="py-xs px-md text-on-surface font-medium text-right whitespace-nowrap">{fmt(l.valorTotal)}</td>
                                 <td className="py-xs px-md w-24 text-right">

@@ -897,6 +897,25 @@ app.put('/api/orcamentos/categoria', autenticar, async (req, res) => {
   }
 });
 
+// PUT /api/orcamentos/linha/:id/categoria — move UMA linha de categoria.
+// IMPORTANTE: declarada antes de "/:id" para não ser capturada pela rota /:id.
+app.put('/api/orcamentos/linha/:id/categoria', autenticar, async (req, res) => {
+  try {
+    const { categoria } = req.body;
+    if (!categoria || !categoria.trim()) return res.status(400).json({ erro: 'categoria é obrigatória' });
+    const r = await db.query('SELECT orcamento_id FROM linhas_orcamento WHERE id = $1', [req.params.id]);
+    if (r.rows.length === 0) return res.status(404).json({ erro: 'Item não encontrado' });
+    if (!(await checarOrcamento(req, res, r.rows[0].orcamento_id))) return;
+    await db.query('UPDATE linhas_orcamento SET categoria = $1 WHERE id = $2', [categoria.trim(), req.params.id]);
+    // Se já houver despesa aprovada desta linha, mantém a categoria coerente.
+    await db.query('UPDATE despesas SET categoria = $1 WHERE linha_id = $2', [categoria.trim(), req.params.id]);
+    res.json({ sucesso: true });
+  } catch (error) {
+    console.error('❌ Erro ao mover categoria da linha:', error);
+    res.status(500).json({ erro: 'Erro ao mover categoria' });
+  }
+});
+
 // PUT /api/orcamentos/:id — renomeia (e opcionalmente atualiza prazo) o orçamento.
 app.put('/api/orcamentos/:id', autenticar, async (req, res) => {
   try {
@@ -1266,7 +1285,7 @@ Responda SOMENTE com JSON neste formato (preencha apenas o bloco do tipo detecta
       {
         "fornecedor": "nome da empresa",
         "cnpj": "ou null", "numeroCotacao": "ou null", "dataEmissao": "YYYY-MM-DD ou null", "prazoDias": número ou null,
-        "itens": [ { "itemNumero": "1.1.1", "descricao": "...", "unidade": "vg/m²/kg ou null", "quantidade": número ou null, "valorUnitario": número, "valorTotal": número, "categoria": "uma de: ${CATEGORIAS_VALIDAS}" } ]
+        "itens": [ { "itemNumero": "1.1.1", "descricao": "...", "unidade": "vg/m²/kg ou null", "quantidade": número ou null, "valorUnitario": número, "valorTotal": número, "categoria": "título da SEÇÃO da planilha onde o item está (ex: Serviços iniciais, Fundações, Blocos)" } ]
       }
     ]
   },
@@ -1300,7 +1319,8 @@ REGRAS CRÍTICAS PARA ORÇAMENTO (siga à risca para importar IGUAL à planilha)
 - NÃO existe lista de itens compartilhada. NÃO force os fornecedores a terem os mesmos itens. Cada fornecedor pode ter itens, quantidades e descrições DIFERENTES — copie os DELE.
 - Colunas "Material/MAT" e "Mão de Obra/M.O" (ou "Unitário" e "Parcial") do MESMO fornecedor NÃO são fornecedores diferentes: some MAT + M.O. para obter o valor do item (use a coluna "Total" se existir).
 - NUNCA crie "Cotação 1/2", sufixos "-Q1"/"-Q2", descrições repetidas, itens inventados ou valores 0 para um item que aquele fornecedor não tem (simplesmente não inclua o item).
-- Copie "itemNumero", "descricao" e "quantidade" EXATAMENTE como na planilha. Cada item tem uma categoria.
+- Copie "itemNumero", "descricao" e "quantidade" EXATAMENTE como na planilha.
+- "categoria" de cada item = o TÍTULO DA SEÇÃO/GRUPO em que ele está na planilha (o cabeçalho pai, SEM o número). Ex.: itens sob "1.2 Fundações" têm categoria "Fundações"; sob "1.3 Blocos" têm "Blocos"; sob "1.1 Serviços iniciais" têm "Serviços iniciais". NÃO reclassifique para categorias genéricas — use os nomes das seções do próprio documento, para o agrupamento ficar IGUAL à planilha.
 - IGNORE cabeçalhos de seção/grupo (ex.: "1 OBRA CIVIL", "1.1 Serviços iniciais" sem quantidade/preço), linhas de subtotal/TOTAL e linhas em branco. Inclua só itens com quantidade e/ou preço.
 - valorTotal de cada item = coluna Total da planilha, ou quantidade × valorUnitario.`;
 
