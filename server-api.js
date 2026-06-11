@@ -1262,8 +1262,13 @@ Responda SOMENTE com JSON neste formato (preencha apenas o bloco do tipo detecta
   "tipo": "orcamento|nfe|nfse|documento",
   "confianca": número entre 0 e 1,
   "orcamento": {
-    "itens": [ { "itemNumero": "1.1", "descricao": "...", "unidade": "un ou null", "quantidade": número ou null, "categoria": "uma de: ${CATEGORIAS_VALIDAS}" } ],
-    "fornecedores": [ { "fornecedor": "nome", "cnpj": "ou null", "numeroCotacao": "ou null", "dataEmissao": "YYYY-MM-DD ou null", "prazoDias": número ou null, "precos": { "1.1": { "valorUnitario": número, "valorTotal": número } } } ]
+    "fornecedores": [
+      {
+        "fornecedor": "nome da empresa",
+        "cnpj": "ou null", "numeroCotacao": "ou null", "dataEmissao": "YYYY-MM-DD ou null", "prazoDias": número ou null,
+        "itens": [ { "itemNumero": "1.1.1", "descricao": "...", "unidade": "vg/m²/kg ou null", "quantidade": número ou null, "valorUnitario": número, "valorTotal": número, "categoria": "uma de: ${CATEGORIAS_VALIDAS}" } ]
+      }
+    ]
   },
   "despesa": {
     "fornecedor": "nome do emitente",
@@ -1291,13 +1296,13 @@ REGRAS:
 - Não invente dados; use null quando não houver. NUNCA crie itens, quantidades ou fornecedores que não existem no documento.
 
 REGRAS CRÍTICAS PARA ORÇAMENTO (siga à risca para importar IGUAL à planilha):
-- Conte os FORNECEDORES de verdade. Só existem vários fornecedores quando há BLOCOS/COLUNAS de preço DISTINTOS, cada um com o NOME de uma empresa diferente cotando os MESMOS itens. Na dúvida, é UM fornecedor só.
-- ATENÇÃO: colunas como "Material/MAT" e "Mão de Obra/M.O" (ou "Unitário" e "Parcial") do MESMO fornecedor NÃO são fornecedores diferentes. Some MAT + M.O. para obter o valor do item. Existe APENAS UM fornecedor nesse caso.
-- Se há um único fornecedor, "fornecedores" tem EXATAMENTE 1 objeto. NUNCA divida um orçamento em "Cotação 1/2", nem use sufixos como "-Q1"/"-Q2", nem repita descrições, nem preencha 0 para um segundo fornecedor inexistente.
-- Copie "itemNumero", "descricao" e "quantidade" EXATAMENTE como estão na planilha (não reescreva nem complete descrições).
-- IGNORE linhas de cabeçalho de seção/grupo (ex.: "1 OBRA CIVIL", "1.1 Serviços iniciais" sem quantidade), linhas de subtotal/total e linhas em branco. Inclua só os itens com quantidade e/ou preço.
-- "itens" tem categoria única por item; as chaves de "precos" usam os mesmos itemNumero dos itens.
-- valorTotal de cada item = (preço do item) ou quantidade × valorUnitario, conforme a planilha.`;
+- Cada FORNECEDOR/EMPRESA vira UM objeto em "fornecedores" com a SUA PRÓPRIA lista "itens". Os orçamentos podem estar EMPILHADOS um abaixo do outro (cada bloco começa com o nome de uma empresa, ex.: "CONSTRUTORA FRANK", depois mais abaixo "CONSTRUTORA MERANO") ou lado a lado. Cada bloco é um orçamento separado.
+- NÃO existe lista de itens compartilhada. NÃO force os fornecedores a terem os mesmos itens. Cada fornecedor pode ter itens, quantidades e descrições DIFERENTES — copie os DELE.
+- Colunas "Material/MAT" e "Mão de Obra/M.O" (ou "Unitário" e "Parcial") do MESMO fornecedor NÃO são fornecedores diferentes: some MAT + M.O. para obter o valor do item (use a coluna "Total" se existir).
+- NUNCA crie "Cotação 1/2", sufixos "-Q1"/"-Q2", descrições repetidas, itens inventados ou valores 0 para um item que aquele fornecedor não tem (simplesmente não inclua o item).
+- Copie "itemNumero", "descricao" e "quantidade" EXATAMENTE como na planilha. Cada item tem uma categoria.
+- IGNORE cabeçalhos de seção/grupo (ex.: "1 OBRA CIVIL", "1.1 Serviços iniciais" sem quantidade/preço), linhas de subtotal/TOTAL e linhas em branco. Inclua só itens com quantidade e/ou preço.
+- valorTotal de cada item = coluna Total da planilha, ou quantidade × valorUnitario.`;
 
     let content;
     if (ehPDF) {
@@ -1327,21 +1332,21 @@ REGRAS CRÍTICAS PARA ORÇAMENTO (siga à risca para importar IGUAL à planilha)
     const tipo = String(parsed.tipo || '').toLowerCase();
 
     if (tipo === 'orcamento' && parsed.orcamento) {
-      // Normaliza no mesmo formato do /analisar (itens compartilhados + preços)
-      const itens = (parsed.orcamento.itens || []).map((it) => ({
-        itemNumero: String(it.itemNumero ?? ''), descricao: it.descricao || '',
-        unidade: it.unidade || null, quantidade: sanitizeNumero(it.quantidade) || null,
-        categoria: it.categoria || 'Serviços Gerais',
-      }));
+      // Cada fornecedor tem a SUA própria lista de itens (orçamentos independentes,
+      // empilhados ou lado a lado). Sem lista compartilhada.
       const orcamentos = (parsed.orcamento.fornecedores || []).map((fo) => {
-        const precos = fo.precos || {};
-        const linhas = itens.map((it) => {
-          const p = precos[it.itemNumero] || {};
-          const vu = sanitizeNumero(p.valorUnitario) || 0;
-          let vt = sanitizeNumero(p.valorTotal);
-          if (!vt && vu && it.quantidade) vt = vu * it.quantidade;
-          return { ...it, valorUnitario: vu, valorTotal: vt || 0 };
-        });
+        const linhas = (fo.itens || []).map((it) => {
+          const quantidade = sanitizeNumero(it.quantidade) || null;
+          const vu = sanitizeNumero(it.valorUnitario);
+          let vt = sanitizeNumero(it.valorTotal);
+          if (!vt && vu && quantidade) vt = vu * quantidade;
+          return {
+            itemNumero: String(it.itemNumero ?? ''), descricao: it.descricao || '',
+            unidade: it.unidade || null, quantidade,
+            valorUnitario: vu || 0, valorTotal: vt || 0,
+            categoria: it.categoria || 'Serviços Gerais',
+          };
+        }).filter((l) => l.descricao || l.valorTotal); // descarta linhas vazias
         return {
           fornecedor: fo.fornecedor || 'Fornecedor', cnpj: fo.cnpj || null,
           numeroCotacao: fo.numeroCotacao || null, dataEmissao: fo.dataEmissao || null,
@@ -1349,7 +1354,7 @@ REGRAS CRÍTICAS PARA ORÇAMENTO (siga à risca para importar IGUAL à planilha)
           valorTotal: linhas.reduce((a, l) => a + (l.valorTotal || 0), 0),
           linhas, avisos: [],
         };
-      }).filter((o) => o.fornecedor || (o.linhas && o.linhas.length));
+      }).filter((o) => o.linhas && o.linhas.length);
       if (orcamentos.length === 0) return res.status(422).json({ erro: 'Não identifiquei itens de orçamento no documento.' });
       return res.json({ tipo: 'orcamento', confianca: parsed.confianca ?? null, orcamentos });
     }
