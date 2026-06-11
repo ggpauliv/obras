@@ -1288,8 +1288,16 @@ Responda SOMENTE com JSON neste formato (preencha apenas o bloco do tipo detecta
 REGRAS:
 - Números sem "R$", sem ponto de milhar, ponto como separador decimal.
 - Para nfe/nfse use o tipo correto e preencha "despesa".
-- Para orçamento, "itens" tem categoria única por item; "precos" usa os mesmos itemNumero.
-- Não invente dados; use null quando não houver.`;
+- Não invente dados; use null quando não houver. NUNCA crie itens, quantidades ou fornecedores que não existem no documento.
+
+REGRAS CRÍTICAS PARA ORÇAMENTO (siga à risca para importar IGUAL à planilha):
+- Conte os FORNECEDORES de verdade. Só existem vários fornecedores quando há BLOCOS/COLUNAS de preço DISTINTOS, cada um com o NOME de uma empresa diferente cotando os MESMOS itens. Na dúvida, é UM fornecedor só.
+- ATENÇÃO: colunas como "Material/MAT" e "Mão de Obra/M.O" (ou "Unitário" e "Parcial") do MESMO fornecedor NÃO são fornecedores diferentes. Some MAT + M.O. para obter o valor do item. Existe APENAS UM fornecedor nesse caso.
+- Se há um único fornecedor, "fornecedores" tem EXATAMENTE 1 objeto. NUNCA divida um orçamento em "Cotação 1/2", nem use sufixos como "-Q1"/"-Q2", nem repita descrições, nem preencha 0 para um segundo fornecedor inexistente.
+- Copie "itemNumero", "descricao" e "quantidade" EXATAMENTE como estão na planilha (não reescreva nem complete descrições).
+- IGNORE linhas de cabeçalho de seção/grupo (ex.: "1 OBRA CIVIL", "1.1 Serviços iniciais" sem quantidade), linhas de subtotal/total e linhas em branco. Inclua só os itens com quantidade e/ou preço.
+- "itens" tem categoria única por item; as chaves de "precos" usam os mesmos itemNumero dos itens.
+- valorTotal de cada item = (preço do item) ou quantidade × valorUnitario, conforme a planilha.`;
 
     let content;
     if (ehPDF) {
